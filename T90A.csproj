@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>T90A</AssemblyName>
+    <RootNamespace>T90A</RootNamespace>
+    <Nullable>disable</Nullable>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <Optimize>true</Optimize>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <Deterministic>true</Deterministic>
+    <PathMap>$(MSBuildProjectDirectory)=.</PathMap>
+    <GameDir Condition="'$(GameDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Gunner HEAT PC\Bin</GameDir>
+    <NoWarn>$(NoWarn);MSB3277;CS0618</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\T72M1_skin_hull_trimmed.bin" LogicalName="T72M1_skin_hull_trimmed.bin" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="MelonLoader" HintPath="$(GameDir)\MelonLoader\net35\MelonLoader.dll" Private="false" />
+    <Reference Include="0Harmony" HintPath="$(GameDir)\MelonLoader\net35\0Harmony.dll" Private="false" />
+    <Reference Include="$(GameDir)\GHPC_Data\Managed\*.dll" Exclude="$(GameDir)\GHPC_Data\Managed\mscorlib.dll;$(GameDir)\GHPC_Data\Managed\netstandard.dll;$(GameDir)\GHPC_Data\Managed\System*.dll;$(GameDir)\GHPC_Data\Managed\Mono*.dll">
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+</Project>
