@@ -23,7 +23,7 @@ The Russian **T-90A** main battle tank as its own unit in GHPC, built to be as c
 
 ## Installation
 
-1. Install [MelonLoader](https://melonwiki.xyz/) into GHPC if it isn't already.
+1. Install [MelonLoader](https://melon-loader.com/) into GHPC if it isn't already.
 2. Download `T90A_<version>.zip` from [Releases](../../releases/latest).
 3. Copy the `Mods` folder from the archive into the game folder, the one that holds `GHPC.exe` (Steam: right-click
    GHPC > Manage > Browse local files).
