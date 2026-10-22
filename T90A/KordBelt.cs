@@ -6,7 +6,7 @@ namespace T90A
 {
 	internal static class KordBelt
 	{
-		const string BeltMaterial = "t90a_mg_6p49_kord_ammo";
+		internal const string BeltMaterial = "t90a_mg_6p49_kord_ammo";
 		const int SpareRounds = 24;
 
 		internal static void Fit(Transform cupVis, Transform cradle)

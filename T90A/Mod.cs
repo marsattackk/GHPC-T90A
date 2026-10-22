@@ -8,7 +8,7 @@ using MelonLoader.Utils;
 using T90A.Common;
 using UnityEngine;
 
-[assembly: MelonInfo(typeof(T90A.T90AMod), "T-90A", "0.1.0", "marsattackk")]
+[assembly: MelonInfo(typeof(T90A.T90AMod), "T-90A", "0.2.0", "marsattackk")]
 [assembly: MelonGame("Radian Simulations LLC", "GHPC")]
 
 namespace T90A
@@ -19,6 +19,8 @@ namespace T90A
 
 		internal static GameObject Visual, Armor;
 		internal static VanillaEdits Edits;
+		internal static MaterialRoles Roles;
+		internal static RigMap Rig;
 
 		internal const string FriendlyName = "T-90A";
 		const string BaseUnit = "T72M1";
@@ -39,11 +41,11 @@ namespace T90A
 		public override void OnInitializeMelon()
 		{
 			var cfg = MelonPreferences.CreateCategory("T-90A");
-			Enabled = cfg.CreateEntry("Enabled", true, description: "Adds the T-90A as its own unit (Instant Action / mission editor, campaign roster, ATAC key \"T90A\").");
+			Enabled = cfg.CreateEntry("Enabled", true, description: "Adds the T-90A as its own unit (Instant Action, campaign roster, ATAC key \"T90A\").");
 			InCampaign = cfg.CreateEntry("Add to campaign roster", true, description: "Adds the T-90A to the Soviet campaign roster.");
 			CampaignPrevalence = cfg.CreateEntry("Campaign prevalence", 0.5f, description: "How common it is compared to other tanks (1 = as common as a typical tank).");
 			CampaignAfterMissions = cfg.CreateEntry("Campaign unlock after missions", 2);
-			Apfsds = cfg.CreateEntry("APFSDS", "3BM42", description: "3BM42 Mango (default) or 3BM60 Svinets-2 (late/upgraded T-90A).");
+			Apfsds = cfg.CreateEntry("APFSDS", "3BM42", description: "Default APFSDS where the game does not choose one (the mission customizer's ammo dropdown and the campaign's ammo supply override it): 3BM42 Mango (default; the T-90A's stock round) or 3BM60 Svinets-2 (a 2010s round, for T-90As with the long-round autoloader of 2006).");
 			NightSightChoice = cfg.CreateEntry("Gunner night sight", NightSight.Essa, description: "ESSA = thermal sight, T-90A from 2006 (default); Buran-M = 3rd-gen image intensifier of the first T-90As (obr. 2004).");
 			EssaElectronicZoom = cfg.CreateEntry("ESSA electronic zoom", true, description: "ESSA x2 electronic zoom (1.125 deg, half the thermal resolution); not fitted on every tank.");
 			ArmorValues.Config(cfg);
@@ -58,6 +60,12 @@ namespace T90A
 				var edits = bundle.LoadAsset<TextAsset>(VanillaEdits.AssetName);
 				if (edits != null) Edits = VanillaEdits.Parse(edits.text);
 				else MelonLogger.Warning("T-90A: bundle has no vanilla_edits; the kept T-72M1 armour stays as it is.");
+				var roles = bundle.LoadAsset<TextAsset>(MaterialRoles.AssetName);
+				if (roles != null) Roles = MaterialRoles.Parse(roles.text);
+				else MelonLogger.Warning("T-90A: bundle has no material roles; glass keeps the bundle's own materials.");
+				var rig = bundle.LoadAsset<TextAsset>(RigMap.AssetName);
+				if (rig != null) Rig = RigMap.Parse(rig.text);
+				else MelonLogger.Warning("T-90A: bundle has no rig map; the hatches stay closed.");
 			}
 
 			UnitRegistry.Add(new UnitDef

@@ -1,10 +1,10 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using GHPC;
 using GHPC.Equipment;
-using GHPC.Thermals;
 using GHPC.Vehicle;
 using GHPC.Weapons;
 using HarmonyLib;
@@ -19,6 +19,9 @@ namespace T90A
 		class Converted : MonoBehaviour { }
 
 		const string PaintedPrefix = "t90a_t_90a_";
+
+		const float ReverseTrackFactor = 4.52f / 4.17f;
+		const float ReverseCapKmh = 12.5f;
 
 		internal static void Convert(Vehicle vehicle, bool atSpawn = false)
 		{
@@ -40,11 +43,17 @@ namespace T90A
 			catch (Exception e) { MelonLogger.Error("T-90A crew stations failed: " + e); }
 			try { CommanderSeat.Apply(vehicle); }
 			catch (Exception e) { MelonLogger.Error("T-90A commander station failed: " + e); }
+			try { Interior.Apply(vehicle); }
+			catch (Exception e) { MelonLogger.Error("T-90A interior failed (left as the T-72M1's): " + e); }
+			try { Hatches(vehicle); }
+			catch (Exception e) { MelonLogger.Error("T-90A hatches failed (left closed): " + e); }
 			try { RealAxis.Apply(vehicle); }
 			catch (Exception e) { MelonLogger.Error("T-90A turret axis failed: " + e); }
 			if (atSpawn) try { Kord.Apply(vehicle); }
 			catch (Exception e) { MelonLogger.Error("T-90A Kord failed: " + e); }
 			else MelonLogger.Warning("T-90A Kord: " + vehicle.name + " was converted after spawn; no remote Kord fitted.");
+			if (atSpawn) try { Modules.Build(vehicle); }
+			catch (Exception e) { MelonLogger.Error("T-90A modules failed: " + e); }
 			MelonCoroutines.Start(LateSetup(vehicle));
 		}
 
@@ -70,6 +79,18 @@ namespace T90A
 				var fresh = get.Invoke(mgr, new[] { AccessTools.Field(t, flag).GetValue(mgr) });
 				AccessTools.Field(t, cache).SetValue(mgr, fresh);
 			}
+		}
+
+		static List<KeyValuePair<float, float>> _gunProfile;
+		static void GunDepressionProfile(AimablePlatform gun, AimablePlatform traverse)
+		{
+			if (_gunProfile == null)
+				using (var s = typeof(Conversion).Assembly.GetManifestResourceStream("gun_depression.txt"))
+				{
+					if (s == null) { MelonLogger.Warning("T-90A: gun depression profile missing from the DLL; the gun keeps -6.2 deg at every turret angle."); return; }
+					using (var r = new StreamReader(s)) _gunProfile = TraverseLimits.Parse(r.ReadToEnd());
+				}
+			TraverseLimits.Apply(gun, traverse, _gunProfile);
 		}
 
 		static void SmokeTubes(Vehicle vehicle)
@@ -115,18 +136,30 @@ namespace T90A
 			if (elevation == null) MelonLogger.Warning("T-90A: gun elevation platform not found; vanilla gun limits kept.");
 			else
 			{
-				elevation.SpeedPowered = 25f;
-				elevation.LocalEulerLimits = new Vector2(-7f, 20f);
+				elevation.SpeedPowered = 28f;
+				elevation.LocalEulerLimits = new Vector2(-(6f + 13f / 60f), 13f + 47f / 60f);
+				if (traverse != null) GunDepressionProfile(elevation, traverse);
 			}
 			SmokeTubes(vehicle);
+			SmokeCaps.Apply(vehicle.transform);
 
 			var vc = vehicle.GetComponent<NWH.VehiclePhysics.VehicleController>();
-			if (vc != null) vc.engine.maxPower = 1000f;
+			if (vc != null)
+			{
+				vc.engine.maxPower = 1000f;
+				vc.engine.maxRPM = 2000f;
+				bool initialised = vc.IsInitialized;
+				if (!initialised && vc.tracks.wheelEnlargementCoefficient > 1f) vc.brakes.maxTorque *= vc.transmission.gearMultiplier / 5.297f;
+				vc.transmission.gearMultiplier = 5.297f;
+				if (initialised && vc.tracks.wheelEnlargementCoefficient > 1f) vc.transmission.gearMultiplier *= vc.tracks.wheelEnlargementCoefficient;
+				vc.transmission.targetShiftUpRPM = 1900f;
+				vc.transmission.ReverseGears = new List<float> { -14.35f * ReverseTrackFactor };
+			}
 			var chassis = vehicle.GetComponent<NwhChassis>();
 			if (chassis != null)
 			{
 				AccessTools.Field(typeof(NwhChassis), "_maxForwardSpeed").SetValue(chassis, 60f / 3.6f);
-				AccessTools.Field(typeof(NwhChassis), "_maxReverseSpeed").SetValue(chassis, 16.1f / 3.6f);
+				AccessTools.Field(typeof(NwhChassis), "_maxReverseSpeed").SetValue(chassis, ReverseCapKmh / 3.6f);
 			}
 
 			var feed = vehicle.GetComponent<WeaponsManager>()?.Weapons[0].Weapon?.Feed;
@@ -183,6 +216,15 @@ namespace T90A
 			catch (Exception e) { MelonLogger.Error("T-90A Kord late setup failed: " + e); }
 			try { SightSetup.Apply(vehicle); }
 			catch (Exception e) { MelonLogger.Error("T-90A sight setup failed: " + e); }
+			try { Modules.Wire(vehicle); }
+			catch (Exception e) { MelonLogger.Error("T-90A module wiring failed: " + e); }
+			try
+			{
+				var parts = vehicle.GetComponentsInChildren<Transform>(true).Where(t => t.name.StartsWith("T90A_") && t.GetComponentsInChildren<Renderer>(true).Length > 0 && t.GetComponentsInParent<Transform>(true).Any(p => p.name == "---MESH---")
+					&& (t.parent == null || !t.parent.GetComponentsInParent<Transform>(true).Any(p => p.name.StartsWith("T90A_"))));
+				ThermalHeat.Apply(vehicle.transform, parts);
+			}
+			catch (Exception e) { MelonLogger.Error("T-90A thermal heat failed: " + e); }
 		}
 
 		static byte[] _trimmedSkin;
@@ -195,7 +237,7 @@ namespace T90A
 			using (var s = typeof(Conversion).Assembly.GetManifestResourceStream("T72M1_skin_hull_trimmed.bin"))
 			{
 				if (s == null) { MelonLogger.Warning("T-90A: running-gear mesh missing from the DLL; T-72 skirts hidden by collapsed bones only."); return null; }
-				var ms = new System.IO.MemoryStream(); s.CopyTo(ms); _trimmedSkin = ms.ToArray();
+				var ms = new MemoryStream(); s.CopyTo(ms); _trimmedSkin = ms.ToArray();
 			}
 			return _trimmedSkin;
 		}
@@ -241,8 +283,6 @@ namespace T90A
 					: (name == "HULL" ? hull : name == "TURRET" ? turret : gun).Find("T90A_" + name);
 				if (part == null) continue;
 				VehiclePaint.ApplyPaint(part.gameObject, template, flir, PaintedPrefix);
-				var heat = part.gameObject.AddComponent<HeatSource>();
-				AccessTools.Field(typeof(HeatSource), "heat").SetValue(heat, 0.4f);
 			}
 			CoatGlass(root);
 			HatchInner(root);
@@ -252,37 +292,28 @@ namespace T90A
 			catch (Exception e) { MelonLogger.Error("T-90A tactical numbers failed: " + e); }
 			try { HideLeftovers(root); }
 			catch (Exception e) { MelonLogger.Error("T-90A leftover hiding failed: " + e); }
+			try { VisualLods.Sync(root, new[] { KordBelt.BeltMaterial }); }
+			catch (Exception e) { MelonLogger.Error("T-90A LOD materials failed: " + e); }
 		}
 
 		static readonly Vector3 HatchHinge = new Vector3(-0.224f, 2.100f - 1.369f, -1.494f + 0.527f);
 		static readonly Vector3 HatchPortShift = new Vector3(-0.03f, 0.09f, -0.28f);
-		const float HatchRoofSlope = 8.5f;
 
 		static void StubHatch(Transform root, Transform turret, Transform hatch)
 		{
-			var door = root.GetComponentsInChildren<AnimatedPart>(true).FirstOrDefault(a => a.Transform != null && a.Transform.name == "EJECTOR");
-			var bone = door?.Transform; var start = door?.StartTransform; var end = door?.EndTransform;
-			if (bone == null || start == null || end == null)
-			{
-				MelonLogger.Warning("T-90A: T-72M1 ejector door not found; stub hatch left closed and ejection unchanged.");
-				Attach(hatch, turret);
-				hatch.localPosition = HatchHinge;
-				return;
-			}
-			float s = Mathf.Sin(HatchRoofSlope * Mathf.Deg2Rad), c = Mathf.Cos(HatchRoofSlope * Mathf.Deg2Rad);
-			var closed = turret.rotation * Quaternion.LookRotation(new Vector3(0f, -s, -c), new Vector3(0f, c, -s));
-			var hinge = turret.TransformPoint(HatchHinge);
-			start.SetPositionAndRotation(hinge, closed);
-			end.SetPositionAndRotation(hinge, closed * Quaternion.Euler(0f, 0f, 270f));
-			bone.SetPositionAndRotation(hinge, closed);
 			Attach(hatch, turret);
 			hatch.localPosition = HatchHinge;
-			hatch.SetParent(bone, true);
 			var shift = turret.TransformVector(HatchPortShift);
 			foreach (var t in root.GetComponentsInChildren<Transform>(true).Where(x => x.name == "ejection path" || x.name == "ejection port fire marker").ToList())
 			{
 				t.position += shift;
 			}
+		}
+
+		static void Hatches(Vehicle vehicle)
+		{
+			var root = vehicle.transform;
+			HatchRig.Apply(root, T90AMod.Rig, "T90A_", "T-90A");
 		}
 
 		static readonly Color HatchInnerColor = new Color(0.192f, 0.208f, 0.161f, 1f);
@@ -429,30 +460,9 @@ namespace T90A
 			keep.Renderers = rs; keep.Lights = ls;
 		}
 
-		static readonly string[] GlassWords = { "glass", "lens", "prism", "periscope", "optic" };
-
 		static void CoatGlass(Transform root)
 		{
-			foreach (var r in root.GetComponentsInChildren<Renderer>(true))
-			{
-				if (!r.name.StartsWith("T90A_")) continue;
-				foreach (var m in r.materials)
-				{
-					if (m == null || m.shader.name == "GHPC/VehicleShader") continue;
-					string n = m.name.ToLowerInvariant();
-					bool smooth = m.HasProperty("_Glossiness") && m.GetFloat("_Glossiness") > 0.7f;
-					bool transparent = m.renderQueue >= 3000;
-					if (!GlassWords.Any(n.Contains) && !smooth && !transparent) continue;
-					bool lamp = n.Contains("headlight");
-					if (m.HasProperty("_Color")) m.SetColor("_Color", lamp ? new Color(0.45f, 0.45f, 0.42f, 1f) : new Color(0.035f, 0.045f, 0.05f, 1f));
-					if (m.HasProperty("_Glossiness")) m.SetFloat("_Glossiness", 0.55f);
-					if (m.HasProperty("_GlossMapScale")) m.SetFloat("_GlossMapScale", 0.55f);
-					if (m.HasProperty("_Metallic")) m.SetFloat("_Metallic", 0f);
-					m.DisableKeyword("_METALLICGLOSSMAP");
-					m.DisableKeyword("_EMISSION");
-					m.renderQueue = -1;
-				}
-			}
+			VanillaMaterials.Apply(root, r => r.name.StartsWith("T90A_"), T90AMod.Roles);
 		}
 
 		internal static Transform FindDeep(Transform root, string name) =>

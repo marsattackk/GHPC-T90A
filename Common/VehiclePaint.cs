@@ -40,7 +40,8 @@ namespace T90A.Common
 			m.SetTexture("_Smoothness", Worn && wornMetal != null ? wornMetal : src.GetTexture("_MetallicGlossMap"));
 			var mask = src.GetTexture("_DetailMask");
 			if (mask != null) m.SetTexture("_PaintMask", mask);
-			m.SetTexture("_Occlusion", Texture2D.whiteTexture);
+			var ao = src.HasProperty("_OcclusionMap") ? src.GetTexture("_OcclusionMap") : null;
+			m.SetTexture("_Occlusion", ao != null ? ao : Texture2D.whiteTexture);
 			m.SetFloat("_CamoAmount", 0f);
 			m.SetFloat("_hackcamoUVs", 0f);
 			m.DisableKeyword("_HACKCAMOUVS_ON");

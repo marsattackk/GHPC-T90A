@@ -20,8 +20,10 @@ namespace T90A
 		internal const string Essa = "ESSA", BuranM = "Buran-M";
 
 		const float EssaWide = 6.75f, EssaNarrow = 2.25f, EssaElectronic = 1.125f;
-		const int EssaWidth = 512, EssaHeight = 288;
+		const int EssaHeight = 288;
+		const int EssaWidth = 512;
 		static readonly Vector2 EssaElevationLimits = new Vector2(-10f, 20f);
+		static readonly Vector2 BuranElevationLimits = new Vector2(-10f, 20f);
 
 		static readonly FieldInfo UnitNightVision = typeof(GHPC.Unit).GetField("_nightVisionType", BindingFlags.NonPublic | BindingFlags.Instance);
 		static readonly FieldInfo ReticleSmr = typeof(ReticleMesh).GetField("SMR", BindingFlags.NonPublic | BindingFlags.Instance);
@@ -183,11 +185,11 @@ namespace T90A
 			Transform _line;
 			internal Transform Original;
 
-			internal void Init(FireControlSystem fcs, CameraSlot slot, Transform line = null)
+			internal void Init(FireControlSystem fcs, CameraSlot slot)
 			{
 				_fcs = fcs;
 				_slot = slot;
-				_line = line != null ? line : slot.transform;
+				_line = slot.transform;
 				Original = fcs.FireGateOverrideTransform;
 				slot.ActiveChanged += OnActive;
 				if (slot.IsActive) OnActive(true);
@@ -203,29 +205,6 @@ namespace T90A
 				if (_fcs == null) return;
 				if (active) _fcs.FireGateOverrideTransform = _line;
 				else if (_fcs.FireGateOverrideTransform == _line) _fcs.FireGateOverrideTransform = Original;
-			}
-		}
-
-		internal class AimLine : MonoBehaviour
-		{
-			FireControlSystem _fcs;
-
-			internal static Transform Create(FireControlSystem fcs, CameraSlot daySlot)
-			{
-				var go = new GameObject("T90A fire gate line (1G46 rule)");
-				go.transform.SetParent(daySlot.transform.parent, false);
-				go.transform.SetPositionAndRotation(daySlot.transform.position, daySlot.transform.rotation);
-				go.AddComponent<AimLine>()._fcs = fcs;
-				return go.transform;
-			}
-
-			void LateUpdate()
-			{
-				if (_fcs == null || _fcs.LinkedWeaponSystems == null || _fcs.LinkedWeaponSystems.Length == 0) return;
-				Vector3 dir = _fcs.StabsActive ? _fcs.AimWorldVector
-					: (_fcs.Mounts != null && _fcs.Mounts.Length > 0 ? _fcs.Mounts[_fcs.Mounts.Length - 1].SightDirectionOverride : null)
-						?? _fcs.LinkedWeaponSystems[0].MuzzleIdentity.forward;
-				if (dir.sqrMagnitude > 1e-6f) transform.rotation = Quaternion.LookRotation(dir, transform.parent != null ? transform.parent.up : Vector3.up);
 			}
 		}
 
@@ -310,14 +289,19 @@ namespace T90A
 			slot.VibrationShakeMultiplier = dSlot.VibrationShakeMultiplier;
 			slot.SpriteType = dSlot.SpriteType;
 
-			night.Alignment = dOptic.Alignment;
-			night.RotateElevation = dOptic.RotateElevation;
-			night.RotateAzimuth = dOptic.RotateAzimuth;
-			night.CantCorrect = dOptic.CantCorrect;
-			night.ForceHorizontalReticleAlign = dOptic.ForceHorizontalReticleAlign;
+			night.Alignment = day.Alignment;
+			night.RotateElevation = day.RotateElevation;
+			night.RotateAzimuth = day.RotateAzimuth;
+			night.CantCorrect = day.CantCorrect;
+			night.CantCorrectMaxSpeed = day.CantCorrectMaxSpeed;
+			night.LevelTransform = day.LevelTransform;
+			night.ForceHorizontalReticleAlign = day.ForceHorizontalReticleAlign;
+			night.LocalElevationLimits = BuranElevationLimits;
+			night.LocalAzimuthLimits = day.LocalAzimuthLimits;
 			night.RegisterAtStart = false;
 
-			if (day.FCS != null) night.gameObject.AddComponent<GateFollowsSight>().Init(day.FCS, slot, AimLine.Create(day.FCS, day.slot));
+			if (day.FCS != null) night.gameObject.AddComponent<GateFollowsSight>().Init(day.FCS, slot);
+			Fcs1A45T.AimClamp.Register(day.FCS, night);
 
 			if (night.post != null && dOptic.post != null)
 			{

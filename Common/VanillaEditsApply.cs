@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using GHPC;
+using GHPC.PhysicsHelpers;
 using GHPC.Utility;
 using HarmonyLib;
 using UnityEngine;
@@ -9,7 +11,8 @@ namespace T90A.Common
 {
 	internal static class VanillaEditsApply
 	{
-		static readonly System.Reflection.FieldInfo RestRotation = AccessTools.Field(typeof(AimablePlatform), "_originalLocalRotation");
+		static readonly FieldInfo RestRotation = AccessTools.Field(typeof(AimablePlatform), "_originalLocalRotation");
+		static readonly FieldInfo GroupColliders = AccessTools.Field(typeof(RaycastColliderGroup), "childColliders");
 
 		internal static void Apply(Transform root, VanillaEdits e, IDictionary<string, (Mesh mesh, Transform bone)> reshape, List<string> problems = null)
 		{
@@ -81,6 +84,17 @@ namespace T90A.Common
 				var fs = Followers.On(root, bone);
 				foreach (var f in fs) f.transform.SetPositionAndRotation(bone.TransformPoint(Followers.PosShift(f)), bone.rotation * Followers.RotShift(f));
 			}
+
+			foreach (var n in e.Strip)
+				foreach (var t in Find(n))
+				{
+					var cols = t.GetComponents<Collider>();
+					foreach (var g in groups.SelectMany(x => x.GetComponentsInChildren<RaycastColliderGroup>(true)).Distinct())
+						if (GroupColliders.GetValue(g) is List<Collider> list) foreach (var col in cols) list.Remove(col);
+					foreach (var a in t.GetComponents<IArmor>()) Object.Destroy(a as Component);
+					foreach (var col in cols) Object.Destroy(col);
+					foreach (var r in t.GetComponents<Renderer>()) Object.Destroy(r);
+				}
 		}
 
 		static List<Transform> Groups(Transform root)

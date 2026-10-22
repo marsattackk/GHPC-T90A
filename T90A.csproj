@@ -23,6 +23,11 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Resources\T72M1_skin_hull_trimmed.bin" LogicalName="T72M1_skin_hull_trimmed.bin" />
+    <EmbeddedResource Include="Resources\tkn4s_day.jsonc" LogicalName="tkn4s_day.jsonc" />
+    <EmbeddedResource Include="Resources\tkn4s_night.jsonc" LogicalName="tkn4s_night.jsonc" />
+    <EmbeddedResource Include="Resources\modules_built.json" LogicalName="modules_built.json" />
+    <EmbeddedResource Include="Resources\interior_map.txt" LogicalName="interior_map.txt" />
+    <EmbeddedResource Include="Resources\gun_depression.txt" LogicalName="gun_depression.txt" />
   </ItemGroup>
 
   <ItemGroup>

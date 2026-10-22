@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using GHPC;
 using GHPC.Equipment;
 using MelonLoader;
 using UnityEngine;
@@ -16,6 +17,7 @@ namespace T90A
 			public bool Era;
 			public bool AngleMatters;
 			public bool Variable;
+			public bool ActualThickness;
 			public float DepthMm;
 			public bool DrawnOnly;
 			public float Weight = 1f;
@@ -27,7 +29,7 @@ namespace T90A
 		{
 			["era"] = new Entry
 			{
-				Kind = "era", Name = "Kontakt-5 ERA", Ke = 190f, Ce = 550f, Era = true, AngleMatters = false, Xray = "era",
+				Kind = "era", Name = "Kontakt-5 ERA", Ke = 140f, Ce = 550f, Era = true, AngleMatters = false, Xray = "era",
 				KeAfter = 0f, CeAfter = 0f,
 			},
 			["composite"] = new Entry
@@ -62,7 +64,7 @@ namespace T90A
 			},
 			["screen"] = new Entry
 			{
-				Kind = "screen", Name = "rubber-fabric side screen", Ke = 10f, Ce = 10f, AngleMatters = false,
+				Kind = "screen", Name = "rubber-fabric side screen", Ke = 8f, Ce = 8f, AngleMatters = false, ActualThickness = true,
 			},
 			["steel_front"] = Steel("steel_front", "turret front plate (cheek outer wall)", 65f),
 			["steel_inner"] = Steel("steel_inner", "turret cheek inner wall", 150f),
@@ -74,7 +76,7 @@ namespace T90A
 			["steel_under"] = Steel("steel_under", "turret bustle floor", 45f),
 			["mantlet"] = new Entry
 			{
-				Kind = "mantlet", Name = "gun mantlet", Ke = 420f, Ce = 505f, AngleMatters = true, Variable = true, DepthMm = MantletDepthMm,
+				Kind = "mantlet", Name = "gun mantlet", Ke = 350f, Ce = 460f, AngleMatters = true, Variable = true, DepthMm = MantletDepthMm,
 			},
 			["steel_base"] = new Entry
 			{
@@ -82,11 +84,12 @@ namespace T90A
 			},
 			["box"] = new Entry
 			{
-				Kind = "box", Name = "turret stowage box", Ke = 5f, Ce = 5f, AngleMatters = true,
+				Kind = "box", Name = "turret stowage box", Ke = 3f, Ce = 3f, AngleMatters = true,
 			},
 		};
 
-		const float SteelKe = 1.05f, SteelCe = 1.0f;
+		const float SteelKe = 1.05f;
+		const float SteelCe = 1.0f;
 		internal const float MantletDepthMm = 749f;
 
 		static Entry Steel(string kind, string name, float mm) => new Entry
@@ -95,6 +98,31 @@ namespace T90A
 		};
 
 		internal static bool IsSteel(string kind) => kind.StartsWith("steel_");
+
+		internal class Kept { public float Mm; }
+
+		static Kept KeptPlate(float mm) => new Kept { Mm = mm};
+		internal static readonly Dictionary<string, Kept> KeptBase = new Dictionary<string, Kept>
+		{
+			["Hull Side"] = KeptPlate(80f),
+			["Hull Side.001"] = KeptPlate(20f),
+			["Hull Roof 30mm "] = KeptPlate(30f),
+			["Hull Roof 20mm"] = KeptPlate(20f),
+			["Hull Floor"] = KeptPlate(20f),
+		};
+
+		static UniformArmor KeptArmour(Transform hullArmour, string name) => hullArmour != null ? hullArmour.Find(name)?.GetComponent<UniformArmor>() : null;
+		static bool KeptSame(UniformArmor ua, Kept k) => Mathf.Abs(ua.PrimarySabotRha - k.Mm) < 0.01f && Mathf.Abs(ua.PrimaryHeatRha - k.Mm) < 0.01f;
+
+		internal static void CheckKept(Transform hullArmour, List<string> problems)
+		{
+			foreach (var kv in KeptBase)
+			{
+				var ua = KeptArmour(hullArmour, kv.Key);
+				if (ua == null) problems.Add($"hull plate '{kv.Key.Trim()}' not found");
+				else if (!KeptSame(ua, kv.Value)) problems.Add($"hull plate '{kv.Key.Trim()}' is {ua.PrimarySabotRha:0} mm in the game, {kv.Value.Mm:0} mm in the T-90A's sources");
+			}
+		}
 
 		internal static bool ShownInXray(string kind) => Table.TryGetValue(kind, out var e) && e.Xray != null || kind == "composite";
 
@@ -155,6 +183,7 @@ namespace T90A
 				: IsSteel(kind) && e.Variable ? VariableSteelMaterial("T-90A welded turret steel (geometry)", e.Ke, e.Ce)
 				: IsSteel(kind) ? SteelMaterial("T-90A welded turret steel", 313f, true)
 				: kind == "box" ? SteelMaterial("T-90A stowage box sheet steel", 129f, false)
+				: kind == "screen" ? RubberMaterial("T-90A rubber-fabric screen (rubber skirts)")
 				: e.DepthMm > 0f ? MakeMaterial(e.Name, e.Kind, e.Ke / e.DepthMm, e.Ce / e.DepthMm)
 				: MakeMaterial(e.Name, e.Kind, 1f, 1f);
 			return e;
@@ -171,6 +200,21 @@ namespace T90A
 				Name = shatter ? "armor steel" : "mild steel", ThicknessSource = ArmorType.RhaSource.BHN, BHN = bhn,
 				RhaeMultiplierKe = 1f, RhaeMultiplierCe = 1f, CanShatterLongRods = shatter, CanRicochet = true, NormalizesHits = true,
 				HarderIsBetter = false, SpallAngleMultiplier = 1f, SpallPowerMultiplier = 1f, CrushThicknessModifier = 1f,
+			};
+			Object.DontDestroyOnLoad(codex);
+			return _steel[name] = codex;
+		}
+
+		static ArmorCodexScriptable RubberMaterial(string name)
+		{
+			if (_steel.TryGetValue(name, out var m)) return m;
+			var codex = ScriptableObject.CreateInstance<ArmorCodexScriptable>();
+			codex.name = name;
+			codex.ArmorType = new ArmorType
+			{
+				Name = "rubber", ThicknessSource = ArmorType.RhaSource.Multipliers, RhaeMultiplierKe = 0.1f, RhaeMultiplierCe = 0.1f, BHN = 350f,
+				CanShatterLongRods = false, CanRicochet = false, NormalizesHits = true, HarderIsBetter = false,
+				SpallAngleMultiplier = 0.1f, SpallPowerMultiplier = 0.1f, CrushThicknessModifier = 1f,
 			};
 			Object.DontDestroyOnLoad(codex);
 			return _steel[name] = codex;

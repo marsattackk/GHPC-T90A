@@ -35,7 +35,9 @@ namespace T90A
 		internal const float RoundsPerMinute = 625f;
 		static readonly Vector2 Traverse = new Vector2(-45f, 60f);
 		static readonly Vector2 Elevation = new Vector2(-5f, 70f);
-		const float CupolaSpeed = 20f;
+		const float CupolaSpeed = 35f;
+		const float ElevationSpeed = 24f;
+		const int BeltB32PerTracer = 3;
 
 		static readonly FieldInfo StageDuration = AccessTools.Field(typeof(AmmoFeed.ReloadStage), "Duration");
 		static readonly FieldInfo RackClipTypes = AccessTools.Field(typeof(AmmoRack), "_clipTypes");
@@ -108,7 +110,10 @@ namespace T90A
 			float cycle = 60f / RoundsPerMinute;
 			foreach (var s in feed.RoundCycleStages) StageDuration.SetValue(s, (float)StageDuration.GetValue(s) * cycle / donorCycle);
 			var donorBelt = rack.ClipTypes[0];
-			var belt = new AmmoType.AmmoClip { Name = "12.7mm B-32 / BZT-44", MinimalPattern = donorBelt.MinimalPattern, Capacity = BeltRounds };
+			var donorB32 = donorBelt.MinimalPattern[0];
+			var tracer = donorBelt.MinimalPattern.First(a => a != donorB32);
+			var pattern = Enumerable.Repeat(donorB32, BeltB32PerTracer).Append(tracer).ToArray();
+			var belt = new AmmoType.AmmoClip { Name = "12.7mm B-32 / BZT-44", MinimalPattern = pattern, Capacity = BeltRounds };
 			RackClipTypes.SetValue(rack, new[] { belt });
 			RackInitialCounts.SetValue(rack, new[] { Belts });
 			var b32 = belt.MinimalPattern[0];
@@ -130,7 +135,7 @@ namespace T90A
 			var scripts = new GameObject("---T90A ZPU SCRIPTS---");
 			scripts.transform.SetParent(root, false);
 			var cupola = Platform(scripts.transform, "ZPU cupola drive", d.CupolaDrive, cupolaBone, EnumHelpers.Axis3.Y, Traverse, CupolaSpeed, zones.CupolaDrive);
-			var elev = Platform(scripts.transform, "ZPU elevation drive", d.ElevationDrive, cradle, EnumHelpers.Axis3.X, Elevation, d.ElevationDrive.SpeedPowered, zones.ElevationDrive);
+			var elev = Platform(scripts.transform, "ZPU elevation drive", d.ElevationDrive, cradle, EnumHelpers.Axis3.X, Elevation, ElevationSpeed, zones.ElevationDrive);
 			fcs.Mounts = new[] { cupola, elev };
 
 			var optic = opticGo.GetComponent<UsableOptic>();
@@ -169,9 +174,11 @@ namespace T90A
 				var clips = vehicle.GetComponent<LoadoutManager>()?.LoadedAmmoList?.AmmoClips;
 				AmmoCodexScriptable Round(int i, string name, string token) =>
 					(clips != null && clips.Length > i && clips[i] != null ? clips[i].ClipType.MinimalPattern[0] : null) ?? (fontHost != null ? Sight1G46.FindAmmo(name, fontHost, token) : null);
-				var reticle = Tkn4sReticle.Get(tkn.reticleMesh.reticleSO, fontHost, b32,
-					Round(0, Sight1G46.ApfsdsAmmo, "3BM"), Round(2, Sight1G46.HeAmmo, "3OF"), Round(1, Sight1G46.HeatAmmo, "3BK"));
-				CommanderSight.Configure(tkn, tknNight, d.NightLook, tknHead, fcs, weapon, b32, optic.LevelTransform, slot, zones.Tkn4s, reticle);
+				var rounds = new Dictionary<string, AmmoCodexScriptable> { { "b32", b32 },
+					{ "apfsds", Round(0, Sight1G46.ApfsdsAmmo, "3BM") }, { "he", Round(2, Sight1G46.HeAmmo, "3OF") }, { "heat", Round(1, Sight1G46.HeatAmmo, "3BK") } };
+				var reticle = Reticles.Build("tkn4s_day.jsonc", tkn.reticleMesh.reticleSO, fontHost, rounds);
+				var nightReticle = Reticles.Build("tkn4s_night.jsonc", null, fontHost, null);
+				CommanderSight.Configure(tkn, tknNight, d.NightLook, tknHead, fcs, weapon, b32, optic.LevelTransform, slot, zones.Tkn4s, reticle, nightReticle);
 				Tkn4sReadout.Build(tkn, wm.Weapons[0].Weapon, wm.Weapons[0].FCS);
 			}
 

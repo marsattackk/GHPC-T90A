@@ -1,8 +1,10 @@
+using System.Collections.Generic;
 using GHPC.Equipment.Optics;
 using GHPC.Weapons;
+using MelonLoader;
+using T90A.Common;
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace T90A
 {
@@ -17,25 +19,15 @@ namespace T90A
 		internal static void Build(UsableOptic day, WeaponSystem gun, FireControlSystem gunFcs)
 		{
 			if (day == null || gun == null) return;
-			var root = new GameObject("TKN-4S indicator Canvas", typeof(RectTransform));
-			root.transform.SetParent(day.transform, false);
-			var canvas = root.AddComponent<Canvas>();
-			canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-			canvas.sortingOrder = -1;
-			var scaler = root.AddComponent<CanvasScaler>();
-			scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-			scaler.referenceResolution = new Vector2(800f, 600f);
-			scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-			scaler.matchWidthOrHeight = 1f;
-			float u = 600f / (CommanderSight.DayFov * Mathf.Deg2Rad * 1000f);
-
-			float h = Fcs1A45T.Readout.StripHeight;
-			var strip = Fcs1A45T.Readout.Rect("strip", root.transform, new Vector2(0f, 0f), new Vector2(1f, 0f), new Vector2(0f, h / 2f), new Vector2(0f, h));
-			strip.gameObject.AddComponent<Image>().color = Color.black;
-			var r = root.AddComponent<Tkn4sReadout>();
+			var spec = Reticles.Spec("tkn4s_day.jsonc");
+			var problems = new List<string>();
+			var o = ReticleBuild.BuildOverlay(spec, day.transform, (float)spec.Fov, problems);
+			foreach (var p in problems) MelonLogger.Warning($"T-90A TKN-4S indicator strip: {p}");
+			var r = o.Root.AddComponent<Tkn4sReadout>();
 			r._gun = gun; r._gunFcs = gunFcs;
-			r._digit = Fcs1A45T.Readout.Text("ammo text", root.transform, Tkn4sReticle.IndicatorX * u, 24f, TextAlignmentOptions.Center, "");
-			r._lit = Fcs1A45T.Readout.Lamp("ready indicator", root.transform, Tkn4sReticle.ReadyX * u, Fcs1A45T.Readout.LampReady);
+			r._digit = o.Readouts.TryGetValue("ammo", out var digit) ? digit : null;
+			r._lit = o.Lamps.TryGetValue("ready indicator", out var lamp) ? lamp : null;
+			if (r._digit == null || r._lit == null) MelonLogger.Warning("T-90A TKN-4S indicator strip: no 'ammo' readout or 'ready indicator' lamp in its description.");
 		}
 
 		void Update()

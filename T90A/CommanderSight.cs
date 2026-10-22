@@ -17,14 +17,14 @@ namespace T90A
 		internal const float DayFov = 7.8f;
 		internal const float NightFov = 11.5f;
 		internal static readonly Vector2 AutoElevation = new Vector2(-4f, 20f);
-		internal static readonly Vector2 RangeLimits = new Vector2(0f, 2000f);
+		internal static readonly Vector2 RangeLimits = new Vector2(0f, 1600f);
 		internal static readonly Vector3 ZoneCentre = new Vector3(0.535f, 2.0205f, -0.9225f), ZoneSize = new Vector3(0.416f, 0.501f, 0.275f);
 
 		static readonly FieldInfo SlotReparent = AccessTools.Field(typeof(CameraSlot), "_reparentTarget");
 		static readonly FieldInfo ReticleSmr = AccessTools.Field(typeof(ReticleMesh), "SMR");
 
 		internal static void Configure(UsableOptic day, UsableOptic night, UsableOptic nightLook, Transform head, FireControlSystem fcs, WeaponSystem kord,
-			GHPC.Weaponry.AmmoCodexScriptable b32, Transform level, CameraSlot pzu7, DC hitZone, ReticleSO reticle)
+			GHPC.Weaponry.AmmoCodexScriptable b32, Transform level, CameraSlot pzu7, DC hitZone, ReticleSO reticle, ReticleSO nightReticle)
 		{
 			foreach (var o in new[] { day, night })
 			{
@@ -48,7 +48,8 @@ namespace T90A
 				s.HitZone = hitZone;
 				s.SlotToUseOnDestroy = pzu7;
 				s.IsExterior = false;
-				if (o.reticleMesh != null && reticle != null) { o.reticleMesh.reticleSO = o == night ? Tkn4sReticle.Night() : reticle; ReticleSmr.SetValue(o.reticleMesh, null); }
+				var so = o == night ? nightReticle : reticle;
+				if (o.reticleMesh != null && so != null) { o.reticleMesh.reticleSO = so; ReticleSmr.SetValue(o.reticleMesh, null); }
 				o.gameObject.AddComponent<RangeLine>().Init(o, fcs, b32.AmmoType);
 			}
 			day.name = "TKN-4S sight";

@@ -48,6 +48,8 @@ namespace T90A
 				if (aar != null && mat != null) { aar.SwitchMaterials = true; aar.AarMaterial = mat; }
 			}
 
+			ArmorValues.CheckKept(hullArmor, problems);
+
 			var inst = Object.Instantiate(T90AMod.Armor);
 			var gunBone = turretBone.Find("GUN");
 			var groups = new[] { ("HULL", hullBone, hullArmor), ("TURRET", turretBone, turretArmor), ("GUN", gunBone, gunArmor) };
@@ -116,7 +118,7 @@ namespace T90A
 			Material(armor) = e.Material;
 			IsEra(armor) = e.Era;
 			NoDecals(armor) = e.Era;
-			armor.ThicknessListed = UniformArmor.ThicknessMode.RHAE;
+			armor.ThicknessListed = e.ActualThickness ? UniformArmor.ThicknessMode.ActualThickness : UniformArmor.ThicknessMode.RHAE;
 			armor.PrimarySabotRha = e.Ke;
 			armor.PrimaryHeatRha = e.Ce;
 			armor.SecondarySabotRha = e.KeAfter;

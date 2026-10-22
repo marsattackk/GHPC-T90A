@@ -15,7 +15,7 @@ namespace T90A.Common
 			"nsv_mount", "lp_R123",
 		};
 
-		static bool IsHullDetailBone(string n) =>
+		public static bool IsHullDetailBone(string n) =>
 			n == "fender_L" || n == "fender_R" || n == "flaps" || n.StartsWith("gill_") || n.StartsWith("skirt_");
 
 		public static void HideBaseVisuals(Transform root, byte[] trimmedSkin = null)
