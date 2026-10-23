@@ -38,7 +38,7 @@ namespace T90A.Common
 			Followers.ShiftBone(gun, turret.InverseTransformVector(root.TransformVector(s.NewGun - s.BaseGun)));
 			Followers.Refollow(root, turret, turretOld);
 			Followers.Refollow(root, gun, gunOld);
-			Rebind(root, gun);
+			Rebind(root, (turret, turretOld), (gun, gunOld));
 			if (s.NewMuzzle.HasValue)
 			{
 				if (muzzle == null) MelonLogger.Warning($"{s.Tag}: no muzzle point to move.");
@@ -52,14 +52,29 @@ namespace T90A.Common
 			}
 		}
 
-		static void Rebind(Transform root, Transform gun)
+		static void Rebind(Transform root, params (Transform bone, (Vector3 pos, Quaternion rot) old)[] moved)
 		{
+			var gun = moved[moved.Length - 1].bone;
 			foreach (var s in root.GetComponentsInChildren<SkinnedMeshRenderer>(true))
 			{
 				if (s.bones == null || !s.bones.Contains(gun) || s.sharedMesh == null) continue;
-				var mesh = s.sharedMesh;
-				mesh.bindposes = s.bones.Select(b => b.worldToLocalMatrix * s.transform.localToWorldMatrix).ToArray();
-				s.sharedMesh = mesh;
+				var bones = s.bones;
+				foreach (var (bone, old) in moved)
+				{
+					Transform bind = null;
+					for (int i = 0; i < bones.Length; i++)
+					{
+						if (bones[i] != bone) continue;
+						if (bind == null)
+						{
+							bind = new GameObject(bone.name + " (bind)").transform;
+							bind.SetParent(bone, false);
+							bind.SetPositionAndRotation(old.pos, old.rot);
+						}
+						bones[i] = bind;
+					}
+				}
+				s.bones = bones;
 			}
 		}
 	}

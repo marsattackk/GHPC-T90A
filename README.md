@@ -10,7 +10,7 @@ I made this mod for myself first, but you're welcome to use it too.
   <img src="docs/images/t90a_firing.jpg" width="49%" alt="The T-90A firing">
 </p>
 
-This README describes **version 0.3.1**. No other mod needed, just MelonLoader.
+This README describes **version 0.3.2**. No other mod needed, just MelonLoader.
 
 ## Installing it
 
