@@ -115,6 +115,8 @@ namespace T90A
 			catch (Exception e) { MelonLogger.Error("T-90A sight setup failed: " + e); }
 			try { Modules.Wire(vehicle); }
 			catch (Exception e) { MelonLogger.Error("T-90A module wiring failed: " + e); }
+			try { PortAmmo.SelfCheck(vehicle); }
+			catch (Exception e) { MelonLogger.Error("T-90A ammunition self-check failed: " + e); }
 			try
 			{
 				ThermalHeat.Apply(vehicle.transform, ThermalHeat.PortParts(vehicle.transform, "T90A_"));

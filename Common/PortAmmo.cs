@@ -191,6 +191,21 @@ namespace T90A.Common
 			return sets;
 		}
 
+		static Transform _modelHolder;
+
+		static Transform ModelHolder
+		{
+			get
+			{
+				if (_modelHolder != null) return _modelHolder;
+				var go = new GameObject($"{S.Tag} round models (inactive)");
+				go.SetActive(false);
+				Object.DontDestroyOnLoad(go);
+				_modelHolder = go.transform;
+				return _modelHolder;
+			}
+		}
+
 		static AmmoClipCodexScriptable MakeClip(Round r, AmmoType source)
 		{
 			var ammo = new AmmoType();
@@ -211,9 +226,8 @@ namespace T90A.Common
 
 			if (source.VisualModel != null)
 			{
-				var visual = Object.Instantiate(source.VisualModel);
+				var visual = Object.Instantiate(source.VisualModel, ModelHolder, false);
 				visual.name = r.Id + " visual";
-				Object.DontDestroyOnLoad(visual);
 				var stored = visual.GetComponent<AmmoStoredVisual>();
 				if (stored != null) { stored.AmmoType = ammo; stored.AmmoScriptable = codex; }
 				ammo.VisualModel = visual;
@@ -246,6 +260,82 @@ namespace T90A.Common
 			lm.RackLoadouts = kept.ToArray();
 			if (missile >= 0) AddGuidanceUnit(weapon);
 			RegisterAllBallistics.Invoke(lm, null);
+		}
+
+		static readonly HashSet<string> reported = new HashSet<string>();
+
+		internal static void SelfCheck(Vehicle vehicle)
+		{
+			if (S == null || !_built || vehicle == null) return;
+			var problems = new List<string>();
+			var own = Apfsds.Select(kv => (kv.Key, kv.Value)).ToList();
+			if (Missile != null) own.Add((S.Missile.Id, Missile));
+			foreach (var (id, clip) in own)
+			{
+				var model = clip?.ClipType?.MinimalPattern?.FirstOrDefault()?.AmmoType?.VisualModel;
+				if (model == null) { problems.Add($"{id} round model missing"); continue; }
+				if (model.activeInHierarchy) problems.Add($"{id} round model is active in the scene");
+				string damage = ModelDamage(model.transform);
+				if (damage != null) problems.Add($"{id} round model {damage}");
+			}
+			var lm = vehicle.GetComponent<LoadoutManager>();
+			var clips = lm?.LoadedAmmoList?.AmmoClips;
+			if (lm == null || clips == null) { Report(vehicle, problems.Concat(new[] { "no loadout" })); return; }
+			int expected = 3 + (Missile != null ? 1 : 0);
+			if (clips.Length != expected) problems.Add($"ammo list has {clips.Length} entries, expected {expected}");
+			if (clips.Length > 0 && !Apfsds.Values.Any(a => ReferenceEquals(a, clips[0]))) problems.Add($"APFSDS slot holds '{clips[0]?.ClipType?.Name}'");
+			if (clips.Length > 1 && !ReferenceEquals(clips[1], Heat)) problems.Add($"HEAT slot holds '{clips[1]?.ClipType?.Name}'");
+			bool xray = AarController.ShowXray || AarController.InAar;
+			var cm = ConstantsAndInfoManager.Instance;
+			int aarLayer = cm != null ? cm.AarLayer : 15, xrayLayer = cm != null ? cm.XrayOnlyLayer : 21;
+			var bad = new Dictionary<string, int>();
+			void Bad(string what) => bad[what] = bad.TryGetValue(what, out int n) ? n + 1 : 1;
+			int stored = 0;
+			foreach (var rl in lm.RackLoadouts ?? new LoadoutManager.RackLoadout[0])
+			{
+				if (rl.Rack == null) continue;
+				foreach (var slot in rl.Rack.VisualSlots)
+				{
+					var v = slot != null ? slot.GetComponentsInChildren<AmmoStoredVisual>(true).FirstOrDefault(x => !x.Hidden) : null;
+					if (v == null) continue;
+					string name = v.AmmoType?.Name ?? "unknown round";
+					var parts = v.GetComponentsInChildren<Renderer>(true).ToList();
+					if (v.ChargeVisual != null) parts.AddRange(v.ChargeVisual.GetComponentsInChildren<Renderer>(true));
+					if (parts.Count == 0) { Bad($"{name} stored without a model"); continue; }
+					string damage = ModelDamage(v.transform);
+					if (damage != null) Bad($"{name} stored {damage}");
+					if (!xray && parts.Any(r => r.gameObject.layer == aarLayer || r.gameObject.layer == xrayLayer)) Bad($"{name} stored on the x-ray layer");
+				}
+			}
+			foreach (var kv in bad) problems.Add($"{kv.Key} ({kv.Value}x)");
+			for (int i = 0; i < clips.Length; i++) stored += lm.GetCurrentAmmoCount(i);
+			var weapon = vehicle.GetComponent<WeaponsManager>()?.Weapons?.FirstOrDefault()?.Weapon;
+			int breech = weapon?.Feed?.AmmoTypeInBreech != null ? 1 : 0;
+			int total = (lm.TotalAmmoCounts ?? new int[0]).Sum();
+			if (lm.FillAmmoOnStart && Math.Abs(stored + breech - total) > 1) problems.Add($"{stored} rounds stored + {breech} in the breech, expected {total}");
+			if (Missile != null && clips.Contains(Missile) && weapon != null)
+			{
+				if (weapon.GuidanceUnit == null) problems.Add("missile guidance unit missing");
+				else if (!ReferenceEquals(FeedMissileGuidance.GetValue(weapon.Feed), weapon.GuidanceUnit)) problems.Add("missile guidance unit not linked to the gun's feed");
+			}
+			Report(vehicle, problems);
+		}
+
+		static string ModelDamage(Transform model)
+		{
+			var issues = new List<string>();
+			var filters = model.GetComponentsInChildren<MeshFilter>(true);
+			if (filters.Any(f => f.sharedMesh == null)) issues.Add("lost meshes");
+			if (model.GetComponentsInChildren<Renderer>(true).Any(r => r.sharedMaterials.Any(m => m == null))) issues.Add("lost materials");
+			if (model.GetComponentsInChildren<Collider>(true).Length == 0) issues.Add("has no hit zones");
+			return issues.Count > 0 ? string.Join(", ", issues) : null;
+		}
+
+		static void Report(Vehicle vehicle, IEnumerable<string> problems)
+		{
+			var fresh = problems.Where(p => reported.Add(p)).ToList();
+			if (fresh.Count == 0) return;
+			MelonLogger.Warning($"{S.Tag} ammunition self-check ({vehicle.name}): {string.Join("; ", fresh)}. Please include this log in a bug report.");
 		}
 
 		static readonly FieldInfo InitialClipCounts = AccessTools.Field(typeof(GHPC.Weapons.AmmoRack), "_initialClipCounts");
