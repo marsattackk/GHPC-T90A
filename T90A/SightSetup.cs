@@ -2,6 +2,7 @@ using GHPC.Equipment.Optics;
 using GHPC.Vehicle;
 using GHPC.Weapons;
 using MelonLoader;
+using T90A.Common;
 
 namespace T90A
 {
@@ -34,10 +35,6 @@ namespace T90A
 			NightSight.Apply(vehicle, day);
 		}
 
-		internal static UsableOptic DayOptic(FireControlSystem fcs)
-		{
-			if (fcs?.MainOptic == null) return null;
-			return fcs.MainOptic.slot.IsLinkedNightSight ? fcs.MainOptic.slot.LinkedDaySight.PairedOptic : fcs.MainOptic;
-		}
+		internal static UsableOptic DayOptic(FireControlSystem fcs) => GuidanceBeam.DayOptic(fcs);
 	}
 }

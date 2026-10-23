@@ -32,7 +32,7 @@ namespace T90A
 
 		void Update()
 		{
-			if (_gun == null) return;
+			if (_gun == null || _digit == null || _lit == null) return;
 			var ammo = _gunFcs != null ? _gunFcs.CurrentAmmoType : null;
 			string g = ammo != null ? Fcs1A45T.Readout.Glyph(ammo) : "";
 			if (_digit.text != g) _digit.text = g;

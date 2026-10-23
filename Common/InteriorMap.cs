@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using System.Globalization;
-using System.Linq;
 using GHPC.Utility;
 using UnityEngine;
 
@@ -10,8 +9,8 @@ namespace T90A.Common
 	{
 		internal sealed class Move
 		{
-			public string Path, Kind;
-			public Vector3 Local, From;
+			public string Path;
+			public Vector3 Local;
 			public Quaternion? Rot;
 			public Vector3? Scale;
 			public string Parent;
@@ -33,7 +32,7 @@ namespace T90A.Common
 				if (f[0] != "move" || f.Length < 8) continue;
 				map.Moves.Add(new Move
 				{
-					Path = f[1], Kind = f[2], Local = V3(f[4]), Rot = f[5] == "-" ? (Quaternion?)null : Q(f[5]), From = V3(f[6]),
+					Path = f[1], Local = V3(f[4]), Rot = f[5] == "-" ? (Quaternion?)null : Q(f[5]),
 					Scale = f.Length > 9 && f[9] != "-" ? V3(f[9]) : (Vector3?)null,
 					Parent = f.Length > 10 && f[10] != "-" ? f[10] : null,
 				});
@@ -45,33 +44,27 @@ namespace T90A.Common
 
 		static Quaternion Q(string s) { var a = s.Split(','); return new Quaternion(float.Parse(a[0], CI), float.Parse(a[1], CI), float.Parse(a[2], CI), float.Parse(a[3], CI)); }
 
-		internal string Apply(Transform root, List<string> problems = null)
+		internal void Apply(Transform root, List<string> problems = null)
 		{
-			var counts = new Dictionary<string, int>();
-			var before = new List<string>();
-			float largest = 0f; string largestName = ""; int reparented = 0;
-			var missing = new List<string>();
 			foreach (var m in Moves)
 			{
 				var t = Find(root, m.Path) ?? (m.Parent != null ? Find(root, m.CurrentPath) : null);
-				if (t == null) { missing.Add(m.Path); problems?.Add($"'{m.Path}' not found"); continue; }
+				if (t == null)
+				{
+					problems?.Add($"'{m.Path}' not found");
+					continue;
+				}
 				Transform parent = null;
-				if (m.Parent != null && (parent = Find(root, m.Parent)) == null) { missing.Add(m.Parent); problems?.Add($"'{m.Parent}' (new parent of '{m.Path}') not found"); continue; }
-				float pre = parent == null || t.parent != parent ? (t.localPosition - m.From).magnitude : 0f;
-				if (pre > 0.001f) before.Add($"{t.name} {pre * 100f:0.0} cm");
-				var was = t.position;
-				if (parent != null && t.parent != parent) { t.SetParent(parent, false); reparented++; }
+				if (m.Parent != null && (parent = Find(root, m.Parent)) == null)
+				{
+					problems?.Add($"'{m.Parent}' (new parent of '{m.Path}') not found");
+					continue;
+				}
+				if (parent != null && t.parent != parent) t.SetParent(parent, false);
 				t.localPosition = m.Local;
 				if (m.Rot.HasValue) t.localRotation = m.Rot.Value;
 				if (m.Scale.HasValue) t.localScale = m.Scale.Value;
-				float d = (t.position - was).magnitude;
-				if (d > largest) { largest = d; largestName = t.name; }
-				counts[m.Kind] = counts.TryGetValue(m.Kind, out var n) ? n + 1 : 1;
 			}
-			return $"{Moves.Count - missing.Count} of {Moves.Count} moved ({string.Join(", ", counts.Select(c => $"{c.Key} {c.Value}"))}), largest {largest * 100f:0.0} cm ({largestName})"
-				+ (reparented > 0 ? $"; {reparented} re-parented into another rig group" : "")
-				+ (before.Count > 0 ? $"; already moved before (now the map's pose): {string.Join(", ", before)}" : "")
-				+ (missing.Count > 0 ? $"; {missing.Count} NOT FOUND: {string.Join(", ", missing)}" : "");
 		}
 
 		internal static Transform Find(Transform root, string path)

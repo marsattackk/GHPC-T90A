@@ -5,7 +5,7 @@ namespace T90A.Common
 {
 	public static class VehiclePaint
 	{
-		public static bool Worn;
+		public static bool Clean;
 
 		public static void ApplyPaint(GameObject part, Material template, Shader flir, string paintedPrefix)
 		{
@@ -33,11 +33,15 @@ namespace T90A.Common
 		static Material VehicleMaterial(Material src, Material template)
 		{
 			var m = new Material(template) { name = src.name + " (vehicle)" };
-			var wornAlbedo = src.GetTexture("_EmissionMap");
-			var wornMetal = src.GetTexture("_ParallaxMap");
-			m.SetTexture("_Albedo", Worn && wornAlbedo != null ? wornAlbedo : src.GetTexture("_MainTex"));
+			var albedo = src.GetTexture("_MainTex");
+			var gloss = src.GetTexture("_MetallicGlossMap");
+			var cleanAlbedo = src.HasProperty("_DetailAlbedoMap") ? src.GetTexture("_DetailAlbedoMap") : null;
+			var cleanMetal = src.HasProperty("_DetailNormalMap") ? src.GetTexture("_DetailNormalMap") : null;
+			if (Clean && cleanAlbedo != null) albedo = cleanAlbedo;
+			if (Clean && cleanMetal != null) gloss = cleanMetal;
+			m.SetTexture("_Albedo", albedo);
 			m.SetTexture("_Normal", src.GetTexture("_BumpMap"));
-			m.SetTexture("_Smoothness", Worn && wornMetal != null ? wornMetal : src.GetTexture("_MetallicGlossMap"));
+			m.SetTexture("_Smoothness", gloss);
 			var mask = src.GetTexture("_DetailMask");
 			if (mask != null) m.SetTexture("_PaintMask", mask);
 			var ao = src.HasProperty("_OcclusionMap") ? src.GetTexture("_OcclusionMap") : null;

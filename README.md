@@ -10,7 +10,7 @@ I made this mod for myself first, but you're welcome to use it too.
   <img src="docs/images/t90a_firing.jpg" width="49%" alt="The T-90A firing">
 </p>
 
-This README describes **version 0.2.0**. No other mod needed, just MelonLoader.
+This README describes **version 0.3.0**. No other mod needed, just MelonLoader.
 
 ## Installing it
 
@@ -129,6 +129,19 @@ instead of the default.
   ammo / ready indicator at the bottom. Switch to it with the game's "Cycle View" key; looking through it, you aim and
   fire the remote Kord.
 
+## The paint
+
+<p align="center">
+  <img src="docs/images/paint_weathered.jpg" width="49%" alt="Weathered paint (default)">
+  <img src="docs/images/paint_clean.jpg" width="49%" alt="Clean factory paint">
+</p>
+
+*Left: the default weathered paint. Right: `Weathered paint` set to false.*
+
+The weathering is made for the T-90A's own shape: dust and mud heavier toward the ground, grime in the crevices,
+streaks down the sides, rust running down from bolts and edges at the back, chipped edges. If you'd rather have a
+factory-fresh tank, set `Weathered paint` to false (see Settings below).
+
 ## Where the model comes from
 
 The 3D model and textures are War Thunder's T-90A, taken from War Thunder's game files. They belong to Gaijin
@@ -165,6 +178,7 @@ before editing it):
 | `Gunner night sight` | `"ESSA"` / `"Buran-M"` | ESSA |
 | `ESSA electronic zoom` | true / false | true |
 | `Armour preset` | `"game-scale"` / `"source-only"` | game-scale |
+| `Weathered paint` | true (dirt, wear and rust) / false (clean factory paint) | true |
 
 In Instant Action and the campaign, the T-90A gets its own APFSDS choice (3BM42 or 3BM60) in the game's normal
 ammo menu.
@@ -186,7 +200,7 @@ The T-90A's commander fires a 12.7 mm Kord from under armour, hatch closed:
   set the superelevation.
 - Drives, sight and barrel can be knocked out. The ammo belt flexes as the gun elevates.
 
-![The remote Kord on the commander's cupola](docs/images/t90a_top_side.webp)
+![The remote Kord on the commander's cupola](docs/images/t90a_kord.jpg)
 
 </details>
 

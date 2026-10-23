@@ -13,6 +13,10 @@ namespace T90A.Common
 		static readonly FieldInfo Current = AccessTools.Field(typeof(HeatSource), "_heat");
 		static readonly FieldInfo Held = AccessTools.Field(typeof(HeatSource), "_mpbRenderers");
 
+		internal static IEnumerable<Transform> PortParts(Transform unit, string prefix) =>
+			unit.GetComponentsInChildren<Transform>(true).Where(t => t.name.StartsWith(prefix) && t.GetComponentsInChildren<Renderer>(true).Length > 0 && t.GetComponentsInParent<Transform>(true).Any(p => p.name == "---MESH---")
+				&& (t.parent == null || !t.parent.GetComponentsInParent<Transform>(true).Any(p => p.name.StartsWith(prefix))));
+
 		internal static void Apply(Transform unit, IEnumerable<Transform> parts, IDictionary<string, float> overrides = null)
 		{
 			var ownParts = parts.Where(p => p != null).ToList();

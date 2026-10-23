@@ -98,6 +98,45 @@ namespace T90A.Common
 			}
 		}
 
+		public static readonly string[] LeftoverMaterials = { "T72_interior", "GST emission", "IR searchlight glow" };
+		public static readonly string[] LeftoverNames = { "Luna lens glow", "Luna visible glow" };
+		public const string LeftoverLightPrefix = "GST light";
+
+		class KeepHidden : MonoBehaviour
+		{
+			internal Renderer[] Renderers;
+			internal Light[] Lights;
+
+			void LateUpdate()
+			{
+				foreach (var r in Renderers) if (r != null && r.enabled) r.enabled = false;
+				foreach (var l in Lights) if (l != null && l.enabled) l.enabled = false;
+			}
+		}
+
+		public static void HideLeftovers(Transform root, string ownPrefix)
+		{
+			bool UnderOurs(Transform t) { for (var x = t; x != null && x != root; x = x.parent) if (x.name.StartsWith(ownPrefix)) return true; return false; }
+			string Clean(Material m) => m == null ? "" : m.name.Replace(" (Instance)", "");
+			var rs = root.GetComponentsInChildren<Renderer>(true)
+				.Where(r => !UnderOurs(r.transform) && !(r is ParticleSystemRenderer)
+					&& (LeftoverNames.Contains(r.name) || r.sharedMaterials.Any(m => LeftoverMaterials.Contains(Clean(m)))))
+				.ToArray();
+			var ls = root.GetComponentsInChildren<Light>(true).Where(l => l.name.StartsWith(LeftoverLightPrefix)).ToArray();
+			foreach (var r in rs) r.enabled = false;
+			foreach (var l in ls) l.enabled = false;
+			var keep = root.gameObject.AddComponent<KeepHidden>();
+			keep.Renderers = rs; keep.Lights = ls;
+		}
+
+		public static void MoveEjectionMarkers(Transform root, Vector3 worldShift)
+		{
+			foreach (var t in root.GetComponentsInChildren<Transform>(true).Where(x => x.name == "ejection path" || x.name == "ejection port fire marker").ToList())
+			{
+				t.position += worldShift;
+			}
+		}
+
 		public static Material FindTemplate(Transform root)
 		{
 			foreach (var r in root.GetComponentsInChildren<Renderer>(true))

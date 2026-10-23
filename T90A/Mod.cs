@@ -8,7 +8,7 @@ using MelonLoader.Utils;
 using T90A.Common;
 using UnityEngine;
 
-[assembly: MelonInfo(typeof(T90A.T90AMod), "T-90A", "0.2.0", "marsattackk")]
+[assembly: MelonInfo(typeof(T90A.T90AMod), "T-90A", "0.3.0", "marsattackk")]
 [assembly: MelonGame("Radian Simulations LLC", "GHPC")]
 
 namespace T90A
@@ -21,6 +21,7 @@ namespace T90A
 		internal static VanillaEdits Edits;
 		internal static MaterialRoles Roles;
 		internal static RigMap Rig;
+		internal static Vector3[] SmokePoints;
 
 		internal const string FriendlyName = "T-90A";
 		const string BaseUnit = "T72M1";
@@ -35,6 +36,7 @@ namespace T90A
 		internal static MelonPreferences_Entry<string> NightSightChoice;
 		internal static MelonPreferences_Entry<bool> EssaElectronicZoom;
 		internal static MelonPreferences_Entry<string> Apfsds;
+		internal static MelonPreferences_Entry<bool> WeatheredPaint;
 
 		static readonly string[] MenuScenes = { "MainMenu2_Scene", "MainMenu2-1_Scene", "LOADER_MENU", "LOADER_INITIAL", "t64_menu", "leo2_menu" };
 
@@ -48,6 +50,7 @@ namespace T90A
 			Apfsds = cfg.CreateEntry("APFSDS", "3BM42", description: "Default APFSDS where the game does not choose one (the mission customizer's ammo dropdown and the campaign's ammo supply override it): 3BM42 Mango (default; the T-90A's stock round) or 3BM60 Svinets-2 (a 2010s round, for T-90As with the long-round autoloader of 2006).");
 			NightSightChoice = cfg.CreateEntry("Gunner night sight", NightSight.Essa, description: "ESSA = thermal sight, T-90A from 2006 (default); Buran-M = 3rd-gen image intensifier of the first T-90As (obr. 2004).");
 			EssaElectronicZoom = cfg.CreateEntry("ESSA electronic zoom", true, description: "ESSA x2 electronic zoom (1.125 deg, half the thermal resolution); not fitted on every tank.");
+			WeatheredPaint = cfg.CreateEntry("Weathered paint", true, description: "Dirt, wear and rust on the paint (default); false = clean factory paint. For T-90As spawned after the change.");
 			ArmorValues.Config(cfg);
 
 			if (!Enabled.Value) return;
@@ -66,6 +69,8 @@ namespace T90A
 				var rig = bundle.LoadAsset<TextAsset>(RigMap.AssetName);
 				if (rig != null) Rig = RigMap.Parse(rig.text);
 				else MelonLogger.Warning("T-90A: bundle has no rig map; the hatches stay closed.");
+				SmokePoints = SmokeLaunchers.Load(bundle);
+				if (SmokePoints == null) MelonLogger.Warning("T-90A: bundle has no smoke launch points; the smoke grenades leave from the T-72's positions.");
 			}
 
 			UnitRegistry.Add(new UnitDef
@@ -81,6 +86,7 @@ namespace T90A
 				OnSpawn = v => Conversion.Convert(v, atSpawn: true),
 			});
 			UnitRegistry.TryRegister();
+			PortAmmo.S = T90AAmmo.Settings();
 			ShowcaseSpawner.Add(new ShowcaseSpawner.Entry { Key = UnitKey, Name = () => FriendlyName, Anchors = new[] { "T80B", "T72M1" } });
 		}
 

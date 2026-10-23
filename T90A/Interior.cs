@@ -31,8 +31,8 @@ namespace T90A
 			var map = Map;
 			if (map == null) return;
 			var problems = new List<string>();
-			string log = map.Apply(vehicle.transform, problems);
-			if (problems.Count > 0) MelonLogger.Warning("T-90A interior: " + log);
+			map.Apply(vehicle.transform, problems);
+			if (problems.Count > 0) MelonLogger.Warning("T-90A interior: " + string.Join("; ", problems));
 		}
 	}
 }

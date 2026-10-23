@@ -41,6 +41,7 @@ namespace T90A.Common
 				if (line.Length == 0 || line[0] == '#') continue;
 				var p = line.Split('|');
 				if (p[0] == "gear" && p.Length > 1) m.RunningGear = p[1];
+				else if (p[0] == "axes" && p.Length >= 5) { Vec(p[1]); Vec(p[2]); Vec(p[3]); float.Parse(p[4], CI); }
 				else if (p[0] == "hatch" && p.Length >= 9)
 					hs.Add(new Hatch { Role = p[2], Group = p[3], BaseBone = p[4], Hinge = Vec(p[5]), Axis = Vec(p[6]), Angle = float.Parse(p[7], CI), Lift = Vec(p[8]) });
 				else if (p[0] == "part" && p.Length >= 5)
