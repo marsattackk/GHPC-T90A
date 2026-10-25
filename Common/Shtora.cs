@@ -6,7 +6,6 @@ using GHPC.Player;
 using GHPC.Vehicle;
 using GHPC.Weapons;
 using HarmonyLib;
-using MelonLoader;
 using UnityEngine;
 using UnityEngine.Events;
 using DC = GHPC.Equipment.DestructibleComponent;
@@ -17,6 +16,7 @@ namespace T90A.Common
 	{
 		internal sealed class Settings
 		{
+			public string Tag;
 			public string EmitterLeft, EmitterRight;
 			public float SectorAz = 20f;
 			public float SectorEl = 2.25f;
@@ -40,8 +40,12 @@ namespace T90A.Common
 			WeaponSystem _gun;
 			bool _subscribed;
 
+			bool _setUp;
+
 			internal void Setup(Vehicle v, Settings s)
 			{
+				if (_setUp) return;
+				_setUp = true;
 				Vehicle = v; S = s;
 				_turret = Followers.TurretBone(v);
 				_gun = ModuleBuilder.MainWeapon(v);
@@ -52,13 +56,21 @@ namespace T90A.Common
 			internal void FindEmitters()
 			{
 				var set = Vehicle.GetComponent<ModuleBuilder.ModuleSet>();
-				if (set == null || _turret == null) return;
+				if (set == null || _turret == null)
+				{
+					DonorParts.WarnOnce("shtora emitters", $"{S.Tag} Shtora-1: no {(set == null ? "modules" : "turret")} found; the jammer has no emitters.");
+					return;
+				}
 				foreach (var (m, dc) in set.Built)
 				{
+					bool left = m.Id == S.EmitterLeft, right = !left && m.Id == S.EmitterRight;
+					if (!left && !right || m.Boxes == null || m.Boxes.Count == 0) continue;
 					var local = _turret.InverseTransformPoint(Vehicle.transform.TransformPoint(m.Bounds.center));
-					if (m.Id == S.EmitterLeft) { Left = dc; LeftLocal = local; }
-					else if (m.Id == S.EmitterRight) { Right = dc; RightLocal = local; }
+					if (left) { Left = dc; LeftLocal = local; }
+					else { Right = dc; RightLocal = local; }
 				}
+				if (Left == null || Right == null)
+					DonorParts.WarnOnce("shtora emitters", $"{S.Tag} Shtora-1: the jammer's emitter module(s) {(Left == null ? S.EmitterLeft : "")}{(Left == null && Right == null ? " and " : "")}{(Right == null ? S.EmitterRight : "")} not found; the jammer doesn't work on that side.");
 			}
 
 			internal void Set(bool on)
@@ -70,19 +82,20 @@ namespace T90A.Common
 			bool Alive(DC dc) => dc != null && !dc.IsDestroyed;
 			internal bool LeftWorks => On && Alive(Left);
 			internal bool RightWorks => On && Alive(Right);
-			internal bool Working => (LeftWorks || RightWorks) && Vehicle != null && !Vehicle.Neutralized && _gun?.MuzzleIdentity != null;
+			internal bool Working => (LeftWorks || RightWorks) && Vehicle != null && !Vehicle.Neutralized && _turret != null && _gun != null && _gun.MuzzleIdentity != null;
 
 			internal Vector3 EmitterCentre()
 			{
-				var pts = new List<Vector3>();
-				if (LeftWorks) pts.Add(_turret.TransformPoint(LeftLocal));
-				if (RightWorks) pts.Add(_turret.TransformPoint(RightLocal));
-				if (pts.Count == 0) return _gun.MuzzleIdentity.position;
-				return pts.Aggregate(Vector3.zero, (a, b) => a + b) / pts.Count;
+				bool l = LeftWorks, r = RightWorks;
+				if (l && r) return (_turret.TransformPoint(LeftLocal) + _turret.TransformPoint(RightLocal)) * 0.5f;
+				if (l) return _turret.TransformPoint(LeftLocal);
+				if (r) return _turret.TransformPoint(RightLocal);
+				return _gun.MuzzleIdentity.position;
 			}
 
 			internal Vector2 Bearing(Vector3 world)
 			{
+				if (_turret == null || _gun == null || _gun.MuzzleIdentity == null) return new Vector2(180f, 0f);
 				var fwd = _gun.MuzzleIdentity.forward;
 				var right = Vector3.Cross(_turret.up, fwd).normalized;
 				var up = Vector3.Cross(fwd, right);
@@ -129,7 +142,12 @@ namespace T90A.Common
 
 		internal static readonly List<Station> Stations = new List<Station>();
 
-		internal static Station Of(Unit u) => u == null ? null : Stations.FirstOrDefault(s => s != null && s.Vehicle == u);
+		internal static Station Of(Unit u)
+		{
+			if (u == null) return null;
+			for (int i = 0; i < Stations.Count; i++) { var s = Stations[i]; if (s != null && s.Vehicle == u) return s; }
+			return null;
+		}
 
 		internal static void Apply(Vehicle v, Settings s)
 		{
@@ -155,18 +173,47 @@ namespace T90A.Common
 		static bool Jammable(AmmoType a, Settings s) =>
 			a != null && a.Guidance == AmmoType.GuidanceType.SACLOS && a.Name != null && s.Missiles.Any(p => a.Name.StartsWith(p, StringComparison.OrdinalIgnoreCase));
 
-		static Station TargetOf(Vector3 launch, Vector3 at)
+		const float AimLineM = 4f, AimLinePerKm = 2f, HeadingM = 5f, HeadingPerKm = 17.5f;
+
+		static Station TargetOf(LiveRound r, Vector3 launch, Vector3 at)
 		{
-			Station best = null; float bestOff = float.MaxValue;
+			var shooter = r.Shooter;
+			bool player = shooter != null && PlayerInput.Instance != null && PlayerInput.Instance.CurrentPlayerUnit == shooter;
+			if (shooter != null && !player && shooter.InfoBroker?.AI is GHPC.AI.UnitAI ai && ai.Target?.Owner is Unit aimed)
+			{
+				var st = Of(aimed);
+				return st != null && Hostile(shooter, st.Vehicle) ? st : null;
+			}
+			var line = GuidanceLine(r);
+			if (line.HasValue) return OnLine(shooter, line.Value.origin, line.Value.direction, AimLineM, AimLinePerKm);
 			var dir = at - launch;
 			if (dir.sqrMagnitude < 1f) return null;
+			return OnLine(shooter, launch, dir.normalized, HeadingM, HeadingPerKm);
+		}
+
+		static bool Hostile(Unit shooter, Unit target) => shooter == null || target == null || shooter.Allegiance != target.Allegiance;
+
+		static Ray? GuidanceLine(LiveRound r)
+		{
+			if (r.Shooter == null) return null;
+			foreach (var g in r.Shooter.GetComponentsInChildren<MissileGuidanceUnit>(true))
+				if (g != null && g.AimElement != null && g.CurrentMissiles != null && g.CurrentMissiles.Contains(r))
+					return new Ray(g.AimElement.position, g.AimElement.forward);
+			return null;
+		}
+
+		static Station OnLine(Unit shooter, Vector3 from, Vector3 dir, float baseM, float perKm)
+		{
+			Station best = null; float bestOff = float.MaxValue;
 			foreach (var st in Stations)
 			{
-				if (st == null || st.Vehicle == null) continue;
-				var to = st.Vehicle.transform.position - launch;
-				float a = Vector3.Angle(dir, to);
-				if (a > 5f) continue;
-				if (a < bestOff) { bestOff = a; best = st; }
+				if (st == null || st.Vehicle == null || st.Vehicle == shooter || !Hostile(shooter, st.Vehicle)) continue;
+				var to = (st.Vehicle.Center != null ? st.Vehicle.Center.position : st.Vehicle.transform.position) - from;
+				float along = Vector3.Dot(to, dir);
+				if (along <= 0f) continue;
+				float off = (to - dir * along).magnitude;
+				if (off > baseM + perKm * along / 1000f || off >= bestOff) continue;
+				bestOff = off; best = st;
 			}
 			return best;
 		}
@@ -184,7 +231,7 @@ namespace T90A.Common
 			{
 				if ((r.transform.position - f.Launch).sqrMagnitude < 50f * 50f) return;
 				f.Picked = true;
-				f.Target = TargetOf(f.Launch, r.transform.position);
+				f.Target = TargetOf(r, f.Launch, r.transform.position);
 				if (f.Target == null) return;
 				if (!Jammable(r.Info, f.Target.S)) { f.Target = null; return; }
 			}
@@ -227,7 +274,7 @@ namespace T90A.Common
 			{
 				if (!__instance.Guided || Stations.Count == 0 || __instance.IsDestroyed) return;
 				try { Step(__instance); }
-				catch (Exception e) { MelonLogger.Error("Shtora jammer failed on a missile: " + e.Message); Flights[__instance] = new Flight { Picked = true, Seen = __instance.TimeTraveled}; }
+				catch (Exception e) { PatchGuard.Failed("Shtora jammer on a missile", e); Flights[__instance] = new Flight { Picked = true, Seen = __instance.TimeTraveled}; }
 			}
 		}
 

@@ -130,7 +130,7 @@ namespace T90A.Common
 			TheaterMetaScriptable meta = null;
 			for (int frame = 0; frame < 600 && meta == null; frame++)
 			{
-				meta = Resources.FindObjectsOfTypeAll<TheaterMetaScriptable>().FirstOrDefault();
+				if (frame % 10 == 0) meta = Resources.FindObjectsOfTypeAll<TheaterMetaScriptable>().FirstOrDefault();
 				if (meta == null) yield return null;
 			}
 			if (meta?.AllTheaters == null) yield break;
@@ -208,8 +208,9 @@ namespace T90A.Common
 			static readonly AccessTools.FieldRef<Unit, string> UniqueName = Reflect.FieldRefAccess<Unit, string>("_uniqueName");
 			static readonly AccessTools.FieldRef<Unit, string> FriendlyNameRef = Reflect.FieldRefAccess<Unit, string>("_friendlyName");
 
-			static void Postfix(string uniqueName, IUnit __result)
+			static void Postfix(string __0, IUnit __result)
 			{
+				string uniqueName = __0;
 				var u = Units.FirstOrDefault(x => string.Equals(uniqueName, x.Key, StringComparison.OrdinalIgnoreCase));
 				if (u == null) return;
 				if (!(__result is Vehicle vehicle)) { MelonLogger.Warning($"{u.Key} spawn returned no Vehicle."); return; }

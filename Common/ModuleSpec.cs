@@ -30,6 +30,7 @@ namespace T90A.Common
 			{
 				get
 				{
+					if (Boxes == null || Boxes.Count == 0) return new Bounds();
 					var b = new Bounds(Boxes[0].Centre, Boxes[0].Size);
 					foreach (var x in Boxes.Skip(1)) b.Encapsulate(new Bounds(x.Centre, x.Size));
 					return b;

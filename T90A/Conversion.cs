@@ -65,6 +65,7 @@ namespace T90A
 
 		static readonly Shtora.Settings Jammer = new Shtora.Settings
 		{
+			Tag = "T-90A",
 			EmitterLeft = "shtora_l", EmitterRight = "shtora_r",
 			SectorAz = 20f,
 			SectorEl = 2.25f,
@@ -140,7 +141,7 @@ namespace T90A
 				if (smoke != null) SmokeLaunchers.RefreshCrew(smoke);
 			}
 			catch (Exception e) { MelonLogger.Error("T-90A smoke crew refresh failed: " + e); }
-			try { Voices.Apply(vehicle); }
+			try { CrewVoices.Apply(vehicle, "T-90A"); }
 			catch (Exception e) { MelonLogger.Error("T-90A voices failed: " + e); }
 			try { Kord.LateSetup(vehicle); }
 			catch (Exception e) { MelonLogger.Error("T-90A Kord late setup failed: " + e); }

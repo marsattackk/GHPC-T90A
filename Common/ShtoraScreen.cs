@@ -77,8 +77,12 @@ namespace T90A.Common
 			internal float[] SlotAz;
 			Transform _turret;
 
+			bool _setUp;
+
 			internal void Setup(Vehicle v, Settings s)
 			{
+				if (_setUp) return;
+				_setUp = true;
 				Vehicle = v; S = s;
 				_turret = Followers.TurretBone(v);
 				Smoke = v.GetComponentInChildren<VehicleSmokeManager>(true);
@@ -86,8 +90,11 @@ namespace T90A.Common
 				var main = ModuleBuilder.MainWeapon(v);
 				if (main != null) main.Fired += (a, r) => { if (a != null && a.Caliber >= 20f) LastOwnShot = Time.time; };
 				if (Smoke == null || _turret == null) return;
-				Slots = (VehicleSmokeManager.SmokeSlot[])SlotsField.GetValue(Smoke);
-				var fwdRef = (Transform)ForwardRefField.GetValue(Smoke) ?? _turret;
+				if (SlotsField == null || PrefabField == null) return;
+				Slots = SlotsField.GetValue(Smoke) as VehicleSmokeManager.SmokeSlot[];
+				if (Slots == null) return;
+				var fwdRef = ForwardRefField?.GetValue(Smoke) as Transform;
+				if (fwdRef == null) fwdRef = _turret;
 				SlotAz = Slots.Select(sl =>
 				{
 					var axis = sl.DisplayMesh != null ? sl.DisplayMesh.transform.forward : fwdRef.forward;
@@ -95,13 +102,21 @@ namespace T90A.Common
 					return Vector3.SignedAngle(Vector3.ProjectOnPlane(fwdRef.forward, fwdRef.up), flat, fwdRef.up);
 				}).ToArray();
 				for (int i = 0; i < Slots.Length; i++) Slots[i].Angle = SlotAz[i];
-				LaunchAngleField.SetValue(Smoke, s.LaunchAngle);
-				DistanceField.SetValue(Smoke, new Vector2(LandingFor(s.Distance.x, s), LandingFor(s.Distance.y, s)));
-				var basePrefab = (GameObject)PrefabField.GetValue(Smoke);
+				LaunchAngleField?.SetValue(Smoke, s.LaunchAngle);
+				DistanceField?.SetValue(Smoke, new Vector2(LandingFor(s.Distance.x, s), LandingFor(s.Distance.y, s)));
+				var basePrefab = PrefabField.GetValue(Smoke) as GameObject;
 				var grenade = Grenade3D17(basePrefab, s);
-				if (grenade != null && ObjectPoolManager.Instance != null) ObjectPoolManager.Instance.Register(grenade);
+				var pool = ObjectPoolManager.Instance;
+				if (grenade != null && pool != null && (!PooledIn.TryGetValue(grenade, out var was) || was != pool))
+				{
+					pool.Register(grenade);
+					PooledIn[grenade] = pool;
+				}
 				if (grenade != null) PrefabField.SetValue(Smoke, grenade);
 			}
+
+			internal Vector3 TurretPoint => _turret != null ? _turret.position + _turret.up * 0.5f
+				: Vehicle.Center != null ? Vehicle.Center.position : Vehicle.transform.position;
 
 			internal Vector2 Bearing(Vector3 world)
 			{
@@ -125,6 +140,12 @@ namespace T90A.Common
 				return false;
 			}
 
+			internal void NoteAi(string s) => Note(s);
+
+			void Note(string s)
+			{
+			}
+
 			internal void Lased(Vector3 from)
 			{
 				if (Vehicle == null || Vehicle.Neutralized || _turret == null) return;
@@ -139,7 +160,7 @@ namespace T90A.Common
 					done = "coarse head: warning only";
 					if (!IsPlayer && Vehicle.InfoBroker?.AI is UnitAI ai)
 					{
-						try { LookAt.Invoke(ai, new object[] { (from - _turret.position).normalized, 12f }); done += "; AI turns the turret to it"; }
+						try { if (LookAt == null) throw new MissingMethodException("UnitAI.FinalLookAtVector"); LookAt.Invoke(ai, new object[] { (from - _turret.position).normalized, 12f }); done += "; AI turns the turret to it"; }
 						catch (Exception e) { done += "; AI turn failed: " + e.Message; }
 					}
 				}
@@ -148,7 +169,7 @@ namespace T90A.Common
 				if (!precise) Held = ("side laser, turn to it", Time.time);
 				else if (!S.Automatic) Held = ("semi-auto mode", Time.time);
 				if (IsPlayer && S.Display == Look.ScreenPage) ShtoraPage.Alarm(Head(b.x, S), this, precise ? b.x : float.NaN, done);
-				if (IsPlayer) Hud.Alarm(Head(b.x, S), S.AlarmTone);
+				if (IsPlayer && S.Display == Look.ControlPanel) Hud.Alarm(Head(b.x, S), S.AlarmTone);
 			}
 
 			internal bool IsPlayer => PlayerInput.Instance != null && PlayerInput.Instance.CurrentPlayerUnit == Vehicle;
@@ -160,12 +181,13 @@ namespace T90A.Common
 			internal string ScreenState()
 			{
 				if (Smoke == null || Slots == null) return "no tubes";
-				int left = Slots.Sum(x => x.Rounds);
+				int left = 0;
+				foreach (var sl in Slots) left += sl.Rounds;
 				if (left <= 0) return "no grenades left";
 				if (S.Automatic && HatchOpen()) return "held: hatch open";
 				float shot = S.OwnShotBlock - (Time.time - LastOwnShot);
 				if (S.Automatic && shot > 0f) return $"held: own shot, {Mathf.CeilToInt(shot)} s";
-				if (Held.why != null && Time.time - Held.at <= HeldShow && !LiveBlocks.Contains(Held.why)) return "held: " + Held.why;
+				if (Held.why != null && Time.time - Held.at <= HeldShow && Array.IndexOf(LiveBlocks, Held.why) < 0) return "held: " + Held.why;
 				return $"ready ({left})";
 			}
 
@@ -198,12 +220,13 @@ namespace T90A.Common
 			bool FireSlot(int i)
 			{
 				var slot = Slots[i];
-				var prefab = (GameObject)PrefabField.GetValue(Smoke);
-				if (prefab == null || ObjectPoolManager.Instance == null) return false;
+				var prefab = PrefabField?.GetValue(Smoke) as GameObject;
+				if (prefab == null || ImpulseMethod == null || ObjectPoolManager.Instance == null) return false;
+				ObjectPoolManager.Instance.Register(prefab);
 				var obj = ObjectPoolManager.Instance.Get(prefab);
 				if (obj == null) return false;
 				var g = obj.GetComponent<Grenade>();
-				var ret = (Action<Grenade>)PoolReturnField.GetValue(Smoke);
+				var ret = PoolReturnField?.GetValue(Smoke) as Action<Grenade>;
 				if (g != null && ret != null) g.Exploded = (Action<Grenade>)Delegate.Combine(g.Exploded, ret);
 				var pos = slot.SpawnLocation.position;
 				obj.transform.position = pos;
@@ -217,9 +240,9 @@ namespace T90A.Common
 				slot.Rounds--;
 				if (slot.DisableVisualOnUse && slot.DisplayMesh != null) slot.DisplayMesh.enabled = false;
 				if (slot.ScaleBoneToZero && slot.DisplayBone != null) slot.DisplayBone.localScale = Vector3.zero;
-				var ev = (string)ShootEventField.GetValue(Smoke);
-				var fwd = (Transform)ForwardRefField.GetValue(Smoke);
-				if (!string.IsNullOrEmpty(ev)) GHPC.Audio.FmodGenericAudioManager.PlayOneShotWithCameraSoundDelay(ev, (fwd ?? Smoke.transform).position);
+				var ev = ShootEventField?.GetValue(Smoke) as string;
+				var fwd = ForwardRefField?.GetValue(Smoke) as Transform;
+				if (!string.IsNullOrEmpty(ev)) GHPC.Audio.FmodGenericAudioManager.PlayOneShotWithCameraSoundDelay(ev, (fwd != null ? fwd : Smoke.transform).position);
 				return true;
 			}
 
@@ -240,7 +263,12 @@ namespace T90A.Common
 		}
 
 		internal static readonly List<Station> Stations = new List<Station>();
-		internal static Station Of(Unit u) => u == null ? null : Stations.FirstOrDefault(s => s != null && s.Vehicle == u);
+		internal static Station Of(Unit u)
+		{
+			if (u == null) return null;
+			for (int i = 0; i < Stations.Count; i++) { var s = Stations[i]; if (s != null && s.Vehicle == u) return s; }
+			return null;
+		}
 
 		static readonly FieldInfo SlotsField = Reflect.Field(typeof(VehicleSmokeManager), "_smokeSlots"),
 			PrefabField = Reflect.Field(typeof(VehicleSmokeManager), "_smokePrefab"),
@@ -253,12 +281,15 @@ namespace T90A.Common
 			EffectField = Reflect.Field(typeof(Grenade), "_effectPrefab"),
 			LaserDestroyedField = Reflect.Field(typeof(FireControlSystem), "_laserDestroyed");
 		static readonly MethodInfo ImpulseMethod = Reflect.Method(typeof(VehicleSmokeManager), "CalculateLaunchImpulse", new[] { typeof(float), typeof(float), typeof(float) }),
-			LookAt = Reflect.Method(typeof(UnitAI), "FinalLookAtVector");
+			LookAt = Reflect.Method(typeof(UnitAI), "FinalLookAtVector", new[] { typeof(Vector3), typeof(float) });
+
+		static bool LaserDestroyed(FireControlSystem fcs) => LaserDestroyedField?.GetValue(fcs) is bool b && b;
 
 		internal static void Apply(Vehicle v, Settings s)
 		{
 			var st = v.gameObject.GetComponent<Station>() ?? v.gameObject.AddComponent<Station>();
 			if (s.PanelShown) Hud.Ensure();
+			if (s.Display == Look.ScreenPage && s.PanelAlways) ShtoraPage.Ensure(s);
 			st.Setup(v, s);
 		}
 
@@ -269,11 +300,13 @@ namespace T90A.Common
 
 		static Transform _holder;
 		static readonly Dictionary<GameObject, GameObject> Made = new Dictionary<GameObject, GameObject>();
+		static readonly Dictionary<GameObject, ObjectPoolManager> PooledIn = new Dictionary<GameObject, ObjectPoolManager>();
 
 		static GameObject Grenade3D17(GameObject basePrefab, Settings s)
 		{
 			if (basePrefab == null) return null;
 			if (Made.TryGetValue(basePrefab, out var done) && done != null) return done;
+			if (Made.ContainsValue(basePrefab)) return basePrefab;
 			try
 			{
 				if (_holder == null) { var h = new GameObject("Shtora 3D17 holder"); h.SetActive(false); UnityEngine.Object.DontDestroyOnLoad(h); _holder = h.transform; }
@@ -359,8 +392,9 @@ namespace T90A.Common
 			{
 				var prefab = DonorParts.Prefab(key);
 				var mgr = prefab != null ? prefab.GetComponentInChildren<VehicleSmokeManager>(true) : null;
-				var g = mgr != null ? ((GameObject)PrefabField.GetValue(mgr))?.GetComponent<Grenade>() : null;
-				var fx = g != null ? (GameObject)EffectField.GetValue(g) : null;
+				var gp = mgr != null ? PrefabField?.GetValue(mgr) as GameObject : null;
+				var g = gp != null ? gp.GetComponent<Grenade>() : null;
+				var fx = g != null ? EffectField?.GetValue(g) as GameObject : null;
 				if (fx == null) continue;
 				_white = UnityEngine.Object.Instantiate(fx, _holder, false);
 				_white.name = fx.name;
@@ -415,7 +449,12 @@ namespace T90A.Common
 		internal sealed class BurstOnStart : MonoBehaviour
 		{
 			public int Count;
-			void Start()
+			bool _started;
+			void Start() { _started = true; Burst(); }
+
+			void OnEnable() { if (_started) Burst(); }
+
+			void Burst()
 			{
 				var ps = GetComponent<ParticleSystem>();
 				if (ps == null) return;
@@ -433,6 +472,26 @@ namespace T90A.Common
 			return lf != null && lf.OriginalParent != null ? lf.OriginalParent.GetComponent<Unit>() : null;
 		}
 
+		static bool LineClear(Vector3 a, Vector3 b, Unit shooter, Unit target)
+		{
+			var cm = ConstantsAndInfoManager.Instance;
+			if (cm == null) return true;
+			var start = a;
+			for (int i = 0; i < 4; i++)
+			{
+				var d = b - start;
+				float len = d.magnitude;
+				if (len < 0.5f) return true;
+				var dir = d / len;
+				if (!RaycastColliderUtils.Raycast(new Ray(start, dir), out var hit, len, cm.LaserRangefinderLayerMask)) return true;
+				var u = UnitOf(hit.collider);
+				if (u != null && u == target) return true;
+				if (u == null || u != shooter) return false;
+				start = hit.point + dir * 0.05f;
+			}
+			return true;
+		}
+
 		static bool SmokeBetween(Vector3 a, Vector3 b)
 		{
 			var d = b - a;
@@ -444,9 +503,10 @@ namespace T90A.Common
 		{
 			static void Postfix(FireControlSystem __instance)
 			{
-				if (Stations.Count == 0 || __instance.LaserOrigin == null || __instance.MaxLaserRange <= 0f || (bool)LaserDestroyedField.GetValue(__instance)) return;
+				if (Stations.Count == 0) return;
 				try
 				{
+					if (__instance.LaserOrigin == null || __instance.MaxLaserRange <= 0f || LaserDestroyed(__instance)) return;
 					var ray = new Ray(__instance.LaserOrigin.position, __instance.LaserOrigin.forward);
 					float smoke = -1f;
 					if (Physics.Raycast(ray, out var sh, __instance.MaxLaserRange, 1 << CodeUtils.LAYER_INDEX_VISIBILITYONLY) && sh.collider.CompareTag("Smoke")) smoke = sh.distance;
@@ -457,11 +517,11 @@ namespace T90A.Common
 					if (st == null || st.Vehicle == shooter) return;
 					st.Lased(__instance.LaserOrigin.position);
 				}
-				catch (Exception e) { MelonLogger.Error("Shtora laser warning failed on a lase: " + e.Message); }
+				catch (Exception e) { PatchGuard.Failed("Laser warning on a lase", e); }
 			}
 		}
 
-		static readonly Dictionary<UnitAI, object> Lasing = Shared<Dictionary<UnitAI, object>>("GHPCMods.ShtoraScreen.Lasing.v1");
+		static readonly Dictionary<UnitAI, object> Lasing = Shared<Dictionary<UnitAI, object>>("GHPCMods.ShtoraScreen.Lasing.v2");
 
 		static T Shared<T>(string key) where T : class, new()
 		{
@@ -473,17 +533,26 @@ namespace T90A.Common
 			return t;
 		}
 
-		[HarmonyPatch(typeof(UnitAI), nameof(UnitAI.SetTarget))]
+		static void Prune<K, V>(Dictionary<K, V> d) where K : UnityEngine.Object
+		{
+			List<K> dead = null;
+			foreach (var k in d.Keys) if (k == null) { if (dead == null) dead = new List<K>(); dead.Add(k); }
+			if (dead != null) foreach (var k in dead) d.Remove(k);
+		}
+
+		[HarmonyPatch(typeof(UnitAI), nameof(UnitAI.SetTarget), new[] { typeof(ITarget), typeof(bool) })]
 		static class AiTargetPatch
 		{
-			static void Postfix(UnitAI __instance, ITarget target)
+			static void Postfix(UnitAI __instance, ITarget __0)
 			{
+				var target = __0;
 				if (Stations.Count == 0 || target == null) return;
 				var st = Of(target.Owner);
 				if (st == null || Lasing.TryGetValue(__instance, out var cur) && ReferenceEquals(cur, st)) return;
 				if (__instance.Unit == null || __instance.Unit == st.Vehicle || !Lases(__instance, st.Vehicle)) return;
 				var fcs = __instance.Unit.GetComponent<WeaponsManager>()?.Weapons?.FirstOrDefault()?.FCS;
 				if (fcs == null || fcs.LaserOrigin == null || fcs.MaxLaserRange <= 0f) return;
+				Prune(Lasing); Prune(Blinded);
 				Lasing[__instance] = st;
 				MelonCoroutines.Start(AiLasing(__instance, fcs, st));
 			}
@@ -492,7 +561,7 @@ namespace T90A.Common
 		static readonly FieldInfo GunnerAiField = Reflect.Field(typeof(UnitAI), "_gunnerAI");
 		static bool Lases(UnitAI ai, Unit target)
 		{
-			var rf = Blinded.TryGetValue(ai, out var was) ? was.rf : ai.RangefinderType;
+			var rf = Blinded.TryGetValue(ai, out var was) ? BlindRf(was) : ai.RangefinderType;
 			if (rf != AimTimeCalculator.RangeFinderType.Laser) return false;
 			if (GunnerAiField?.GetValue(ai) is Behaviour g && !g.enabled) return false;
 			var a = ai.Unit.Allegiance; var b = target.Allegiance;
@@ -500,38 +569,55 @@ namespace T90A.Common
 		}
 
 		const float BlindCheck = 0.25f;
+		static readonly WaitForSeconds BlindWait = new WaitForSeconds(BlindCheck);
 		static IEnumerator AiLasing(UnitAI ai, FireControlSystem fcs, Station st)
 		{
-			yield return new WaitForSeconds(UnityEngine.Random.Range(st.S.AiLaseDelay.x, st.S.AiLaseDelay.y));
-			float nextLase = 0f;
-			while (ai != null && st != null && st.Vehicle != null && !st.Vehicle.Neutralized && ai.Unit != null && !ai.Unit.Neutralized && ai.Target?.Owner == st.Vehicle && Lases(ai, st.Vehicle)
-				&& Lasing.TryGetValue(ai, out var mine) && ReferenceEquals(mine, st))
+			string why = "lasing stopped (error)";
+			try
 			{
-				bool smoke = false;
-				if (!(bool)LaserDestroyedField.GetValue(fcs) && fcs.LaserOrigin != null)
+				yield return new WaitForSeconds(UnityEngine.Random.Range(st.S.AiLaseDelay.x, st.S.AiLaseDelay.y));
+				float nextLase = 0f;
+				while (ai != null && st != null && st.Vehicle != null && !st.Vehicle.Neutralized && ai.Unit != null && !ai.Unit.Neutralized && ai.Target?.Owner == st.Vehicle && Lases(ai, st.Vehicle)
+					&& Lasing.TryGetValue(ai, out var mine) && ReferenceEquals(mine, st))
 				{
-					var from = fcs.LaserOrigin.position;
-					var to = st.Vehicle.Center != null ? st.Vehicle.Center.position : st.Vehicle.transform.position;
-					bool inRange = (to - from).magnitude <= fcs.MaxLaserRange;
-					smoke = inRange && SmokeBetween(from, to);
-					if (Time.time >= nextLase)
+					bool smoke = false;
+					if (!LaserDestroyed(fcs) && fcs.LaserOrigin != null)
 					{
-						nextLase = Time.time + st.S.AiRelase;
-						if (inRange && !smoke) st.Lased(from);
+						var from = fcs.LaserOrigin.position;
+						var to = st.Vehicle.Center != null ? st.Vehicle.Center.position : st.Vehicle.transform.position;
+						bool inRange = (to - from).magnitude <= fcs.MaxLaserRange;
+						smoke = inRange && SmokeBetween(from, to);
+						if (Time.time >= nextLase)
+						{
+							nextLase = Time.time + st.S.AiRelase;
+							if (inRange && !smoke && (LineClear(from, to, ai.Unit, st.Vehicle) || LineClear(from, st.TurretPoint, ai.Unit, st.Vehicle))) st.Lased(from);
+						}
 					}
+					Blind(ai, st, smoke && st.S.BlindAi, "laser line clear");
+					yield return BlindWait;
 				}
-				Blind(ai, st, smoke && st.S.BlindAi);
-				yield return new WaitForSeconds(BlindCheck);
+				why = ai == null ? "shooter gone" : st == null || st.Vehicle == null || st.Vehicle.Neutralized ? "unit gone" : ai.Unit == null || ai.Unit.Neutralized ? "shooter knocked out"
+					: ai.Target?.Owner != st.Vehicle ? "target changed" : "stopped lasing (gunner AI off)";
 			}
-			if (ai == null) yield break;
-			if (Lasing.TryGetValue(ai, out var now) && ReferenceEquals(now, st)) { Lasing.Remove(ai); Blind(ai, st, false); }
-			else if (!Lasing.ContainsKey(ai)) Blind(ai, st, false);
+			finally { EndLasing(ai, st, why); }
 		}
 
-		static readonly Dictionary<UnitAI, (AimTimeCalculator.RangeFinderType rf, float min, float max, bool gain)> Blinded
-			= Shared<Dictionary<UnitAI, (AimTimeCalculator.RangeFinderType, float, float, bool)>>("GHPCMods.ShtoraScreen.Blinded.v1");
+		static void EndLasing(UnitAI ai, Station st, string why)
+		{
+			bool mine = Lasing.TryGetValue(ai, out var now) && ReferenceEquals(now, st);
+			if (mine) Lasing.Remove(ai);
+			if (ai == null) { Blinded.Remove(ai); return; }
+			if (mine || !Lasing.ContainsKey(ai))
+			{
+				try { Blind(ai, st, false, why); }
+				catch (Exception e) { Blinded.Remove(ai); MelonLogger.Warning("Shtora screens: an AI's own ranging couldn't be restored: " + e.Message); }
+			}
+		}
 
-		static void Blind(UnitAI ai, Station st, bool on)
+		static readonly Dictionary<UnitAI, object[]> Blinded = Shared<Dictionary<UnitAI, object[]>>("GHPCMods.ShtoraScreen.Blinded.v2");
+		static AimTimeCalculator.RangeFinderType BlindRf(object[] was) => (AimTimeCalculator.RangeFinderType)was[0];
+
+		static void Blind(UnitAI ai, Station st, bool on, string why)
 		{
 			var r = ai?.AccuracyModifiers?.Range;
 			if (r == null) return;
@@ -539,7 +625,7 @@ namespace T90A.Common
 			if (on == now) return;
 			if (on)
 			{
-				Blinded[ai] = (ai.RangefinderType, r.Min, r.Max, r.IncreaseAccuracyPerShot);
+				Blinded[ai] = new object[] { ai.RangefinderType, r.Min, r.Max, r.IncreaseAccuracyPerShot };
 				ai.RangefinderType = AimTimeCalculator.RangeFinderType.Stadia;
 				r.Min = st.S.BlindRange.x; r.Max = st.S.BlindRange.y; r.IncreaseAccuracyPerShot = true;
 				r.Reset();
@@ -547,9 +633,10 @@ namespace T90A.Common
 			else
 			{
 				Blinded.Remove(ai);
-				ai.RangefinderType = was.rf;
-				r.Min = was.min; r.Max = was.max; r.IncreaseAccuracyPerShot = was.gain;
+				ai.RangefinderType = BlindRf(was);
+				r.Min = (float)was[1]; r.Max = (float)was[2]; r.IncreaseAccuracyPerShot = (bool)was[3];
 				r.Reset();
+				if (st != null) st.NoteAi($"{(ai.Unit != null ? ai.Unit.name : "?")} no longer blinded ({why}): its own laser again (range x{r.Value:0.000})");
 			}
 		}
 
@@ -581,12 +668,20 @@ namespace T90A.Common
 		static class WeaponHudPatch
 		{
 			static readonly AccessTools.FieldRef<WeaponHud, Text> HudText = Reflect.FieldRefAccess<WeaponHud, Text>("_hudText");
-			static readonly Dictionary<RectTransform, (float top, string text)> Lifted
-				= Shared<Dictionary<RectTransform, (float top, string text)>>("GHPCMods.ShtoraScreen.HudLift.v1");
+			static readonly Dictionary<RectTransform, object[]> Lifted = Shared<Dictionary<RectTransform, object[]>>("GHPCMods.ShtoraScreen.HudLift.v2");
 
 			static void Postfix(WeaponHud __instance)
 			{
+				if (Stations.Count == 0 && Shtora.Stations.Count == 0 && Lifted.Count == 0) return;
+				if (HudText == null) return;
+				try { AddLines(__instance); }
+				catch (Exception e) { PatchGuard.Failed("Screen lines in the weapon text", e); }
+			}
+
+			static void AddLines(WeaponHud __instance)
+			{
 				var t = HudText(__instance);
+				if (t != null && _ours != null && ReferenceEquals(t.text, _ours)) return;
 				Settle(t);
 				if (Stations.Count == 0 && Shtora.Stations.Count == 0) return;
 				var unit = PlayerInput.Instance != null ? PlayerInput.Instance.CurrentPlayerUnit : null;
@@ -605,8 +700,11 @@ namespace T90A.Common
 				lines.Insert(at + 1, $"{name}: {string.Join(", ", parts)}");
 				if (sc != null) lines.Insert(at + 2, $"{name} screen: {sc.ScreenState()}");
 				t.text = string.Join("\n", lines);
+				_ours = t.text;
 				Lift(t, Height(t, t.text) - before);
 			}
+
+			static string _ours;
 
 			static float Height(Text t, string s)
 			{
@@ -618,18 +716,20 @@ namespace T90A.Common
 			static void Lift(Text t, float by)
 			{
 				var rt = t.rectTransform;
-				float top = Lifted.TryGetValue(rt, out var l) ? l.top : rt.anchoredPosition.y;
+				bool known = Lifted.TryGetValue(rt, out var l);
+				if (!known) Prune(Lifted);
+				float top = known ? (float)l[0] : rt.anchoredPosition.y;
 				rt.anchoredPosition = new Vector2(rt.anchoredPosition.x, top + by);
-				Lifted[rt] = (top, t.text);
+				Lifted[rt] = new object[] { top, t.text };
 			}
 
 			static void Settle(Text t)
 			{
 				if (t == null || Lifted.Count == 0) return;
 				var rt = t.rectTransform;
-				if (!Lifted.TryGetValue(rt, out var l) || l.text == null || l.text == t.text) return;
-				rt.anchoredPosition = new Vector2(rt.anchoredPosition.x, l.top);
-				Lifted[rt] = (l.top, null);
+				if (!Lifted.TryGetValue(rt, out var l) || !(l[1] is string text) || text == t.text) return;
+				rt.anchoredPosition = new Vector2(rt.anchoredPosition.x, (float)l[0]);
+				Lifted.Remove(rt);
 			}
 		}
 
@@ -674,19 +774,26 @@ namespace T90A.Common
 				var st = PlayerInput.Instance != null ? Of(PlayerInput.Instance.CurrentPlayerUnit) : null;
 				if (st == null || !st.S.PanelShown || st.Vehicle == null || st.Vehicle.Neutralized || WorldScript.HideHud) return false;
 				if (!st.S.PanelAlways && Time.unscaledTime > _until) return false;
+				return GameHud(_canvas);
+			}
+
+			internal static bool GameHud(Canvas own)
+			{
 				if (_weaponHud == null && Time.unscaledTime >= _nextHudLook)
 				{
 					_nextHudLook = Time.unscaledTime + 1f;
 					_weaponHud = UnityEngine.Object.FindObjectOfType<WeaponHud>();
 					_weaponHudText = _weaponHud != null ? _weaponHud.GetComponent<Text>() : null;
-					var hud = _weaponHud != null ? _weaponHud.GetComponentInParent<Canvas>()?.rootCanvas : null;
-					if (hud != null) { _canvas.sortingLayerID = hud.sortingLayerID; _canvas.sortingOrder = hud.sortingOrder; }
 				}
+				var hud = _weaponHud != null ? _weaponHud.GetComponentInParent<Canvas>()?.rootCanvas : null;
+				if (own != null && hud != null && (own.sortingLayerID != hud.sortingLayerID || own.sortingOrder != hud.sortingOrder)) { own.sortingLayerID = hud.sortingLayerID; own.sortingOrder = hud.sortingOrder; }
 				return _weaponHud != null && _weaponHud.isActiveAndEnabled && _weaponHudText != null && _weaponHudText.enabled;
 			}
 
-			const float SightMaxHeight = 100f;
-			static readonly Vector2 OutsideAt = new Vector2(-40f, 110f), SightAt = new Vector2(-280f, 5f);
+			internal static bool InSight() { var slot = GHPC.Camera.CameraSlot.ActiveInstance; return slot != null && !slot.IsExterior; }
+
+			internal const float SightMaxHeight = 100f;
+			internal static readonly Vector2 OutsideAt = new Vector2(-40f, 110f), SightAt = new Vector2(-280f, 5f);
 			static int _layout = -1;
 			static void Fit(RectTransform panel) { _layout = -1; Place(panel, false); }
 
@@ -750,9 +857,16 @@ namespace T90A.Common
 				var bytes = Resource(name);
 				if (bytes == null) return null;
 				var tex = new Texture2D(2, 2, TextureFormat.RGBA32, true) { name = "shtora_" + name };
-				if (!ImageConversion.LoadImage(tex, bytes)) return null;
+				if (!ImageConversion.LoadImage(tex, bytes)) { UnityEngine.Object.Destroy(tex); return null; }
 				tex.filterMode = FilterMode.Trilinear; tex.wrapMode = TextureWrapMode.Clamp; tex.anisoLevel = 1;
 				return Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f));
+			}
+
+			internal static void Free(Sprite s)
+			{
+				if (s == null) return;
+				if (s.texture != null) UnityEngine.Object.Destroy(s.texture);
+				UnityEngine.Object.Destroy(s);
 			}
 
 			static Dictionary<string, List<float[]>> Layout()
@@ -760,14 +874,18 @@ namespace T90A.Common
 				var bytes = Resource("layout.txt");
 				if (bytes == null) return null;
 				var d = new Dictionary<string, List<float[]>>();
-				foreach (var raw in Encoding.UTF8.GetString(bytes).Split('\n'))
+				try
 				{
-					var line = raw.Trim();
-					if (line.Length == 0 || line[0] == '#') continue;
-					var f = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-					if (!d.TryGetValue(f[0], out var list)) d[f[0]] = list = new List<float[]>();
-					list.Add(f.Skip(1).Select(v => float.Parse(v, System.Globalization.CultureInfo.InvariantCulture)).ToArray());
+					foreach (var raw in Encoding.UTF8.GetString(bytes).Split('\n'))
+					{
+						var line = raw.Trim();
+						if (line.Length == 0 || line[0] == '#') continue;
+						var f = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+						if (!d.TryGetValue(f[0], out var list)) d[f[0]] = list = new List<float[]>();
+						list.Add(f.Skip(1).Select(v => float.Parse(v, System.Globalization.CultureInfo.InvariantCulture)).ToArray());
+					}
 				}
+				catch (FormatException) { return null; }
 				return d;
 			}
 
@@ -815,13 +933,16 @@ namespace T90A.Common
 				var art = Picture("panel.png");
 				var layout = Layout();
 				_lampOn = Picture("lamp_on.png"); _lampOff = Picture("lamp_off.png");
-				if (art != null && layout != null && _lampOn != null && _lampOff != null && layout.TryGetValue("head", out var heads) && heads.Count == 4)
+				if (art != null && layout != null && _lampOn != null && _lampOff != null && layout.TryGetValue("head", out var heads) && heads.Count == 4 && heads.All(p => p.Length >= 2)
+					&& layout.TryGetValue("scale", out var sc) && sc.Count > 0 && sc[0].Length > 0 && sc[0][0] > 0f
+					&& layout.TryGetValue("lamp", out var lp) && lp.Count > 0 && lp[0].Length > 0
+					&& layout.TryGetValue("spz", out var sp) && sp.Count > 0 && sp[0].Length >= 2)
 				{
-					float k = 1f / layout["scale"][0][0], lamp = layout["lamp"][0][0] * k;
+					float k = 1f / sc[0][0], lamp = lp[0][0] * k;
 					panel.sizeDelta = new Vector2(art.rect.width * k, art.rect.height * k);
 					panelGo.AddComponent<Image>().sprite = art;
 					Vector2 At(float[] p) => new Vector2(p[0] * k, -p[1] * k);
-					_spz = Box("lamp СПЗ", panel, At(layout["spz"][0]), new Vector2(lamp, lamp)).gameObject.AddComponent<Image>();
+					_spz = Box("lamp СПЗ", panel, At(sp[0]), new Vector2(lamp, lamp)).gameObject.AddComponent<Image>();
 					_spz.sprite = _lampOn;
 					_lamps = new Image[4];
 					for (int i = 0; i < 4; i++)
@@ -834,6 +955,7 @@ namespace T90A.Common
 					Fit(panel);
 					return;
 				}
+				Free(art); Free(_lampOn); Free(_lampOff);
 				_lampOn = _lampOff = null;
 				panel.sizeDelta = new Vector2(170f, 96f);
 				var bg = panelGo.AddComponent<Image>();
@@ -874,8 +996,7 @@ namespace T90A.Common
 				{
 					bool show = Wanted();
 					if (_panel.activeSelf != show) _panel.SetActive(show);
-					var slot = GHPC.Camera.CameraSlot.ActiveInstance;
-					if (show) Place((RectTransform)_panel.transform, slot != null && !slot.IsExterior);
+					if (show) Place((RectTransform)_panel.transform, InSight());
 					if (_lamps == null) return;
 					float left = _until - Time.unscaledTime;
 					bool blinkOn = left > 1.5f && (Time.unscaledTime * 2.5f) % 1f < 0.6f;

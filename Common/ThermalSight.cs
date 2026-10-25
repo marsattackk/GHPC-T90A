@@ -177,7 +177,13 @@ namespace T90A.Common
 				if (_slot != null) _slot.ActiveChanged -= OnActive;
 			}
 
-			CameraSpriteManager Sprites() => _sprites != null ? _sprites : (_sprites = FindObjectOfType<CameraSpriteManager>());
+			float _nextLook;
+			CameraSpriteManager Sprites()
+			{
+				if (_sprites != null || Time.unscaledTime < _nextLook) return _sprites;
+				_nextLook = Time.unscaledTime + 1f;
+				return _sprites = FindObjectOfType<CameraSpriteManager>();
+			}
 
 			void LateUpdate()
 			{

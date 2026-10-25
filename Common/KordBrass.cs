@@ -94,7 +94,8 @@ namespace T90A.Common
 		{
 			if (belt == null || belt.CaseMesh == null) return;
 			var b = cradle.gameObject.AddComponent<KordBrass>();
-			b._vehicle = vehicle; b._body = vehicle.GetComponent<Rigidbody>() ?? vehicle.GetComponentInParent<Rigidbody>();
+			b._vehicle = vehicle; b._body = vehicle.GetComponent<Rigidbody>();
+			if (b._body == null) b._body = vehicle.GetComponentInParent<Rigidbody>();
 			b._weapon = weapon; b._cycle = cycle; b._cradle = cradle; b._belt = belt;
 			b._chute = chuteOnCradle; b._dir = dirOnCradle.normalized; b._frames = frames; b._mesh = belt.CaseMesh;
 			b._cases = new Case[b.MaxCases];
@@ -111,8 +112,19 @@ namespace T90A.Common
 		{
 			if (_weapon != null) _weapon.Fired -= OnFired;
 			if (_holder != null) Destroy(_holder);
-			if (_gridTask != null && !_gridTask.IsCompleted) try { _gridTask.Wait(2000); } catch { }
+			if (_meshDataHeld && _gridTask != null && !_gridTask.IsCompleted)
+			{
+				_meshDataHeld = false;
+				MelonLoader.MelonCoroutines.Start(DisposeAfter(_gridTask, _meshData));
+				return;
+			}
 			ReleaseMeshData();
+		}
+
+		static System.Collections.IEnumerator DisposeAfter(Task task, Mesh.MeshDataArray data)
+		{
+			while (!task.IsCompleted) yield return null;
+			data.Dispose();
 		}
 
 		void ReleaseMeshData()
@@ -143,7 +155,7 @@ namespace T90A.Common
 			var vel = _body != null ? _body.velocity : Vector3.zero;
 			bool jolt = (vel - _lastVel).magnitude / dt > WakeAccel;
 			_lastVel = vel;
-			_terrains = Terrain.activeTerrains;
+			_terrains = null;
 			int steps = Mathf.Max(1, Mathf.CeilToInt(dt / MaxStep));
 			float h = dt / steps;
 			foreach (var c in _cases)
@@ -162,6 +174,7 @@ namespace T90A.Common
 					}
 					else { c.T.SetPositionAndRotation(c.P, c.Q); continue; }
 				}
+				if (c.State == 1 && _terrains == null) _terrains = Terrain.activeTerrains;
 				for (int s = 0; s < steps && c.State == 1; s++) Step(c, h);
 				if (c.State == 1 && (c.P.y < c.StartY - 50f || Time.time - c.Born > 30f)) { c.State = 0; c.R.enabled = false; continue; }
 				c.T.SetPositionAndRotation(c.P, c.Q);

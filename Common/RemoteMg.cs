@@ -12,7 +12,6 @@ using GHPC.Weaponry;
 using GHPC.Weapons;
 using HarmonyLib;
 using UnityEngine;
-using UnityEngine.AddressableAssets;
 
 namespace T90A.Common
 {
@@ -63,16 +62,25 @@ namespace T90A.Common
 		[HarmonyPatch]
 		static class PlayerControlPatch
 		{
-			static IEnumerable<MethodBase> TargetMethods()
+			static MethodBase[] _targets;
+			static MethodBase[] Targets()
 			{
+				if (_targets != null) return _targets;
 				var t = typeof(CrewBrainWeaponsModule);
-				yield return Reflect.Method(t, nameof(CrewBrainWeaponsModule.Fire), new[] { typeof(WeaponSystemRole), typeof(IUnit) });
-				yield return Reflect.Method(t, nameof(CrewBrainWeaponsModule.AdjustAimByRatio), new[] { typeof(WeaponSystemRole), typeof(float), typeof(float) });
-				yield return Reflect.Method(t, nameof(CrewBrainWeaponsModule.SetAimVector), new[] { typeof(WeaponSystemRole), typeof(Vector3), typeof(bool) });
+				return _targets = new MethodBase[]
+				{
+					Reflect.Method(t, nameof(CrewBrainWeaponsModule.Fire), new[] { typeof(WeaponSystemRole), typeof(IUnit) }),
+					Reflect.Method(t, nameof(CrewBrainWeaponsModule.AdjustAimByRatio), new[] { typeof(WeaponSystemRole), typeof(float), typeof(float) }),
+					Reflect.Method(t, nameof(CrewBrainWeaponsModule.SetAimVector), new[] { typeof(WeaponSystemRole), typeof(Vector3), typeof(bool) }),
+				}.Where(m => m != null).ToArray();
 			}
 
-			static bool Prefix(CrewBrainWeaponsModule __instance, WeaponSystemRole weaponSystemRole)
+			static bool Prepare() => Targets().Length > 0;
+			static IEnumerable<MethodBase> TargetMethods() => Targets();
+
+			static bool Prefix(CrewBrainWeaponsModule __instance, WeaponSystemRole __0)
 			{
+				var weaponSystemRole = __0;
 				if (!InPlayerInput || weaponSystemRole != WeaponSystemRole.RoofGun) return true;
 				var slot = CameraSlot.ActiveInstance;
 				if (slot == null || !slot.AllowFreeLook) return true;
@@ -209,20 +217,31 @@ namespace T90A.Common
 		[HarmonyPatch(typeof(CameraManager), "RescanCamSlots")]
 		static class CameraSlotsPatch
 		{
-			static void Prefix(ref CameraSlot[] cameraSlots)
+			static void Prefix(ref CameraSlot[] __0)
 			{
-				if (cameraSlots == null || cameraSlots.Length == 0) return;
+				try { __0 = WithStation(__0); }
+				catch (System.Exception e) { PatchGuard.Failed("Station sights for the camera", e); }
+			}
+
+			static CameraSlot[] WithStation(CameraSlot[] cameraSlots)
+			{
+				if (cameraSlots == null || cameraSlots.Length == 0) return cameraSlots;
 				var unit = cameraSlots.FirstOrDefault(s => s != null)?.GetComponentInParent<Vehicle>();
 				var st = unit != null ? unit.GetComponentInChildren<Station>(true) : null;
-				if (st == null) return;
+				if (st == null) return cameraSlots;
 				var given = cameraSlots;
 				var missing = st.Sights.Where(s => s != null && !given.Contains(s)).ToArray();
-				if (missing.Length == 0) return;
-				cameraSlots = cameraSlots.Concat(missing).ToArray();
+				if (missing.Length == 0) return cameraSlots;
+				return cameraSlots.Concat(missing).ToArray();
 			}
 		}
 
-		internal static CameraSlot LastSight { get; private set; }
+		static CameraSlot _lastSight;
+		internal static CameraSlot LastSight
+		{
+			get { if (!ReferenceEquals(_lastSight, null) && _lastSight == null) _lastSight = null; return _lastSight; }
+			private set => _lastSight = value;
+		}
 
 		static readonly FieldInfo FixedSlotsField = Reflect.Field(typeof(CameraManager), "_allFixedCamSlots"),
 			FreeSlotsField = Reflect.Field(typeof(CameraManager), "_allFreeLookCamSlots"),
@@ -239,8 +258,9 @@ namespace T90A.Common
 		[HarmonyPatch(typeof(CameraManager), "AttachCamToSlotDirect")]
 		static class RememberSightPatch
 		{
-			static void Postfix(CameraSlot camSlot)
+			static void Postfix(CameraSlot __0)
 			{
+				var camSlot = __0;
 				if (camSlot != null && !camSlot.AllowFreeLook) LastSight = camSlot.IsLinkedNightSight && camSlot.LinkedDaySight != null ? camSlot.LinkedDaySight : camSlot;
 			}
 		}
@@ -281,15 +301,15 @@ namespace T90A.Common
 			}
 		}
 
-		static Mesh _box;
+		static readonly Dictionary<string, Mesh> _boxes = new Dictionary<string, Mesh>();
 		internal static Mesh BoxMesh(string name)
 		{
-			if (_box != null) return _box;
+			if (_boxes.TryGetValue(name ?? "", out var box) && box != null) return box;
 			var c = GameObject.CreatePrimitive(PrimitiveType.Cube);
-			_box = Object.Instantiate(c.GetComponent<MeshFilter>().sharedMesh);
-			_box.name = name;
+			box = Object.Instantiate(c.GetComponent<MeshFilter>().sharedMesh);
+			box.name = name;
 			Object.DestroyImmediate(c);
-			return _box;
+			return _boxes[name ?? ""] = box;
 		}
 
 		internal static int StripReparent(GameObject go)
@@ -326,7 +346,7 @@ namespace T90A.Common
 				var tried = new List<string>();
 				foreach (var meta in metas)
 				{
-					var prefab = Addressables.LoadAssetAsync<GameObject>(meta.PrefabReference.RuntimeKey).WaitForCompletion();
+					var prefab = DonorParts.Load(meta);
 					tried.Add($"{meta.Name} -> {(prefab == null ? "null" : prefab.name)}");
 					var found = prefab == null ? null : From(prefab, null);
 					if (found == null) continue;

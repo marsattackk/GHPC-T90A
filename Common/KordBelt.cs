@@ -222,10 +222,13 @@ namespace T90A.Common
 			const int N = 48;
 			readonly Vector3[] _p = new Vector3[N + 1];
 			readonly float[] _s = new float[N + 1];
-			readonly Vector3 _upA, _upB;
+			Vector3 _upA, _upB;
 			internal float Length => _s[N];
 
-			internal Curve(Vector3 feed, Vector3 feedDir, Vector3 feedUp, Vector3 mouth, Vector3 mouthDir, Vector3 mouthUp)
+			internal Curve(Vector3 feed, Vector3 feedDir, Vector3 feedUp, Vector3 mouth, Vector3 mouthDir, Vector3 mouthUp) =>
+				Set(feed, feedDir, feedUp, mouth, mouthDir, mouthUp);
+
+			internal void Set(Vector3 feed, Vector3 feedDir, Vector3 feedUp, Vector3 mouth, Vector3 mouthDir, Vector3 mouthUp)
 			{
 				float h = (mouth - feed).magnitude * 0.4f;
 				Vector3 p1 = feed + feedDir * h, p2 = mouth + mouthDir * h;
@@ -353,9 +356,13 @@ namespace T90A.Common
 				var feed = Cupola.InverseTransformPoint(Cradle.TransformPoint(FeedOnCradle));
 				var feedDir = Cupola.InverseTransformDirection(Cradle.TransformDirection(FeedDirOnCradle));
 				var feedUp = Cupola.InverseTransformDirection(Cradle.TransformDirection(FeedUpOnCradle));
-				var c = new Curve(feed, feedDir, feedUp, Mouth, MouthDir, Vector3.up);
 				if (_renderers == null) _renderers = Rounds.Select(r => r.t.GetComponent<Renderer>()).ToArray();
 				int left = _feed != null ? _feed.CurrentClipRemainingCount - (_feed.AmmoTypeInBreech != null ? 1 : 0) : int.MaxValue;
+				if (_placed && _fed == _lastFed && _head == _lastHead && left == _lastLeft && feed == _lastFeed && feedDir == _lastFeedDir && feedUp == _lastFeedUp) return;
+				if (_placed && _target <= _fed && !Seen()) return;
+				_placed = true; _lastFed = _fed; _lastHead = _head; _lastLeft = left; _lastFeed = feed; _lastFeedDir = feedDir; _lastFeedUp = feedUp;
+				var c = _curve ?? (_curve = new Curve(feed, feedDir, feedUp, Mouth, MouthDir, Vector3.up));
+				c.Set(feed, feedDir, feedUp, Mouth, MouthDir, Vector3.up);
 				int nAll = Rounds.Length;
 				float frac = _fed - _head * FeedPitch;
 				float fade = Mathf.Clamp01(1f - _fedSince / (2f * FeedPitch));
@@ -374,6 +381,18 @@ namespace T90A.Common
 					t.localPosition = p;
 					t.localRotation = f.rotation * cr;
 				}
+			}
+
+			Curve _curve;
+			bool _placed;
+			float _lastFed;
+			int _lastHead, _lastLeft;
+			Vector3 _lastFeed, _lastFeedDir, _lastFeedUp;
+
+			bool Seen()
+			{
+				foreach (var r in _renderers) if (r != null && r.enabled && r.isVisible) return true;
+				return false;
 			}
 		}
 	}

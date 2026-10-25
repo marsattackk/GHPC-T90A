@@ -8,7 +8,7 @@ using MelonLoader.Utils;
 using T90A.Common;
 using UnityEngine;
 
-[assembly: MelonInfo(typeof(T90A.T90AMod), "T-90A", "0.4.0", "marsattackk")]
+[assembly: MelonInfo(typeof(T90A.T90AMod), "T-90A", "0.4.1", "marsattackk")]
 [assembly: MelonGame("Radian Simulations LLC", "GHPC")]
 
 namespace T90A
@@ -43,10 +43,14 @@ namespace T90A
 		internal static MelonPreferences_Entry<bool> ShtoraPanelAlways;
 		internal static MelonPreferences_Entry<bool> KordCases;
 
+		const string Repo = "marsattackk/GHPC-T90A";
+		static readonly SettingsMigration[] Migrations = { };
+
 		static readonly string[] MenuScenes = { "MainMenu2_Scene", "MainMenu2-1_Scene", "LOADER_MENU", "LOADER_INITIAL", "t64_menu", "leo2_menu" };
 
 		public override void OnInitializeMelon()
 		{
+			UnityErrors.Install(typeof(T90AMod).Namespace);
 			var cfg = MelonPreferences.CreateCategory("T-90A");
 			Enabled = cfg.CreateEntry("Enabled", true, description: "Adds the T-90A as its own unit (Instant Action, campaign roster, ATAC key \"T90A\").");
 			Campaign = CampaignConfig.Create(cfg, "T-90A", 0.5f, 2);
@@ -62,6 +66,8 @@ namespace T90A
 			ShtoraPanelAlways = cfg.CreateEntry("Shtora-1 panel always on screen", false, description: "false (default): the commander's control panel comes up on a laser warning and goes away a few seconds after. true = it stays on screen the whole time you're in the T-90A, the warning lamp lighting up on it. Either way, looking through a sight it is drawn smaller, in the black strip under the picture. For T-90As spawned after the change.");
 			KordCases = cfg.CreateEntry("Kord spent cases", true, description: "true (default): the Kord throws its spent cases out of the chute, and they lie on the tank until it tilts or brakes hard. false = no cases (the belt still feeds). For T-90As spawned after the change.");
 			ArmorValues.Config(cfg);
+			UpdateCheck.Config(cfg, FriendlyName, Info.Version, Repo);
+			PortSettings.Finish(cfg, Info.Version, Migrations);
 
 			if (!Enabled.Value) return;
 			var bundle = BundleAssets.Open(Path.Combine(MelonEnvironment.ModsDirectory, "T90A", "t90a"), "T-90A");
@@ -108,19 +114,18 @@ namespace T90A
 		public override void OnSceneWasLoaded(int buildIndex, string sceneName)
 		{
 			if (!Enabled.Value) return;
+			UpdateCheck.OnSceneLoaded(MenuScenes.Contains(sceneName));
 			UnitRegistry.StartCampaignRoster();
 			RepairKitCompat.TryPatch(HarmonyInstance);
 			ShowcaseSpawner.OnSceneLoaded(sceneName);
 			if (MenuScenes.Contains(sceneName))
-				DonorParts.WarmAtMenu(FriendlyName, () =>
-				{
-					Voices.SovietVoice();
-					NightSight.BuranDonor();
-					RemoteMg.Donor.Get(FriendlyName);
-					ThermalSight.WarmDonor(FriendlyName);
-					VanillaMaterials.Warm(Roles);
-					ShtoraScreen.WarmDonors(Conversion.Screens);
-				});
+				DonorParts.WarmAtMenu(FriendlyName,
+					() => CrewVoices.Donor(FriendlyName),
+					() => NightSight.BuranDonor(),
+					() => RemoteMg.Donor.Get(FriendlyName),
+					() => ThermalSight.WarmDonor(FriendlyName),
+					() => VanillaMaterials.Warm(Roles),
+					() => ShtoraScreen.WarmDonors(Conversion.Screens));
 			if (!MenuScenes.Contains(sceneName))
 				StateController.RunOrDefer(GameState.PlayerReady, ConvertAll, GameStatePriority.Low);
 		}

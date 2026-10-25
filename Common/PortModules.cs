@@ -29,7 +29,8 @@ namespace T90A.Common
 				using (var s = _assembly.GetManifestResourceStream(Resource))
 				{
 					if (s == null) { MelonLogger.Warning($"{_tag} modules: data missing from the DLL; modules stay the {_base}'s."); return null; }
-					using (var r = new System.IO.StreamReader(s)) _spec = ModuleSpec.Parse(r.ReadToEnd(), Resource);
+					try { using (var r = new System.IO.StreamReader(s)) _spec = ModuleSpec.Parse(r.ReadToEnd(), Resource); }
+					catch (System.Exception e) { _spec = null; MelonLogger.Warning($"{_tag} modules: the module data in the DLL can't be read ({e.GetType().Name}: {e.Message}); modules stay the {_base}'s."); }
 				}
 				return _spec;
 			}

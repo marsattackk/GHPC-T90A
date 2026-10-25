@@ -26,14 +26,16 @@ namespace T90A.Common
 			if (type == null) return;
 			var apply = AccessTools.Method(type, "Apply", new[] { typeof(Unit), typeof(NwhChassis) });
 			if (apply == null) { MelonLogger.Warning("RepairKit found, but not its repair method: the modules in the collider groups won't be repaired by it."); return; }
-			harmony.Patch(apply, postfix: new HarmonyMethod(typeof(RepairKitCompat), nameof(Postfix)));
+			try { harmony.Patch(apply, postfix: new HarmonyMethod(typeof(RepairKitCompat), nameof(Postfix))); }
+			catch (Exception e) { MelonLogger.Warning($"RepairKit found, but its repair method couldn't be patched ({e.GetType().Name}: {e.Message}): the modules in the collider groups won't be repaired by it."); }
 		}
 
 		internal static Type ApplierTypeOrNull() => AppDomain.CurrentDomain.GetAssemblies()
 			.Select(a => a.GetType(ApplierType, false)).FirstOrDefault(t => t != null);
 
-		static void Postfix(Unit unit)
+		static void Postfix(Unit __0)
 		{
+			var unit = __0;
 			try
 			{
 				if (!(unit is Vehicle v) || !UnitRegistry.Units.Any(u => string.Equals(u.Key, unit.UniqueName, StringComparison.OrdinalIgnoreCase))) return;

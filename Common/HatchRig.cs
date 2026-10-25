@@ -126,6 +126,7 @@ namespace T90A.Common
 
 			static float Kick(Jiggle j, Vector3 dir, float degS)
 			{
+				if (Torque == null || j == null) return 0f;
 				float s = Vector3.Dot(dir.normalized, j.transform.right) * degS;
 				if (Mathf.Abs(s) < 0.5f) return 0f;
 				Torque(j) = Quaternion.AngleAxis(s * 0.001f, Vector3.forward) * Torque(j);

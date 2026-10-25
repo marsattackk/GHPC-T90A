@@ -247,13 +247,12 @@ namespace T90A.Common
 			if (h.Name == "Module.SmokeTube")
 			{
 				var smoke = vehicle.GetComponentInChildren<VehicleSmokeManager>(true) ?? throw new InvalidOperationException("no smoke manager");
-				Reflect.Field(typeof(VehicleSmokeManager), "_smokeSlots").GetValue(smoke);
 				var slot = SmokeLaunchers.SlotOfTube(smoke, m.Tube) ?? throw new InvalidOperationException($"no grenade slot seated on tube {m.Tube}");
 				var taken = set.Tubes.FirstOrDefault(t => t.Value == slot).Key;
 				if (taken != null) throw new InvalidOperationException($"slot already taken by '{taken.Name}'");
 				set.Tubes[dc] = slot;
 				int held = 0;
-				dc.Destroyed += _ => { held = slot.Rounds; slot.Rounds = 0; };
+				dc.Destroyed += _ => { held += slot.Rounds; slot.Rounds = 0; };
 				dc.Repaired += _ => { slot.Rounds = Math.Max(slot.Rounds, held); held = 0; };
 				return;
 			}

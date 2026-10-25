@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using GHPC.Player;
 using MelonLoader;
 using UnityEngine;
 using UnityEngine.UI;
@@ -11,6 +12,9 @@ namespace T90A.Common
 	internal static class ShtoraPage
 	{
 		static GameObject _root, _panel;
+		static Canvas _canvas;
+		static int _layout = -1;
+		static float _nextIdle;
 		static Image[] _sectors;
 		static RectTransform _mark, _dotParent;
 		static Text _what, _done, _left, _mode;
@@ -39,12 +43,18 @@ namespace T90A.Common
 			catch (Exception e) { MelonLogger.Error("Shtora page failed: " + e.Message); }
 		}
 
+		internal static void Ensure(ShtoraScreen.Settings s)
+		{
+			try { Build(s); }
+			catch (Exception e) { MelonLogger.Error("Shtora page failed: " + e.Message); }
+		}
+
 		static void Build(ShtoraScreen.Settings s)
 		{
 			if (_root != null) return;
 			_root = new GameObject("Shtora page");
 			UnityEngine.Object.DontDestroyOnLoad(_root);
-			var canvas = _root.AddComponent<Canvas>();
+			var canvas = _canvas = _root.AddComponent<Canvas>();
 			canvas.renderMode = RenderMode.ScreenSpaceOverlay; canvas.sortingOrder = 500;
 			var scaler = _root.AddComponent<CanvasScaler>();
 			scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize; scaler.referenceResolution = new Vector2(1920f, 1080f); scaler.matchWidthOrHeight = 1f;
@@ -61,7 +71,7 @@ namespace T90A.Common
 			_panel.SetActive(false);
 			var art = ShtoraScreen.Hud.Picture("pmf_page.png"); var over = ShtoraScreen.Hud.Picture("pmf_over.png"); var words = Words("pmf_layout.txt");
 			if (art != null && over != null && words != null) BuildArt(panel, s, art, over, words);
-			else BuildPlain(panel, s);
+			else { ShtoraScreen.Hud.Free(art); ShtoraScreen.Hud.Free(over); BuildPlain(panel, s); }
 		}
 
 		static void BuildArt(RectTransform panel, ShtoraScreen.Settings s, Sprite art, Sprite over, Dictionary<string, string[]> lay)
@@ -203,10 +213,23 @@ namespace T90A.Common
 			float q = dir ? Mathf.Round(az / s.PreciseStep) * s.PreciseStep : 0f;
 			_what.text = $"ОБЛУЧЕНИЕ: {head} {side}" + (dir ? $"  {(q < 0f ? "-" : q > 0f ? "+" : "")}{Mathf.Floor(Mathf.Abs(q)):0}°{Mathf.Round(Mathf.Abs(q) % 1f * 60f):00}'" : "");
 			_done.text = Done(done, st);
-			_left.text = $"ГРАНАТЫ 3Д17: {st?.Slots?.Sum(x => x.Rounds) ?? 0}";
-			if (s != null) _mode.text = s.Automatic ? "АВТ" : "П/АВТ";
 			_mark.localEulerAngles = new Vector3(0f, 0f, -q);
 			_mark.gameObject.SetActive(dir);
+			Status(st);
+		}
+
+		static void Idle(ShtoraScreen.Station st)
+		{
+			_what.text = "ОБЛУЧЕНИЯ НЕТ";
+			_done.text = "";
+			_mark.gameObject.SetActive(false);
+			Status(st);
+		}
+
+		static void Status(ShtoraScreen.Station st)
+		{
+			_left.text = $"ГРАНАТЫ 3Д17: {st?.Slots?.Sum(x => x.Rounds) ?? 0}";
+			if (st?.S != null) _mode.text = st.S.Automatic ? "АВТ" : "П/АВТ";
 			if (_dotParent == null || st?.Slots == null || st.SlotAz == null) return;
 			while (_dots.Count < st.Slots.Length)
 			{
@@ -300,6 +323,16 @@ namespace T90A.Common
 			return Mathf.Clamp01(1.75f - best / px);
 		}
 
+		static void Place(bool inSight)
+		{
+			if (_layout == (inSight ? 1 : 0)) return;
+			_layout = inSight ? 1 : 0;
+			var panel = (RectTransform)_panel.transform;
+			panel.anchoredPosition = inSight ? ShtoraScreen.Hud.SightAt : ShtoraScreen.Hud.OutsideAt;
+			float k = inSight ? Mathf.Min(PageScale, ShtoraScreen.Hud.SightMaxHeight / panel.sizeDelta.y) : PageScale;
+			panel.localScale = new Vector3(k, k, 1f);
+		}
+
 		sealed class Ticker : MonoBehaviour
 		{
 			void Update()
@@ -309,7 +342,13 @@ namespace T90A.Common
 				bool blinkOn = left > 1.5f && (Time.unscaledTime * 2.5f) % 1f < 0.6f;
 				for (int i = 0; i < 4; i++) _sectors[i].color = i == _lit && left > 1.5f ? _red : _dim;
 				if (_what != null) _what.color = _lit >= 0 && blinkOn ? _red : _text;
-				if (left <= 0f || WorldScript.HideHud) { if (left <= 0f) _lit = -1; if (_panel.activeSelf) _panel.SetActive(false); }
+				if (left <= 0f) _lit = -1;
+				var st = PlayerInput.Instance != null ? ShtoraScreen.Of(PlayerInput.Instance.CurrentPlayerUnit) : null;
+				bool always = st != null && st.S.Display == ShtoraScreen.Look.ScreenPage && st.S.PanelAlways && st.Vehicle != null && !st.Vehicle.Neutralized;
+				bool show = !WorldScript.HideHud && (left > 0f || always && ShtoraScreen.Hud.GameHud(_canvas));
+				if (always && left <= 0f && Time.unscaledTime >= _nextIdle) { _nextIdle = Time.unscaledTime + 0.5f; Idle(st); }
+				if (_panel.activeSelf != show) _panel.SetActive(show);
+				if (show) Place(ShtoraScreen.Hud.InSight());
 			}
 		}
 	}

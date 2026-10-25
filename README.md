@@ -10,7 +10,7 @@ I made this mod for myself first, but you're welcome to use it too.
   <img src="docs/images/t90a_firing.jpg" width="49%" alt="The T-90A firing">
 </p>
 
-This README describes **version 0.4.0**. No other mod needed, just MelonLoader.
+This README describes **version 0.4.1**. No other mod needed, just MelonLoader.
 
 ## What's in it
 
@@ -39,6 +39,10 @@ AI T-90As use the sights, Shtora-1 and the ammo the same way you do. Only the Ko
    ```
 4. Start the game. The T-90A is in **Instant Action** (unit "T-90A"), in the **Soviet
    campaign** roster, and in the "Showcase of most playable vehicles" mission.
+
+Once per game start the mod asks GitHub whether there's a newer release, and if there is, it puts one line in the
+MelonLoader console with a link to the releases page. Nothing in game, nothing gets downloaded or installed, and if
+you're offline it just doesn't say anything. Set `Check for updates` to false (Settings, below) to turn it off.
 
 To remove it, delete `Mods\T90A.dll` and the `Mods\T90A` folder. That's safe mid-campaign too, the game's campaign
 save doesn't keep a list of units, so nothing in it points at the T-90A.
@@ -225,6 +229,8 @@ the dirt.
   Anything else it leaves alone.
 - Only within ±20° of the gun sideways and a couple of degrees up and down, so point the gun at the threat. It's no
   force field either.
+- Only on missiles actually fired at you by the other side. One aimed at the tank next to you, or one of your own
+  side's, flies on as normal.
 - It's on from the start. AI crews switch theirs on when they're fighting or getting shot at.
 - Each lamp is a module and can be shot off. With one gone it works on that side only.
 
@@ -289,7 +295,8 @@ I'm open to suggestions, fixes, better sources, pull requests, whatever you've g
 T-90A that the mod gets wrong, tell me.
 
 Found a bug? Open an [issue](../../issues) and attach `MelonLoader\Latest.log` from the game folder. The mod writes a
-warning there whenever something didn't load right, or a game update has renamed something it uses.
+warning there whenever something didn't load right, a game update has renamed something it uses, or one of its hooks
+into the game failed (the game carries on without it).
 
 ---
 
@@ -321,6 +328,14 @@ before editing it):
 | `Shtora-1 panel on screen` | true (the control panel shows on a laser warning) / false (no panel, the tone only) | true |
 | `Shtora-1 panel always on screen` | false (the panel comes up on a warning and goes away after) / true (always on screen while you're in the T-90A) | false |
 | `Kord spent cases` | true (the Kord throws out its spent cases, they lie on the tank) / false (no cases, the belt still feeds) | true |
+| `Check for updates` | true (asks GitHub once per game start, one line in the MelonLoader console if there's a newer release) / false (no check) | true |
+
+There's also a `ConfigVersion` line at the end, the version that last wrote the section. Leave it alone, it's how the
+mod tells which settings are still on an old default.
+
+If your Windows uses a decimal comma and a settings editor saved a number as text (`"Campaign prevalence" = "0,3"`),
+the mod reads it anyway, with a comma or a point, and says so in the log. MelonLoader on its own would quietly use the
+default instead.
 
 In Instant Action and the campaign, the T-90A gets its own APFSDS choice (3BM42 or 3BM60) in the game's normal
 ammo menu.
@@ -329,7 +344,8 @@ The three campaign settings take effect at the next mission load, no restart nee
 off and the T-90A comes out of the roster, change the prevalence or unlock and the roster follows.
 
 The few parts the T-90A borrows from the base game (T-80B sight sounds and voices, the T-64B's machine-gun station, the
-M60A3 TTS thermal screen effect) are copied once from the game's own files when it starts.
+M60A3 TTS thermal screen effect) are copied once from the game's own files, the first time a T-90A spawns, or at the
+main menu if those vehicles would be unloaded again before then.
 
 </details>
 

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using GHPC.Weaponry;
 using MelonLoader;
@@ -27,12 +28,16 @@ namespace T90A.Common
 
 		internal ReticleSO Build(string file, ReticleSO host, ReticleSO fontHost, Dictionary<string, AmmoCodexScriptable> rounds)
 		{
-			if (_built.TryGetValue(file, out var so) && so != null) return so;
+			string key = file + RoundsKey(rounds);
+			if (_built.TryGetValue(key, out var so) && so != null) return so;
 			var spec = Spec(file);
 			var problems = new List<string>();
 			so = ReticleBuild.Build(spec, host, ReticleBuild.FontTemplate(fontHost), k => rounds != null && rounds.TryGetValue(k, out var a) ? a : null, problems);
 			foreach (var p in problems) MelonLogger.Warning($"{_tag} reticle '{spec.Name}': {p}");
-			return _built[file] = so;
+			return _built[key] = so;
 		}
+
+		static string RoundsKey(Dictionary<string, AmmoCodexScriptable> rounds) => rounds == null || rounds.Count == 0 ? ""
+			: "|" + string.Join("|", Enumerable.Select(Enumerable.OrderBy(rounds, kv => kv.Key, System.StringComparer.Ordinal), kv => kv.Key + "=" + (kv.Value != null ? kv.Value.name : "-")));
 	}
 }

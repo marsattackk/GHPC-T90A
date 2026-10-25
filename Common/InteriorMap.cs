@@ -46,6 +46,7 @@ namespace T90A.Common
 		internal readonly List<Shape> Shapes = new List<Shape>();
 		internal readonly List<NewShape> News = new List<NewShape>();
 		static readonly FieldInfo ArmourName = Reflect.Field(typeof(UniformArmor), "_name");
+		const float RackRha = 15f;
 
 		static readonly CultureInfo CI = CultureInfo.InvariantCulture;
 
@@ -68,7 +69,8 @@ namespace T90A.Common
 					using (var s = _asm.GetManifestResourceStream(Resource))
 					{
 						if (s == null) { MelonLogger.Warning($"{_tag} interior: data missing from the DLL; crew and ammo stay at the {_base}'s places."); return null; }
-						using (var r = new System.IO.StreamReader(s)) _map = Parse(r.ReadToEnd());
+						try { using (var r = new System.IO.StreamReader(s)) _map = Parse(r.ReadToEnd()); }
+						catch (System.Exception e) { _map = null; MelonLogger.Warning($"{_tag} interior: the interior data in the DLL can't be read ({e.GetType().Name}: {e.Message}); crew and ammo stay at the {_base}'s places."); }
 					}
 					return _map;
 				}
@@ -152,6 +154,7 @@ namespace T90A.Common
 				var copy = Object.Instantiate(t.gameObject, t.parent, false);
 				copy.name = c.Name;
 				copy.transform.localPosition = t.localPosition; copy.transform.localRotation = t.localRotation; copy.transform.localScale = t.localScale;
+				foreach (var v in copy.GetComponentsInChildren<GHPC.Weapons.AmmoStoredVisual>(true)) Object.DestroyImmediate(v.gameObject);
 				var cph = copy.GetComponent<GHPC.Weapons.AmmoVisualPlaceholder>();
 				cph.RackIndex = c.RackIndex;
 				cph.PairedChargeSlot = null;
@@ -164,6 +167,8 @@ namespace T90A.Common
 						var cc = Object.Instantiate(ct.gameObject, ct.parent, false);
 						cc.name = c.ChargeName;
 						cc.transform.localPosition = ct.localPosition; cc.transform.localRotation = ct.localRotation; cc.transform.localScale = ct.localScale;
+						var charges = new List<GameObject>(); foreach (Transform ch in cc.transform) charges.Add(ch.gameObject);
+						foreach (var g in charges) Object.DestroyImmediate(g);
 						foreach (var r in cc.GetComponents<MeshRenderer>()) Object.Destroy(r);
 						foreach (var mf in cc.GetComponents<MeshFilter>()) Object.Destroy(mf);
 						cph.PairedChargeSlot = cc.transform;
@@ -212,12 +217,16 @@ namespace T90A.Common
 					go.SetActive(true);
 				}
 				var kids = new List<GameObject>(); foreach (Transform ch in go.transform) kids.Add(ch.gameObject);
-				foreach (var k in kids) Object.Destroy(k);
+				foreach (var k in kids) Object.DestroyImmediate(k);
 				go.transform.localPosition = Vector3.zero; go.transform.localRotation = Quaternion.identity; go.transform.localScale = Vector3.one;
 				var mesh = MeshOf(n.Name, n.Vertices, n.Triangles);
 				var mf = go.GetComponent<MeshFilter>(); if (mf != null) mf.sharedMesh = mesh;
 				var mc = go.GetComponent<MeshCollider>(); if (mc != null) mc.sharedMesh = mesh;
-				foreach (var ua in go.GetComponents<UniformArmor>()) ArmourName?.SetValue(ua, n.Name.ToLowerInvariant());
+				foreach (var ua in go.GetComponents<UniformArmor>())
+				{
+					ArmourName?.SetValue(ua, n.Name.ToLowerInvariant());
+					ua.PrimarySabotRha = RackRha; ua.PrimaryHeatRha = RackRha;
+				}
 				GHPC.PhysicsHelpers.RaycastColliderGroup.AddNewColliderSetToParentGroup(go.transform);
 			}
 		}

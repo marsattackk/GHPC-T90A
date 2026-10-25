@@ -41,16 +41,6 @@ namespace T90A
 
 		internal static string RoundsKey(params AmmoCodexScriptable[] rounds) => string.Join("|", rounds.Select(r => r != null ? r.name : "-"));
 
-		public static void Apply(UsableOptic dayOptic)
-		{
-			ReticleSO host = dayOptic.reticleMesh.reticleSO;
-			Apply(dayOptic,
-				FindAmmo(ApfsdsAmmo, host, "3BM"),
-				FindAmmo(HeAmmo, host, "3OF"),
-				FindAmmo(HeatAmmo, host, "3BK"),
-				FindAmmo(CoaxAmmo, host, "762"));
-		}
-
 		public static void Apply(UsableOptic dayOptic, AmmoCodexScriptable apfsds, AmmoCodexScriptable he,
 			AmmoCodexScriptable heat, AmmoCodexScriptable coax)
 		{
@@ -66,12 +56,8 @@ namespace T90A
 			dayOptic.slot.DefaultFov = ZoomFovs[0];
 			dayOptic.slot.OtherFovs = ZoomFovs.Skip(1).ToArray();
 
-			dayOptic.slot.VibrationBlurScale = MoveBlur;
-			dayOptic.slot.VibrationShakeMultiplier = MoveShake;
+			SightMotion.Stabilised(dayOptic.slot);
 		}
-
-		internal const float MoveBlur = 0.08f;
-		internal const float MoveShake = 0.12f;
 
 		public static ReticleSO Build(ReticleSO host, AmmoCodexScriptable apfsds, AmmoCodexScriptable he,
 			AmmoCodexScriptable heat, AmmoCodexScriptable coax)

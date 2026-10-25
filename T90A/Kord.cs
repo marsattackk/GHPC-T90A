@@ -62,6 +62,8 @@ Prefix = "T90A_", MeshName = "T90A Kord", BeltMaterial = "t90a_mg_6p49_kord_ammo
 
 		static readonly Vector3 GunZoneCentre = new Vector3(0.010f, 0.012f, 0.685f), GunZoneSize = new Vector3(0.112f, 0.176f, 1.562f);
 		const float CupolaDriveFrontZ = -1.36f;
+		const float CupolaDriveOuterX = 0.755f;
+		static readonly Vector2 CupolaDriveY = new Vector2(1.505f, 1.905f);
 
 		internal static void Apply(Vehicle vehicle)
 		{
@@ -130,7 +132,10 @@ Prefix = "T90A_", MeshName = "T90A Kord", BeltMaterial = "t90a_mg_6p49_kord_ammo
 			slot.HitZone = zones.Sight;
 			slot.SlotToUseOnDestroy = root.GetComponentsInChildren<CameraSlot>(true).FirstOrDefault(s => s.name == "commander head");
 			if (optic.reticleMesh != null && optic.reticleMesh.reticleSO != null)
-				optic.reticleMesh.reticleSO = _pzuReticle ?? (_pzuReticle = Pzu7Reticle(optic.reticleMesh.reticleSO, b32));
+			{
+				if (_pzuReticle == null) _pzuReticle = Pzu7Reticle(optic.reticleMesh.reticleSO, b32);
+				optic.reticleMesh.reticleSO = _pzuReticle;
+			}
 
 			UsableOptic tkn = null, tknNight = null;
 			Transform tknHead = null;
@@ -249,24 +254,27 @@ Prefix = "T90A_", MeshName = "T90A Kord", BeltMaterial = "t90a_mg_6p49_kord_ammo
 			Matrix4x4 Moved(DC src, Transform bone) =>
 				(root.worldToLocalMatrix * bone.localToWorldMatrix).inverse * Matrix4x4.Translate(shift) * (d.Root.transform.worldToLocalMatrix * src.transform.localToWorldMatrix);
 
-			Matrix4x4 FrontTo(Matrix4x4 inBone, Transform bone, Mesh mesh, float zMax)
+			Matrix4x4 Within(Matrix4x4 inBone, Transform bone, Mesh mesh, int pa, float lo, float hi)
 			{
 				if (mesh == null) return inBone;
 				var toPrefab = (root.worldToLocalMatrix * bone.localToWorldMatrix) * inBone;
 				Vector3 Axis(int i) => i == 0 ? Vector3.right : i == 1 ? Vector3.up : Vector3.forward;
 				var b = mesh.bounds; int k = 0; float best = -1f;
-				for (int i = 0; i < 3; i++) { float a = Mathf.Abs(toPrefab.MultiplyVector(Axis(i)).normalized.z); if (a > best) { best = a; k = i; } }
-				var ax = Axis(k);
-				float s = Mathf.Sign(toPrefab.MultiplyVector(ax).z);
-				var front = b.center + ax * (s * b.extents[k]); var rear = b.center - ax * (s * b.extents[k]);
-				float fz = toPrefab.MultiplyPoint(front).z, rz = toPrefab.MultiplyPoint(rear).z;
-				if (fz <= zMax || rz >= zMax) return inBone;
-				var scale = Vector3.one; scale[k] = (zMax - rz) / (fz - rz);
-				return inBone * Matrix4x4.Translate(rear) * Matrix4x4.Scale(scale) * Matrix4x4.Translate(-rear);
+				for (int i = 0; i < 3; i++) { float a = Mathf.Abs(toPrefab.MultiplyVector(Axis(i)).normalized[pa]); if (a > best) { best = a; k = i; } }
+				var dir = Axis(k) * Mathf.Sign(toPrefab.MultiplyVector(Axis(k))[pa]);
+				var low = b.center - dir * b.extents[k];
+				float p0 = toPrefab.MultiplyPoint(low)[pa], p1 = toPrefab.MultiplyPoint(b.center + dir * b.extents[k])[pa];
+				float n0 = Mathf.Max(p0, lo), n1 = Mathf.Min(p1, hi);
+				if ((n0 <= p0 && n1 >= p1) || n1 <= n0) return inBone;
+				float u0 = (n0 - p0) / (p1 - p0), u1 = (n1 - p0) / (p1 - p0);
+				var scale = Vector3.one; scale[k] = u1 - u0;
+				return inBone * Matrix4x4.Translate(low + dir * (2f * b.extents[k] * u0)) * Matrix4x4.Scale(scale) * Matrix4x4.Translate(-low);
 			}
 
+			var drive = d.CupolaDriveZone != null ? d.CupolaDriveZone.GetComponent<MeshFilter>()?.sharedMesh : null;
 			if (d.CupolaDriveZone != null && turAar != null) z.CupolaDrive = Wake(Clone(d.CupolaDriveZone, "ZPU cupola drive"), turret, turAar,
-				FrontTo(Moved(d.CupolaDriveZone, turret), turret, d.CupolaDriveZone.GetComponent<MeshFilter>()?.sharedMesh, CupolaDriveFrontZ), "commander's cupola drive");
+				Within(Within(Within(Moved(d.CupolaDriveZone, turret), turret, drive, 2, float.NegativeInfinity, CupolaDriveFrontZ),
+					turret, drive, 0, float.NegativeInfinity, CupolaDriveOuterX), turret, drive, 1, CupolaDriveY.x, CupolaDriveY.y), "commander's cupola drive");
 			if (d.ElevationDriveZone != null && cupAar != null) z.ElevationDrive = Wake(Clone(d.ElevationDriveZone, "ZPU elevation drive"), cupolaBone, cupAar, Moved(d.ElevationDriveZone, cupolaBone), "ZPU elevation drive");
 			if (d.SightZone != null && cupAar != null) z.Sight = Wake(Clone(d.SightZone, "PZU-7 sight"), cupolaBone, cupAar, Moved(d.SightZone, cupolaBone), "PZU-7 sight");
 			if (d.SightZone != null && cupAar != null && d.CommanderOptic != null)

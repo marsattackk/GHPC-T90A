@@ -15,7 +15,6 @@ using UnityEngine;
 using UnityEngine.AddressableAssets;
 using Object = UnityEngine.Object;
 using System.IO;
-using System.Globalization;
 using TMPro;
 
 namespace T90A.Common
@@ -289,43 +288,73 @@ namespace T90A.Common
 					_shapeIndex = st == null ? new string[0] : new StreamReader(st).ReadToEnd().Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0 && l[0] != '#').ToArray();
 			}
 			int meshes = 0, missing = 0;
+			var inv = System.Globalization.CultureInfo.InvariantCulture;
 			foreach (var line in _shapeIndex)
 			{
 				var f = line.Split('|');
 				if (f.Length < 4 || f[1] != r.Shape) continue;
-				if (f[0] == "mesh")
+				try
 				{
-					var mesh = ShapeMesh(f[3]);
-					if (mesh == null) { missing++; continue; }
-					foreach (var mf in model.GetComponentsInChildren<MeshFilter>(true).Where(x => x.name == f[2])) { mf.sharedMesh = mesh; meshes++; }
-				}
-				else if (f[0] == "capsule" && f.Length >= 7)
-				{
-					var c = f[3].Split(',').Select(x => float.Parse(x, CultureInfo.InvariantCulture)).ToArray();
-					foreach (var cc in model.GetComponentsInChildren<CapsuleCollider>(true).Where(x => x.name == f[2]))
+					if (f[0] == "mesh")
 					{
-						cc.center = new Vector3(c[0], c[1], c[2]);
-						cc.radius = float.Parse(f[4], CultureInfo.InvariantCulture);
-						cc.height = float.Parse(f[5], CultureInfo.InvariantCulture);
-						cc.direction = int.Parse(f[6]);
+						var mesh = ShapeMesh(f[3], f.Length >= 7 ? f : null);
+						if (mesh == null) { missing++; continue; }
+						foreach (var mf in model.GetComponentsInChildren<MeshFilter>(true).Where(x => x.name == f[2])) { mf.sharedMesh = mesh; meshes++; }
+					}
+					else if (f[0] == "capsule")
+					{
+						var c = f.Length >= 7 ? f[3].Split(',') : null;
+						if (c == null || c.Length != 3) { missing++; MelonLogger.Warning($"{S.Tag}: round shape line '{line}' is malformed; that hit zone keeps the {r.Source} shape."); continue; }
+						var centre = new Vector3(float.Parse(c[0], inv), float.Parse(c[1], inv), float.Parse(c[2], inv));
+						float radius = float.Parse(f[4], inv), height = float.Parse(f[5], inv);
+						int axis = int.Parse(f[6], inv);
+						foreach (var cc in model.GetComponentsInChildren<CapsuleCollider>(true).Where(x => x.name == f[2]))
+						{
+							cc.center = centre; cc.radius = radius; cc.height = height; cc.direction = axis;
+						}
 					}
 				}
+				catch (Exception e) { missing++; MelonLogger.Warning($"{S.Tag}: round shape line '{line}' can't be used ({e.GetType().Name}: {e.Message}); that piece keeps the {r.Source} shape."); }
 			}
 			if (missing > 0 || meshes == 0) MelonLogger.Warning($"{S.Tag}: the {r.Id} model's shape ({r.Shape}) is missing from the mod ({missing} pieces); its rounds keep the {r.Source} shape.");
 		}
 
-		static Mesh ShapeMesh(string resource)
+		static readonly HashSet<string> _shapeFailed = new HashSet<string>();
+		static Mesh ShapeMesh(string resource, string[] index)
 		{
 			if (_shapeMeshes.TryGetValue(resource, out var m) && m != null) return m;
+			if (_shapeFailed.Contains(resource)) return null;
+			Mesh Bad(string why) { _shapeFailed.Add(resource); MelonLogger.Warning($"{S.Tag}: round shape piece {resource} {why}; that part keeps the source round's shape."); return null; }
+			byte[] bytes;
 			using (var st = typeof(PortAmmo).Assembly.GetManifestResourceStream(resource))
 			{
-				if (st == null) return null;
-				var br = new BinaryReader(st);
-				int nv = br.ReadInt32(), nt = br.ReadInt32();
+				if (st == null) { _shapeFailed.Add(resource); return null; }
+				bytes = new byte[st.Length];
+				int got = 0;
+				while (got < bytes.Length) { int n = st.Read(bytes, got, bytes.Length - got); if (n <= 0) break; got += n; }
+				if (got != bytes.Length) return Bad("is truncated");
+			}
+			if (bytes.Length < 8) return Bad("is truncated");
+			int nv = BitConverter.ToInt32(bytes, 0), nt = BitConverter.ToInt32(bytes, 4);
+			if (nv <= 0 || nt <= 0 || (long)nv * 32 + (long)nt * 12 + 8 != bytes.Length) return Bad($"has {bytes.Length} bytes for {nv} vertices / {nt} triangles");
+			if (index != null)
+			{
+				if (int.TryParse(index[4], out int iv) && int.TryParse(index[5], out int it) && (iv != nv || it != nt)) return Bad($"holds {nv} / {nt}, its index says {iv} / {it}");
+				string want = index[6].Trim();
+				if (want.Length > 0)
+				{
+					string sha;
+					using (var h = System.Security.Cryptography.SHA1.Create()) sha = BitConverter.ToString(h.ComputeHash(bytes)).Replace("-", "").ToLowerInvariant();
+					if (!sha.StartsWith(want, StringComparison.OrdinalIgnoreCase)) return Bad("doesn't match its index's SHA-1");
+				}
+			}
+			using (var br = new BinaryReader(new MemoryStream(bytes, 8, bytes.Length - 8)))
+			{
 				Vector3[] V3() { var a = new Vector3[nv]; for (int i = 0; i < nv; i++) a[i] = new Vector3(br.ReadSingle(), br.ReadSingle(), br.ReadSingle()); return a; }
 				var pos = V3(); var nrm = V3();
 				var uv = new Vector2[nv]; for (int i = 0; i < nv; i++) uv[i] = new Vector2(br.ReadSingle(), br.ReadSingle());
-				var tri = new int[nt * 3]; for (int i = 0; i < tri.Length; i++) tri[i] = br.ReadInt32();
+				var tri = new int[nt * 3];
+				for (int i = 0; i < tri.Length; i++) { tri[i] = br.ReadInt32(); if (tri[i] < 0 || tri[i] >= nv) return Bad($"has a triangle index {tri[i]} out of 0-{nv - 1}"); }
 				m = new Mesh { name = Path.GetFileNameWithoutExtension(resource), hideFlags = HideFlags.DontUnloadUnusedAsset };
 				if (nv > 65535) m.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
 				m.vertices = pos; m.normals = nrm; m.uv = uv; m.triangles = tri;
@@ -339,7 +368,7 @@ namespace T90A.Common
 
 		static Texture2D LookTexture(string resource, Texture like)
 		{
-			if (_looks.TryGetValue(resource, out var t) && t != null) return t;
+			if (_looks.TryGetValue(resource, out var t) && (ReferenceEquals(t, null) || t != null)) return t;
 			byte[] buf;
 			using (var st = typeof(PortAmmo).Assembly.GetManifestResourceStream(resource))
 			{
@@ -349,7 +378,12 @@ namespace T90A.Common
 				while (got < buf.Length) { int n = st.Read(buf, got, buf.Length - got); if (n <= 0) break; got += n; }
 			}
 			t = new Texture2D(2, 2, TextureFormat.RGBA32, true) { name = Path.GetFileNameWithoutExtension(resource) };
-			if (!ImageConversion.LoadImage(t, buf, false)) return null;
+			if (!ImageConversion.LoadImage(t, buf, false))
+			{
+				Object.Destroy(t);
+				_looks[resource] = null;
+				return null;
+			}
 			t.filterMode = like.filterMode; t.anisoLevel = like.anisoLevel; t.wrapMode = like.wrapMode;
 			t.Compress(true);
 			t.Apply(false, true);
@@ -366,7 +400,7 @@ namespace T90A.Common
 			var weapon = vehicle.GetComponent<WeaponsManager>().Weapons[0].Weapon;
 			var list = PortList(lm.LoadedAmmoList.AmmoClips, DefaultApfsds(warn: true));
 			lm.LoadedAmmoList.AmmoClips = list.ToArray();
-			lm.TotalAmmoCounts = S.TotalCounts.Take(list.Count).ToArray();
+			lm.TotalAmmoCounts = Fit(S.TotalCounts, list.Count);
 			int missile = Missile != null ? list.IndexOf(Missile) : -1;
 			var kept = new List<LoadoutManager.RackLoadout>();
 			for (int i = 0; i < lm.RackLoadouts.Length; i++)
@@ -374,7 +408,7 @@ namespace T90A.Common
 				var rl = lm.RackLoadouts[i];
 				var r = S.Racks.FirstOrDefault(x => x.Index == i);
 				if (r == null) { if (!S.DropOtherRacks) kept.Add(rl); continue; }
-				if (r.Counts != null) rl.AmmoCounts = r.Counts.Take(list.Count).ToArray();
+				if (r.Counts != null) rl.AmmoCounts = Fit(r.Counts, list.Count);
 				if (missile >= 0 && r.MissileSlots.Length > 0)
 					rl.FixedChoices = r.MissileSlots.Select(s => new LoadoutManager.RackLoadoutFixedChoice { AmmoClipIndex = missile, RackSlotIndex = s }).ToArray();
 				if (r.NoRestockInto && rl.Rack != null && rl.Rack.GetComponent<NoRestockInto>() == null) rl.Rack.gameObject.AddComponent<NoRestockInto>();
@@ -387,13 +421,21 @@ namespace T90A.Common
 			RegisterAllBallistics.Invoke(lm, null);
 		}
 
+		static int[] Fit(int[] counts, int n)
+		{
+			var a = new int[n];
+			if (counts != null) Array.Copy(counts, a, Math.Min(n, counts.Length));
+			return a;
+		}
+
 		internal sealed class NoRestockInto : MonoBehaviour { }
 
-		[HarmonyPatch(typeof(LoadoutManager), "RackHasRestockSpace")]
+		[HarmonyPatch(typeof(LoadoutManager), "RackHasRestockSpace", new[] { typeof(LoadoutManager.RackLoadout) })]
 		static class RestockTargetPatch
 		{
-			static bool Prefix(LoadoutManager.RackLoadout rackLoadout, ref bool __result)
+			static bool Prefix(LoadoutManager.RackLoadout __0, ref bool __result)
 			{
+				var rackLoadout = __0;
 				if (rackLoadout?.Rack == null || rackLoadout.Rack.GetComponent<NoRestockInto>() == null) return true;
 				__result = false;
 				return false;
@@ -529,13 +571,14 @@ namespace T90A.Common
 		static readonly AccessTools.FieldRef<MissionConfigMenuPanel, UnitPrefabLookupScriptable> AllUnits =
 			Reflect.FieldRefAccess<MissionConfigMenuPanel, UnitPrefabLookupScriptable>("_allUnitsScriptable");
 
-		static void Postfix(MissionConfigMenuPanel __instance, string unitKey, ref List<AmmoLogisticsScriptable> __result, ref List<int> preferredIndices)
+		static void Postfix(MissionConfigMenuPanel __instance, string __0, ref List<AmmoLogisticsScriptable> __result, ref List<int> __1)
 		{
+			string unitKey = __0;
 			if (!PortAmmo.IsPort(unitKey)) return;
 			try
 			{
 				var sets = PortAmmo.SetsForMenu(AllUnits(__instance)?.GetBaseAmmoClipLoadout(unitKey), AllSets(__instance)?.AllAmmoReplacementOrders, out var preferred);
-				if (sets != null) { __result = sets; preferredIndices = preferred; }
+				if (sets != null) { __result = sets; __1 = preferred; }
 			}
 			catch (Exception e) { MelonLogger.Error($"{PortAmmo.S.Tag} ammo choice for the mission customizer failed: " + e); }
 		}
@@ -549,8 +592,9 @@ namespace T90A.Common
 		static readonly AccessTools.FieldRef<MissionConfigAmmoSelectionEntry, TextMeshProUGUI> Label =
 			Reflect.FieldRefAccess<MissionConfigAmmoSelectionEntry, TextMeshProUGUI>("_label");
 
-		static void Postfix(MissionConfigMenuPanel __instance, AmmoLogisticsScriptable ammoLogisticsScriptable)
+		static void Postfix(MissionConfigMenuPanel __instance, AmmoLogisticsScriptable __1)
 		{
+			var ammoLogisticsScriptable = __1;
 			if (ammoLogisticsScriptable == null || ammoLogisticsScriptable != PortAmmo.ApfsdsSet || string.IsNullOrEmpty(PortAmmo.S?.MenuSuffix)) return;
 			var entry = Entries(__instance)?.LastOrDefault()?.GetComponent<MissionConfigAmmoSelectionEntry>();
 			if (entry == null || entry.AmmoSet != ammoLogisticsScriptable) return;
@@ -587,8 +631,9 @@ namespace T90A.Common
 	[HarmonyPatch(typeof(AmmoReplacementOrder), nameof(AmmoReplacementOrder.SelectAmmoType))]
 	internal static class AmmoCampaignUnlockPatch
 	{
-		static void Prefix(AmmoReplacementOrder __instance, bool isCampaignMode)
+		static void Prefix(AmmoReplacementOrder __instance, bool __2)
 		{
+			bool isCampaignMode = __2;
 			if (!isCampaignMode || PortAmmo.ApfsdsSet == null || __instance != PortAmmo.ApfsdsSet.AmmoLogistics) return;
 			int done = CampaignSaveState.ActiveSaveData?.TotalMissionsCompleted ?? 0;
 			foreach (var o in __instance.AmmoOptions) o.AllowInCampaign = done >= o.BlockUntilMissionsCompleted;
@@ -600,7 +645,13 @@ namespace T90A.Common
 	{
 		static readonly AccessTools.FieldRef<LiveRound, bool> Sacrificed = Reflect.FieldRefAccess<LiveRound, bool>("_sacrificedWarhead");
 
-		static void Prefix(LiveRound __instance, Collider cObject)
+		static void Prefix(LiveRound __instance, Collider __0)
+		{
+			try { Precursor(__instance, __0); }
+			catch (Exception e) { PatchGuard.Failed("Tandem ERA charge", e); }
+		}
+
+		static void Precursor(LiveRound __instance, Collider cObject)
 		{
 			AmmoType info = __instance.Info;
 			if (info == null || !info.Tandem || __instance.IsSpall || cObject == null || PortAmmo.S == null) return;

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -23,8 +24,6 @@ namespace T90A.Common
 			public bool ManualMode = true;
 		}
 
-		const BindingFlags Private = BindingFlags.NonPublic | BindingFlags.Instance;
-
 		internal static class AimClamp
 		{
 			static readonly Dictionary<FireControlSystem, List<UsableOptic>> Sights = new Dictionary<FireControlSystem, List<UsableOptic>>();
@@ -42,6 +41,7 @@ namespace T90A.Common
 			internal static void Register(FireControlSystem fcs, UsableOptic optic, float azimuth)
 			{
 				Register(fcs, optic);
+				foreach (var dead in Azimuth.Keys.Where(k => k == null).ToList()) Azimuth.Remove(dead);
 				if (fcs != null && azimuth > 0f) Azimuth[fcs] = azimuth;
 			}
 
@@ -59,9 +59,20 @@ namespace T90A.Common
 			[HarmonyPatch(typeof(FireControlSystem), nameof(FireControlSystem.AdjustAimByRatio))]
 			static class Patch
 			{
-				static void Prefix(FireControlSystem __instance, out Vector3 __state) => __state = __instance.AimWorldVector;
+				static void Prefix(FireControlSystem __instance, out Vector3 __state)
+				{
+					__state = Vector3.zero;
+					try { __state = __instance.AimWorldVector; }
+					catch (Exception e) { PatchGuard.Failed("Sight aim limit", e); }
+				}
 
 				static void Postfix(FireControlSystem __instance, Vector3 __state)
+				{
+					try { Clamp(__instance, __state); }
+					catch (Exception e) { PatchGuard.Failed("Sight aim limit", e); }
+				}
+
+				static void Clamp(FireControlSystem __instance, Vector3 __state)
 				{
 					if (!Sights.TryGetValue(__instance, out var optics)) return;
 					var mode = __instance.CurrentStabMode;
@@ -189,7 +200,13 @@ namespace T90A.Common
 
 			static void Hold(FireControlSystem fcs)
 			{
-				if (Sights.Count == 0 || fcs.LaserOrigin == null || !Sights.ContainsKey(fcs)) return;
+				try { HoldNow(fcs); }
+				catch (Exception e) { PatchGuard.Failed("Laser on the sight head", e); }
+			}
+
+			static void HoldNow(FireControlSystem fcs)
+			{
+				if (Sights.Count == 0 || !Sights.ContainsKey(fcs) || fcs.LaserOrigin == null) return;
 				var w = Limit(fcs, fcs.LaserAim == LaserAimMode.ImpactPoint ? fcs.AimWorldVector : fcs.LaserOrigin.forward, out bool held);
 				if (!held) return;
 				fcs.LaserOrigin.forward = w;
@@ -235,15 +252,15 @@ namespace T90A.Common
 			SetPrivate(fcs, "_recordedOriginalRangeValues", true);
 			SetPrivate(fcs, "_originalMainOpticAlign", dayOptic.Alignment);
 
-			if (!(bool)Reflect.Field(typeof(FireControlSystem), "_initialized").GetValue(fcs)) return;
+			if (!(Reflect.Field(typeof(FireControlSystem), "_initialized")?.GetValue(fcs) is bool initialized) || !initialized) return;
 
-			Reflect.Method(typeof(FireControlSystem), "SetManualMode").Invoke(fcs, new object[] { false });
-			Reflect.Method(typeof(FireControlSystem), "EngageLead").Invoke(fcs, null);
+			Reflect.Method(typeof(FireControlSystem), "SetManualMode", new[] { typeof(bool) })?.Invoke(fcs, new object[] { false });
+			Reflect.Method(typeof(FireControlSystem), "EngageLead")?.Invoke(fcs, null);
 		}
 
 		static void SetPrivate(object target, string field, object value)
 		{
-			typeof(FireControlSystem).GetField(field, Private).SetValue(target, value);
+			Reflect.Field(typeof(FireControlSystem), field)?.SetValue(target, value);
 		}
 	}
 }

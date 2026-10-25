@@ -29,10 +29,19 @@ namespace T90A.Common
 		{
 			var meta = UnitRegistry.Find(key)
 				?? UnitRegistry.Lookup?.AllUnits?.FirstOrDefault(m => m != null && m.Name != null && m.Name.Replace(" ", "").Equals(key, System.StringComparison.OrdinalIgnoreCase));
-			GameObject prefab = null;
-			if (meta?.PrefabReference != null && meta.PrefabReference.RuntimeKeyIsValid())
-				prefab = Addressables.LoadAssetAsync<GameObject>(meta.PrefabReference.RuntimeKey).WaitForCompletion();
+			var prefab = Load(meta);
 			if (prefab == null) WarnOnce(key, $"donor prefab '{key}' {(meta == null ? "not in the unit registry" : "could not be loaded (destroyed by another mod?)")}.");
+			return prefab;
+		}
+
+		static readonly Dictionary<string, GameObject> Loaded = new Dictionary<string, GameObject>();
+		internal static GameObject Load(GHPC.Mission.UnitPrefabLookupScriptable.UnitPrefabMetadata meta)
+		{
+			if (meta?.PrefabReference == null || !meta.PrefabReference.RuntimeKeyIsValid()) return null;
+			string k = meta.PrefabReference.RuntimeKey.ToString();
+			if (Loaded.TryGetValue(k, out var had) && had != null) return had;
+			var prefab = Addressables.LoadAssetAsync<GameObject>(meta.PrefabReference.RuntimeKey).WaitForCompletion();
+			if (prefab != null) Loaded[k] = prefab;
 			return prefab;
 		}
 
@@ -94,19 +103,28 @@ namespace T90A.Common
 
 		static bool _warmed;
 
-		internal static void WarmAtMenu(string tag, System.Action copy)
+		internal static void WarmAtMenu(string tag, params System.Action[] steps)
 		{
 			if (_warmed || !PrefabsAtRisk) return;
 			_warmed = true;
-			MelonCoroutines.Start(Warm(tag, copy));
+			MelonCoroutines.Start(Warm(tag, steps));
 		}
 
-		static System.Collections.IEnumerator Warm(string tag, System.Action copy)
+		static System.Collections.IEnumerator Warm(string tag, System.Action[] steps)
 		{
-			for (int frame = 0; frame < 600 && UnitRegistry.Lookup?.AllUnits == null; frame++) yield return null;
+			for (int frame = 0; frame < 600; frame++)
+			{
+				if (frame % 10 == 0 && UnitRegistry.Lookup?.AllUnits != null) break;
+				yield return null;
+			}
 			if (UnitRegistry.Lookup?.AllUnits == null) { _warmed = false; yield break; }
-			try { copy(); }
-			catch (System.Exception e) { MelonLogger.Warning($"{tag}: copying the vanilla donor parts at the main menu failed ({e.GetType().Name}: {e.Message}); they are copied at the first spawn."); }
+			foreach (var step in steps)
+			{
+				if (step == null) continue;
+				try { step(); }
+				catch (System.Exception e) { MelonLogger.Warning($"{tag}: copying a vanilla donor part at the main menu failed ({e.GetType().Name}: {e.Message}); it is copied at the first spawn."); }
+				yield return null;
+			}
 		}
 	}
 }

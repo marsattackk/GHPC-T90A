@@ -40,8 +40,10 @@ namespace T90A.Common
 			var chassis = vehicle.GetComponent<NwhChassis>();
 			if (chassis != null)
 			{
-				if (s.MaxForwardKmh.HasValue) Reflect.Field(typeof(NwhChassis), "_maxForwardSpeed").SetValue(chassis, s.MaxForwardKmh.Value / 3.6f);
-				if (s.ReverseCapKmh.HasValue) Reflect.Field(typeof(NwhChassis), "_maxReverseSpeed").SetValue(chassis, s.ReverseCapKmh.Value / 3.6f);
+				var fwdCap = Reflect.Field(typeof(NwhChassis), "_maxForwardSpeed");
+				var revCap = Reflect.Field(typeof(NwhChassis), "_maxReverseSpeed");
+				if (s.MaxForwardKmh.HasValue) fwdCap?.SetValue(chassis, s.MaxForwardKmh.Value / 3.6f);
+				if (s.ReverseCapKmh.HasValue) revCap?.SetValue(chassis, s.ReverseCapKmh.Value / 3.6f);
 			}
 			if (s.CombatMassKg.HasValue)
 			{

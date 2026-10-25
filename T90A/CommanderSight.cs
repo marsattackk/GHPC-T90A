@@ -65,12 +65,11 @@ namespace T90A
 			if (nightLook != null)
 			{
 				var ls = nightLook.slot;
-				ns.BaseBlur = ls.BaseBlur; ns.VibrationBlurScale = ls.VibrationBlurScale; ns.VibrationPreBlur = ls.VibrationPreBlur;
-				ns.VibrationShakeMultiplier = ls.VibrationShakeMultiplier; ns.SpriteType = ls.SpriteType;
+				ns.BaseBlur = ls.BaseBlur; ns.VibrationPreBlur = ls.VibrationPreBlur; ns.SpriteType = ls.SpriteType;
 				if (night.post != null && nightLook.post != null) { night.post.sharedProfile = nightLook.post.sharedProfile; night.post.priority = nightLook.post.priority; night.post.weight = nightLook.post.weight; }
 				if (night.reticleMesh != null && nightLook.reticleMesh != null) night.reticleMesh.nightBrightness = nightLook.reticleMesh.nightBrightness;
 			}
-			foreach (var s in new[] { day.slot, ns }) { s.VibrationBlurScale = Sight1G46.MoveBlur; s.VibrationShakeMultiplier = Sight1G46.MoveShake; }
+			foreach (var s in new[] { day.slot, ns }) SightMotion.Stabilised(s);
 		}
 
 		[DefaultExecutionOrder(-50)]
