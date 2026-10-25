@@ -42,7 +42,7 @@ namespace T90A
 			},
 			["pkg_layer"] = new Entry
 			{
-				Kind = "pkg_layer", Name = "cheek pack: rubber + 2x4 mm", Variable = true, AngleMatters = true, Weight = 8.6f / 14f,
+				Kind = "pkg_layer", Name = "cheek pack: rubber + 2x4 mm", Variable = true, AngleMatters = true, Weight = 8.6f / 30f,
 			},
 			["glacis_nera"] = new Entry
 			{
@@ -57,6 +57,7 @@ namespace T90A
 				Kind = "glacis_pp", Name = "Glacis polypropylene, 10 mm", Variable = true, AngleMatters = true, Weight = 0.1f, Xray = "polypropylene",
 			},
 			["xray_rubber"] = new Entry { Kind = "xray_rubber", Name = "rubber (x-ray only)", DrawnOnly = true, Xray = "rubber"},
+			["xray_gap"] = new Entry { Kind = "xray_gap", Name = "package gap fill (x-ray only)", DrawnOnly = true, Xray = "gapfill"},
 			["xray_thin"] = new Entry { Kind = "xray_thin", Name = "thin steel plate (x-ray only)", DrawnOnly = true, Xray = "thin"},
 			["liner"] = new Entry
 			{
@@ -134,6 +135,7 @@ namespace T90A
 			["rubber"] = ("t90a see-through rubber", new Color(0.85f, 0.08f, 0.08f, 0.35f)),
 			["thin"] = ("t90a see-through thin steel plate", new Color(0.55f, 0.10f, 0.95f, 0.35f)),
 			["polypropylene"] = ("t90a see-through polypropylene", new Color(0.45f, 1.00f, 0.55f, 0.55f)),
+			["gapfill"] = ("t90a see-through gap fill", new Color(0.00f, 1.00f, 0.00f, 0.35f)),
 			["lining"] = ("t90a see-through lining", new Color(1.00f, 0.62f, 0.85f, 0.25f)),
 		};
 		internal const string XrayTemplate = "see-through teal gray";

@@ -2,16 +2,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using GHPC.Thermals;
-using HarmonyLib;
 using UnityEngine;
 
 namespace T90A.Common
 {
 	internal static class ThermalHeat
 	{
-		static readonly FieldInfo Serialized = AccessTools.Field(typeof(HeatSource), "heat");
-		static readonly FieldInfo Current = AccessTools.Field(typeof(HeatSource), "_heat");
-		static readonly FieldInfo Held = AccessTools.Field(typeof(HeatSource), "_mpbRenderers");
+		static readonly FieldInfo Serialized = Reflect.Field(typeof(HeatSource), "heat");
+		static readonly FieldInfo Current = Reflect.Field(typeof(HeatSource), "_heat");
+		static readonly FieldInfo Held = Reflect.Field(typeof(HeatSource), "_mpbRenderers");
 
 		internal static IEnumerable<Transform> PortParts(Transform unit, string prefix) =>
 			unit.GetComponentsInChildren<Transform>(true).Where(t => t.name.StartsWith(prefix) && t.GetComponentsInChildren<Renderer>(true).Length > 0 && t.GetComponentsInParent<Transform>(true).Any(p => p.name == "---MESH---")

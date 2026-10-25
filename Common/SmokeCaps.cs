@@ -1,6 +1,5 @@
 using System.Linq;
 using GHPC.Equipment;
-using HarmonyLib;
 using UnityEngine;
 
 namespace T90A.Common
@@ -11,7 +10,7 @@ namespace T90A.Common
 		{
 			var mgr = unit.GetComponentInChildren<VehicleSmokeManager>(true);
 			if (mgr == null) return;
-			var slots = (VehicleSmokeManager.SmokeSlot[])AccessTools.Field(typeof(VehicleSmokeManager), "_smokeSlots").GetValue(mgr);
+			var slots = (VehicleSmokeManager.SmokeSlot[])Reflect.Field(typeof(VehicleSmokeManager), "_smokeSlots").GetValue(mgr);
 			var caps = unit.GetComponentsInChildren<MeshRenderer>(true).Where(r => r.name.StartsWith("smoke_cap_")).ToList();
 			if (slots == null || caps.Count == 0) return;
 			var free = caps.ToList();

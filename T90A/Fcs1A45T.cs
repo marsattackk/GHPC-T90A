@@ -1,11 +1,7 @@
-using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using GHPC.Equipment;
 using GHPC.Equipment.Optics;
 using GHPC.Weapons;
-using HarmonyLib;
-using Reticle;
+using T90A.Common;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -17,132 +13,28 @@ namespace T90A
 		const float LaserMin = 400f;
 		const float LaserMax = 5000f;
 
-		const BindingFlags Private = BindingFlags.NonPublic | BindingFlags.Instance;
 		internal static readonly Vector2 LineOfSightLimits = new Vector2(-15f, 20f);
 
-		internal static class AimClamp
+		static readonly GunnerFcs.Settings Settings = new GunnerFcs.Settings
 		{
-			static readonly Dictionary<FireControlSystem, List<UsableOptic>> Sights =
-				new Dictionary<FireControlSystem, List<UsableOptic>>();
-			static readonly MethodInfo SetAim = AccessTools.PropertySetter(typeof(FireControlSystem), nameof(FireControlSystem.AimWorldVector));
-
-			internal static void Register(FireControlSystem fcs, UsableOptic optic)
-			{
-				if (fcs == null || optic == null) return;
-				foreach (var dead in Sights.Keys.Where(k => k == null).ToList()) Sights.Remove(dead);
-				if (!Sights.TryGetValue(fcs, out var l)) Sights[fcs] = l = new List<UsableOptic>();
-				if (!l.Contains(optic)) l.Add(optic);
-			}
-
-			[HarmonyPatch(typeof(FireControlSystem), nameof(FireControlSystem.AdjustAimByRatio))]
-			static class Patch
-			{
-				static void Postfix(FireControlSystem __instance)
-				{
-					if (!Sights.TryGetValue(__instance, out var optics)) return;
-					var mode = __instance.CurrentStabMode;
-					if (mode != StabilizationMode.Vector && mode != StabilizationMode.None) return;
-					UsableOptic o = null;
-					foreach (var x in optics) if (x != null && x.slot != null && x.slot.IsActive) { o = x; break; }
-					if (o == null) return;
-					var parent = o.slot.transform.parent;
-					if (parent == null) return;
-					var lim = o.LocalElevationLimits;
-					if (lim == Vector2.zero) return;
-					var d = parent.InverseTransformDirection(__instance.AimWorldVector).normalized;
-					float e = Mathf.Asin(Mathf.Clamp(d.y, -1f, 1f)) * Mathf.Rad2Deg;
-					float lo = lim.x != 0f ? lim.x : -90f, hi = lim.y != 0f ? lim.y : 90f;
-					if (e >= lo && e <= hi) return;
-					float c = Mathf.Clamp(e, lo, hi) * Mathf.Deg2Rad;
-					var flat = new Vector3(d.x, 0f, d.z);
-					flat = flat.sqrMagnitude > 1e-8f ? flat.normalized : Vector3.forward;
-					var w = parent.TransformDirection(flat * Mathf.Cos(c) + Vector3.up * Mathf.Sin(c));
-					if (mode == StabilizationMode.Vector) __instance.SetAimVector(w, true);
-					else SetAim.Invoke(__instance, new object[] { w });
-				}
-			}
-		}
+			LaserMin = LaserMin,
+			LaserMax = LaserMax,
+			LineOfSightLimits = LineOfSightLimits,
+			LineOfSightAzimuth = 8f,
+			RangeStep = 100,
+			DisplayRangeIncrement = 50,
+			FireGateAngle = 0.1f,
+		};
 
 		public static void Apply(UsableOptic dayOptic)
 		{
-			FireControlSystem fcs = dayOptic.FCS;
-
-			fcs.MaxLaserRange = LaserMax;
-			fcs.RegisteredRangeLimits = new Vector2(0f, LaserMax);
-			fcs.MarkRangeInvalidBelow = LaserMin;
-			fcs.IgnoreRangeBelow = 0f;
-			fcs.LaserAim = LaserAimMode.ImpactPoint;
-			fcs.randomRadius = new AngularLength(5f, AngularLength.AngularUnit.MIL_NATO);
-			fcs.RangeStep = 100;
-			fcs.RangeGranularity = 0;
-			fcs.DisplayRangeIncrement = 50;
-			fcs.EnableRangeInterpolation = false;
-
-			fcs.UseDeltaD = true;
-			fcs.ImperfectDeltaD = true;
-
-			fcs.CurrentStabMode = StabilizationMode.Vector;
-			fcs.ImperfectFixedRangePointStab = false;
-			fcs.PointStabIncludesVertical = false;
-			fcs.SuperelevateWeapon = true;
-			fcs.SuperleadWeapon = true;
-			fcs.RefreshAimOnAmmoChange = true;
-
-			fcs.RecordTraverseRateBuffer = true;
-			fcs.TraverseBufferSeconds = 1f;
-			fcs.DynamicLead = true;
-			fcs.InertialCompensation = false;
-			SetPrivate(fcs, "PointStabAffectsLead", false);
-			SetPrivate(fcs, "InertiaLeadIncludesVertical", false);
-			SetPrivate(fcs, "_counterMotionLeadAlwaysOn", false);
-			SetPrivate(fcs, "_autoDumpViaPalmSwitches", false);
-			SetPrivate(fcs, "_horizontalLeadOnly", true);
-			SetPrivate(fcs, "_useSeparateLead", false);
-
-			fcs.FireGateAngle = 0.1f;
-			fcs.SuperelevateFireGating = true;
-			fcs.IgnoreHorizontalForFireGating = true;
-
-			fcs.HasManualMode = true;
-			fcs.ManualModeTriggers = new[] { FcsManualModeStartTrigger.SetRangeManually };
-			fcs.AutoModeTriggers = new[] { FcsManualModeCancelTrigger.Lase };
-			fcs.ManualModeLead = FcsManualModeLead.DisableLeadCompensation;
-			fcs.ManualModeSuperelevation = FcsManualModeSuperelevation.DisableSuperelevation;
-			fcs.ManualModeOpticAlign = OpticAlignment.BoresightStabilized;
-			fcs.ZeroReticleRangeInAutoMode = true;
-
-			dayOptic.Alignment = OpticAlignment.BoresightStabilized;
-			dayOptic.RotateElevation = true;
-			dayOptic.RotateAzimuth = true;
-			dayOptic.CantCorrect = true;
-			dayOptic.ForceHorizontalReticleAlign = true;
-			dayOptic.LocalElevationLimits = LineOfSightLimits;
-			AimClamp.Register(fcs, dayOptic);
-
+			GunnerFcs.Apply(dayOptic, Settings);
+			var fcs = dayOptic.FCS;
+			if (fcs != null)
+			{
+				GunnerFcs.LaserAim.Register(fcs, dayOptic, Settings);
+			}
 			Readout.Build(dayOptic);
-			Resync(fcs, dayOptic);
-		}
-
-		static void Resync(FireControlSystem fcs, UsableOptic dayOptic)
-		{
-			SetPrivate(fcs, "_manualModeOnRangeSet", true);
-			SetPrivate(fcs, "_autoModeOnLase", true);
-			SetPrivate(fcs, "_originalSuperelevationMode", true);
-			SetPrivate(fcs, "_originalSuperleadMode", true);
-			SetPrivate(fcs, "_originalRangeLimits", fcs.RegisteredRangeLimits);
-			SetPrivate(fcs, "_originalRangeStep", fcs.RangeStep);
-			SetPrivate(fcs, "_recordedOriginalRangeValues", true);
-			SetPrivate(fcs, "_originalMainOpticAlign", dayOptic.Alignment);
-
-			if (!(bool)typeof(FireControlSystem).GetField("_initialized", Private).GetValue(fcs)) return;
-
-			typeof(FireControlSystem).GetMethod("SetManualMode", Private).Invoke(fcs, new object[] { false });
-			typeof(FireControlSystem).GetMethod("EngageLead", Private).Invoke(fcs, null);
-		}
-
-		static void SetPrivate(object target, string field, object value)
-		{
-			typeof(FireControlSystem).GetField(field, Private).SetValue(target, value);
 		}
 
 		public class Readout : MonoBehaviour

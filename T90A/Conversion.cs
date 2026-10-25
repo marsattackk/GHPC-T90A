@@ -1,10 +1,7 @@
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
-using GHPC;
 using GHPC.Vehicle;
-using HarmonyLib;
 using MelonLoader;
 using T90A.Common;
 using UnityEngine;
@@ -51,8 +48,50 @@ namespace T90A
 			else MelonLogger.Warning("T-90A Kord: " + vehicle.name + " was converted after spawn; no remote Kord fitted.");
 			if (atSpawn) try { Modules.Build(vehicle); }
 			catch (Exception e) { MelonLogger.Error("T-90A modules failed: " + e); }
+			bool shtora = atSpawn && T90AMod.ShtoraOn.Value;
+			var jammer = Jammer.Copy();
+			jammer.OnAtSpawn = T90AMod.ShtoraJammerAtSpawn.Value;
+			if (shtora) try { Shtora.Apply(vehicle, jammer); }
+			catch (Exception e) { MelonLogger.Error("T-90A Shtora-1 jammer failed: " + e); }
+			var screens = Screens.Copy();
+			screens.Automatic = T90AMod.ShtoraAutomatic.Value;
+			screens.AlarmTone = T90AMod.ShtoraTone.Value;
+			screens.PanelShown = T90AMod.ShtoraPanel.Value;
+			screens.PanelAlways = T90AMod.ShtoraPanelAlways.Value;
+			if (shtora) try { ShtoraScreen.Apply(vehicle, screens); }
+			catch (Exception e) { MelonLogger.Error("T-90A Shtora-1 screens failed: " + e); }
 			MelonCoroutines.Start(LateSetup(vehicle));
 		}
+
+		static readonly Shtora.Settings Jammer = new Shtora.Settings
+		{
+			EmitterLeft = "shtora_l", EmitterRight = "shtora_r",
+			SectorAz = 20f,
+			SectorEl = 2.25f,
+			BreakChance = 0.6f,
+			Relock = new Vector2(0.3f, 0.7f),
+			JitterDeg = 30f,
+			Missiles = new[] { "BGM-71", "HOT", "MILAN", "9M111", "9M113", "9M112", "9M17", "9M114" },
+			OnAtSpawn = true,
+		};
+
+		internal static readonly ShtoraScreen.Settings Screens = new ShtoraScreen.Settings
+		{
+			Tag = "T-90A",
+			PreciseHalfAz = 45f, HeadEl = new Vector2(-5f, 25f),
+			Automatic = true,
+			OwnShotBlock = 15f,
+			LaunchAngle = 12f,
+			Distance = new Vector2(50f, 80f),
+			CloudBuild = 3f,
+			CloudLife = 20f,
+			FuseSeconds = 1f, TubeHeight = 2.3f,
+			WhiteSmokeDonors = new[] { "LEO2A3", "M60A3", "LEO1A3", "M1" }, CloudBottomHeight = 2f,
+			CloudSpread = 8f, CloudSizeScale = 4f, CloudParticles = 60, CloudRise = 0f,
+			AiLaseDelay = new Vector2(0.5f, 1f), AiRelase = 10f,
+			SameThreatDeg = 20f,
+			BlindAi = true, BlindRange = new Vector2(0.9f, 1.1f),
+		};
 
 		static readonly GunSetup.Settings Gun = new GunSetup.Settings
 		{
@@ -66,30 +105,24 @@ namespace T90A
 			CodexName = "T90A 2A46M-5",
 		};
 
+		static readonly Mobility.Settings Drive = new Mobility.Settings
+		{
+			MaxPower = 1000f,
+			MaxRpm = 2000f,
+			FinalDrive = 5.297f,
+			ShiftUpRpm = 1900f,
+			ReverseGears = new[] { -14.35f * ReverseTrackFactor },
+			MaxForwardKmh = 60f,
+			ReverseCapKmh = ReverseCapKmh,
+		};
+
 		static void Crew(Vehicle vehicle)
 		{
 			GunSetup.Apply(vehicle, Gun);
 			SmokeLaunchers.Seat(vehicle, T90AMod.SmokePoints);
 			SmokeCaps.Apply(vehicle.transform);
 
-			var vc = vehicle.GetComponent<NWH.VehiclePhysics.VehicleController>();
-			if (vc != null)
-			{
-				vc.engine.maxPower = 1000f;
-				vc.engine.maxRPM = 2000f;
-				bool initialised = vc.IsInitialized;
-				if (!initialised && vc.tracks.wheelEnlargementCoefficient > 1f) vc.brakes.maxTorque *= vc.transmission.gearMultiplier / 5.297f;
-				vc.transmission.gearMultiplier = 5.297f;
-				if (initialised && vc.tracks.wheelEnlargementCoefficient > 1f) vc.transmission.gearMultiplier *= vc.tracks.wheelEnlargementCoefficient;
-				vc.transmission.targetShiftUpRPM = 1900f;
-				vc.transmission.ReverseGears = new List<float> { -14.35f * ReverseTrackFactor };
-			}
-			var chassis = vehicle.GetComponent<NwhChassis>();
-			if (chassis != null)
-			{
-				AccessTools.Field(typeof(NwhChassis), "_maxForwardSpeed").SetValue(chassis, 60f / 3.6f);
-				AccessTools.Field(typeof(NwhChassis), "_maxReverseSpeed").SetValue(chassis, ReverseCapKmh / 3.6f);
-			}
+			Mobility.Apply(vehicle, Drive);
 
 			var peri = FindDeep(vehicle.transform, "Gunner's Periscope Camera")?.GetComponent<GHPC.Camera.CameraSlot>();
 			if (peri != null) peri.DirectAttachOnly = true;
@@ -201,7 +234,7 @@ namespace T90A
 				BaseRigT72M1.HideLeftovers(root, "T90A_");
 			}
 			catch (Exception e) { MelonLogger.Error("T-90A leftover hiding failed: " + e); }
-			try { VisualLods.Sync(root, new[] { KordBelt.BeltMaterial }); }
+			try { VisualLods.Sync(root, new[] { Kord.BeltSettings.BeltMaterial }); }
 			catch (Exception e) { MelonLogger.Error("T-90A LOD materials failed: " + e); }
 		}
 

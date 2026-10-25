@@ -23,6 +23,18 @@ namespace T90A.Common
 			public bool Existing;
 			public Armour Armour;
 			public Dictionary<string, object> Fuel;
+			public int Tube;
+			public Vector3[] XrayVerts;
+			public int[] XrayTris;
+			public Bounds Bounds
+			{
+				get
+				{
+					var b = new Bounds(Boxes[0].Centre, Boxes[0].Size);
+					foreach (var x in Boxes.Skip(1)) b.Encapsulate(new Bounds(x.Centre, x.Size));
+					return b;
+				}
+			}
 		}
 
 		public readonly List<Module> Modules = new List<Module>();
@@ -58,12 +70,24 @@ namespace T90A.Common
 				if (m.TryGetValue("armour", out var ao) && ao is MiniJson.Obj a)
 					mod.Armour = new Armour { Ke = Num(a, "ke", 0f), Ce = Num(a, "ce", 0f), AngleMatters = Flag(a, "angle_matters"), Ricochet = Flag(a, "ricochet"), Normalizes = Flag(a, "normalizes"), Shatter = Flag(a, "shatter") };
 				if (m.TryGetValue("replaces", out var r) && r is List<object> rl) mod.Replaces.AddRange(rl.OfType<string>());
+				mod.Tube = (int)Num(m, "tube", 0f);
+				if (m.TryGetValue("xray", out var xo) && xo is MiniJson.Obj xm)
+				{
+					var v = Floats(Str(xm, "v", ""));
+					mod.XrayVerts = new Vector3[v.Length / 3];
+					for (int i = 0; i < mod.XrayVerts.Length; i++) mod.XrayVerts[i] = new Vector3(v[3 * i], v[3 * i + 1], v[3 * i + 2]);
+					mod.XrayTris = Floats(Str(xm, "t", "")).Select(t => (int)t).ToArray();
+					if (mod.XrayTris.Length % 3 != 0 || mod.XrayTris.Any(t => t < 0 || t >= mod.XrayVerts.Length))
+						throw new FormatException($"{source}: module '{mod.Id}' has a broken x-ray mesh");
+				}
 				s.Modules.Add(mod);
 			}
 			return s;
 		}
 
 		static string Str(MiniJson.Obj o, string key, string fallback) => o.TryGetValue(key, out var v) && v is string s ? s : fallback;
+		static float[] Floats(string s) => s.Split((char[])null, StringSplitOptions.RemoveEmptyEntries)
+			.Select(x => float.Parse(x, System.Globalization.CultureInfo.InvariantCulture)).ToArray();
 		static bool Flag(MiniJson.Obj o, string key) => o.TryGetValue(key, out var v) && v is bool b && b;
 		static float Num(MiniJson.Obj o, string key, float fallback) => o.TryGetValue(key, out var v) && v is double d ? (float)d : fallback;
 		static Vector3 Vec(MiniJson.Obj o, string key)

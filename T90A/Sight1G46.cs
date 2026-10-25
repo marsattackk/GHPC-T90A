@@ -5,6 +5,7 @@ using System.Reflection;
 using GHPC.Equipment.Optics;
 using GHPC.Weaponry;
 using Reticle;
+using T90A.Common;
 using UnityEngine;
 
 namespace T90A
@@ -36,22 +37,41 @@ namespace T90A
 		const float StadiaX800 = -28.2f;
 		const float StadiaXPer400 = 3.39f;
 
-		static ReticleSO built;
+		static readonly Dictionary<string, ReticleSO> built = new Dictionary<string, ReticleSO>();
+
+		internal static string RoundsKey(params AmmoCodexScriptable[] rounds) => string.Join("|", rounds.Select(r => r != null ? r.name : "-"));
+
+		public static void Apply(UsableOptic dayOptic)
+		{
+			ReticleSO host = dayOptic.reticleMesh.reticleSO;
+			Apply(dayOptic,
+				FindAmmo(ApfsdsAmmo, host, "3BM"),
+				FindAmmo(HeAmmo, host, "3OF"),
+				FindAmmo(HeatAmmo, host, "3BK"),
+				FindAmmo(CoaxAmmo, host, "762"));
+		}
 
 		public static void Apply(UsableOptic dayOptic, AmmoCodexScriptable apfsds, AmmoCodexScriptable he,
 			AmmoCodexScriptable heat, AmmoCodexScriptable coax)
 		{
 			ReticleMesh rm = dayOptic.reticleMesh;
-			if (built == null) built = Build(rm.reticleSO, apfsds, he, heat, coax);
+			string key = RoundsKey(apfsds, he, heat, coax);
+			if (!built.TryGetValue(key, out var so) || so == null) built[key] = so = Build(rm.reticleSO, apfsds, he, heat, coax);
 
-			rm.reticleSO = built;
-			typeof(ReticleMesh).GetField("SMR", BindingFlags.NonPublic | BindingFlags.Instance).SetValue(rm, null);
+			rm.reticleSO = so;
+			Reflect.Field(typeof(ReticleMesh), "SMR").SetValue(rm, null);
 			rm.Load();
 
 			dayOptic.slot.AllowFreeZoom = true;
 			dayOptic.slot.DefaultFov = ZoomFovs[0];
 			dayOptic.slot.OtherFovs = ZoomFovs.Skip(1).ToArray();
+
+			dayOptic.slot.VibrationBlurScale = MoveBlur;
+			dayOptic.slot.VibrationShakeMultiplier = MoveShake;
 		}
+
+		internal const float MoveBlur = 0.08f;
+		internal const float MoveShake = 0.12f;
 
 		public static ReticleSO Build(ReticleSO host, AmmoCodexScriptable apfsds, AmmoCodexScriptable he,
 			AmmoCodexScriptable heat, AmmoCodexScriptable coax)
@@ -337,7 +357,7 @@ namespace T90A
 
 		internal static ReticleTree.Text FontTemplate(ReticleSO host)
 		{
-			FieldInfo fontField = typeof(ReticleTree.Text).GetField("font");
+			FieldInfo fontField = Reflect.Field(typeof(ReticleTree.Text), "font");
 			List<ReticleTree.Text> labels = AllOf<ReticleTree.Text>(host).ToList();
 			ReticleTree.Text etched = labels.FirstOrDefault(t =>
 				fontField.GetValue(t) is UnityEngine.Object f && f != null && f.name.StartsWith("TPD_Etch"));
@@ -349,7 +369,7 @@ namespace T90A
 			try
 			{
 				ReticleTree.VerticalBallistic vb = group.elements.OfType<ReticleTree.VerticalBallistic>().First();
-				MethodInfo toSe = typeof(ReticleTree.VerticalBallistic).GetMethod("DistanceToSuperelevation", BindingFlags.NonPublic | BindingFlags.Instance);
+				MethodInfo toSe = Reflect.Method(typeof(ReticleTree.VerticalBallistic), "DistanceToSuperelevation");
 				var se = (AngularLength)toSe.Invoke(vb, new object[] { new LinearLength(range) });
 				if (se.MRADS < 0f) return se.MRADS;
 			}

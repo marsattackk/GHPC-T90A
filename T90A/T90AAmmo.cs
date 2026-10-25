@@ -24,7 +24,7 @@ namespace T90A
 			{
 				new PortAmmo.Round
 				{
-					Id = "3BM42", Name = "3BM42 APFSDS-T", Source = "clip_3BM32",
+					Id = "3BM42", Name = "3BM42 APFSDS-T", Source = "clip_3BM32", Texture = "round_3bm42_co.png", Atlas = "125mm_co",
 					Set = a =>
 					{
 						a.RhaPenetration = 578f;
@@ -36,7 +36,7 @@ namespace T90A
 				},
 				new PortAmmo.Round
 				{
-					Id = "3BM60", Name = "3BM60 APFSDS-T", Source = "clip_3BM32",
+					Id = "3BM60", Name = "3BM60 APFSDS-T", Source = "clip_3BM32", Texture = "round_3bm60_co.png", Atlas = "125mm_co", Shape = "3BM60",
 					Set = a =>
 					{
 						a.RhaPenetration = 693f;
@@ -53,7 +53,7 @@ namespace T90A
 			FixedHeat = "clip_3BK18M",
 			Missile = new PortAmmo.Round
 			{
-				Id = "9M119M", Name = "9M119M Invar", Source = "clip_9M112M",
+				Id = "9M119M", Name = "9M119M Invar", Source = "clip_9M112M", Texture = "round_9m119m_co.png", Atlas = "kobra_co", Shape = "9M119M",
 				Set = a =>
 				{
 					a.RhaPenetration = 700f;

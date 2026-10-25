@@ -1,0 +1,8 @@
+scale 3
+panel 906 606
+lamp 42
+spz 366 321
+head 540 153
+head 600 153
+head 540 207
+head 600 207

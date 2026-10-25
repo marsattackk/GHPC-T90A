@@ -81,5 +81,32 @@ namespace T90A.Common
 					}
 			return n;
 		}
+
+		internal static bool PrefabsAtRisk
+		{
+			get
+			{
+				if (!System.AppDomain.CurrentDomain.GetAssemblies().Any(a => a.GetName().Name == "VanillaAssetUtil")) return false;
+				try { return !(MelonPreferences.HasEntry("VanillaAssetUtil", "Legacy Mode") && MelonPreferences.GetEntryValue<bool>("VanillaAssetUtil", "Legacy Mode")); }
+				catch { return true; }
+			}
+		}
+
+		static bool _warmed;
+
+		internal static void WarmAtMenu(string tag, System.Action copy)
+		{
+			if (_warmed || !PrefabsAtRisk) return;
+			_warmed = true;
+			MelonCoroutines.Start(Warm(tag, copy));
+		}
+
+		static System.Collections.IEnumerator Warm(string tag, System.Action copy)
+		{
+			for (int frame = 0; frame < 600 && UnitRegistry.Lookup?.AllUnits == null; frame++) yield return null;
+			if (UnitRegistry.Lookup?.AllUnits == null) { _warmed = false; yield break; }
+			try { copy(); }
+			catch (System.Exception e) { MelonLogger.Warning($"{tag}: copying the vanilla donor parts at the main menu failed ({e.GetType().Name}: {e.Message}); they are copied at the first spawn."); }
+		}
 	}
 }

@@ -13,9 +13,9 @@ namespace T90A.Common
 		public float Min;
 		float[] _angles = new float[0], _limits = new float[0];
 
-		static readonly AccessTools.FieldRef<AimablePlatform, Quaternion> Orig = AccessTools.FieldRefAccess<AimablePlatform, Quaternion>("_originalLocalRotation");
-		static readonly AccessTools.FieldRef<AimablePlatform, bool> Destroyed = AccessTools.FieldRefAccess<AimablePlatform, bool>("_destroyed");
-		static readonly Action<AimablePlatform> Enforce = AccessTools.MethodDelegate<Action<AimablePlatform>>(AccessTools.Method(typeof(AimablePlatform), "enforceEulerLimits"));
+		static readonly AccessTools.FieldRef<AimablePlatform, Quaternion> Orig = Reflect.FieldRefAccess<AimablePlatform, Quaternion>("_originalLocalRotation");
+		static readonly AccessTools.FieldRef<AimablePlatform, bool> Destroyed = Reflect.FieldRefAccess<AimablePlatform, bool>("_destroyed");
+		static readonly Action<AimablePlatform> Enforce = AccessTools.MethodDelegate<Action<AimablePlatform>>(Reflect.Method(typeof(AimablePlatform), "enforceEulerLimits"));
 
 		internal static List<KeyValuePair<float, float>> Parse(string text)
 		{

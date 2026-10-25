@@ -4,15 +4,14 @@ using System.Reflection;
 using GHPC;
 using GHPC.PhysicsHelpers;
 using GHPC.Utility;
-using HarmonyLib;
 using UnityEngine;
 
 namespace T90A.Common
 {
 	internal static class VanillaEditsApply
 	{
-		static readonly FieldInfo RestRotation = AccessTools.Field(typeof(AimablePlatform), "_originalLocalRotation");
-		static readonly FieldInfo GroupColliders = AccessTools.Field(typeof(RaycastColliderGroup), "childColliders");
+		static readonly FieldInfo RestRotation = Reflect.Field(typeof(AimablePlatform), "_originalLocalRotation");
+		static readonly FieldInfo GroupColliders = Reflect.Field(typeof(RaycastColliderGroup), "childColliders");
 
 		internal static void Apply(Transform root, VanillaEdits e, IDictionary<string, (Mesh mesh, Transform bone)> reshape, List<string> problems = null)
 		{

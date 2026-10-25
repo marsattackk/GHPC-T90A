@@ -14,6 +14,8 @@ using MelonLoader;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using Object = UnityEngine.Object;
+using System.IO;
+using System.Globalization;
 using TMPro;
 
 namespace T90A.Common
@@ -29,6 +31,9 @@ namespace T90A.Common
 			public float Prevalence = 1f;
 			public int AfterMissions;
 			public bool ScaleWithLogistics;
+			public string Texture;
+			public string Atlas;
+			public string Shape;
 		}
 
 		internal sealed class Rack
@@ -36,6 +41,7 @@ namespace T90A.Common
 			public int Index;
 			public int[] Counts;
 			public int[] MissileSlots = new int[0];
+			public bool NoRestockInto;
 		}
 
 		internal sealed class Settings
@@ -50,6 +56,7 @@ namespace T90A.Common
 			public string MenuSuffix;
 			public string FixedHeat = "clip_3BK18M";
 			public Round Missile;
+			public Round[] Extra = new Round[0];
 			public string[] EraDefeating = new string[0];
 			public int[] TotalCounts;
 			public Rack[] Racks = new Rack[0];
@@ -65,11 +72,12 @@ namespace T90A.Common
 		internal static readonly Dictionary<string, AmmoClipCodexScriptable> Apfsds = new Dictionary<string, AmmoClipCodexScriptable>();
 		internal static AmmoClipCodexScriptable Heat;
 		internal static AmmoClipCodexScriptable Missile;
+		internal static readonly List<AmmoClipCodexScriptable> Extras = new List<AmmoClipCodexScriptable>();
 		internal static AmmoLogisticsScriptable ApfsdsSet;
 		static bool _built;
-		static readonly MethodInfo RegisterAllBallistics = AccessTools.Method(typeof(LoadoutManager), "RegisterAllBallistics");
-		static readonly FieldInfo FeedMissileGuidance = AccessTools.Field(typeof(AmmoFeed), "_missileGuidance");
-		static readonly MethodInfo FeedGuidanceStopped = AccessTools.Method(typeof(AmmoFeed), "MissileGuidanceStopped");
+		static readonly MethodInfo RegisterAllBallistics = Reflect.Method(typeof(LoadoutManager), "RegisterAllBallistics");
+		static readonly FieldInfo FeedMissileGuidance = Reflect.Field(typeof(AmmoFeed), "_missileGuidance");
+		static readonly MethodInfo FeedGuidanceStopped = Reflect.Method(typeof(AmmoFeed), "MissileGuidanceStopped");
 
 		internal static bool Build()
 		{
@@ -79,7 +87,7 @@ namespace T90A.Common
 			var clips = list?.AmmoClips ?? new AmmoClipCodexScriptable[0];
 			AmmoType SourceOf(Round r) => clips.FirstOrDefault(c => c.name == r.Source)?.ClipType.MinimalPattern[0].AmmoType;
 			Heat = clips.FirstOrDefault(c => c.name == S.FixedHeat);
-			var missing = S.Apfsds.Concat(S.Missile != null ? new[] { S.Missile } : new Round[0]).Where(r => SourceOf(r) == null).Select(r => r.Source).ToList();
+			var missing = S.Apfsds.Concat(S.Missile != null ? new[] { S.Missile } : new Round[0]).Concat(S.Extra).Where(r => SourceOf(r) == null).Select(r => r.Source).ToList();
 			if (Heat == null) missing.Add(S.FixedHeat);
 			if (missing.Count > 0 || S.Apfsds.Length == 0)
 			{
@@ -91,6 +99,8 @@ namespace T90A.Common
 			{
 				Missile = MakeClip(S.Missile, SourceOf(S.Missile));
 			}
+			Extras.Clear();
+			foreach (var r in S.Extra) Extras.Add(MakeClip(r, SourceOf(r)));
 			ApfsdsSet = MakeApfsdsSet();
 			_built = true;
 			return true;
@@ -166,6 +176,7 @@ namespace T90A.Common
 			list[0] = ap;
 			list[1] = Heat;
 			if (Missile != null) list.Add(Missile);
+			list.AddRange(Extras);
 			return list;
 		}
 
@@ -230,9 +241,121 @@ namespace T90A.Common
 				visual.name = r.Id + " visual";
 				var stored = visual.GetComponent<AmmoStoredVisual>();
 				if (stored != null) { stored.AmmoType = ammo; stored.AmmoScriptable = codex; }
+				ApplyLook(visual, r);
+				ApplyShape(visual, r);
 				ammo.VisualModel = visual;
 			}
 			return clipCodex;
+		}
+
+		static readonly Dictionary<string, Texture2D> _looks = new Dictionary<string, Texture2D>();
+		static readonly Dictionary<(Material, string), Material> _lookMaterials = new Dictionary<(Material, string), Material>();
+
+		static void ApplyLook(GameObject model, Round r)
+		{
+			if (string.IsNullOrEmpty(r.Texture) || string.IsNullOrEmpty(r.Atlas)) return;
+			foreach (var rend in model.GetComponentsInChildren<Renderer>(true))
+			{
+				var mats = rend.sharedMaterials;
+				bool changed = false;
+				for (int i = 0; i < mats.Length; i++)
+				{
+					var m = mats[i];
+					if (m == null || !m.HasProperty("_MainTex") || m.mainTexture == null || m.mainTexture.name != r.Atlas) continue;
+					if (!_lookMaterials.TryGetValue((m, r.Texture), out var copy) || copy == null)
+					{
+						var tex = LookTexture(r.Texture, m.mainTexture);
+						if (tex == null) { MelonLogger.Warning($"{S.Tag}: the {r.Id} stencils ({r.Texture}) are missing from the mod; its rounds keep the {r.Atlas} look."); return; }
+						copy = new Material(m) { name = $"{m.name} ({S.Prefix} {r.Id})", hideFlags = HideFlags.DontUnloadUnusedAsset };
+						copy.mainTexture = tex;
+						_lookMaterials[(m, r.Texture)] = copy;
+					}
+					mats[i] = copy;
+					changed = true;
+				}
+				if (changed) rend.sharedMaterials = mats;
+			}
+		}
+
+		static readonly Dictionary<string, Mesh> _shapeMeshes = new Dictionary<string, Mesh>();
+		static string[] _shapeIndex;
+
+		static void ApplyShape(GameObject model, Round r)
+		{
+			if (string.IsNullOrEmpty(r.Shape)) return;
+			if (_shapeIndex == null)
+			{
+				using (var st = typeof(PortAmmo).Assembly.GetManifestResourceStream("round_meshes.txt"))
+					_shapeIndex = st == null ? new string[0] : new StreamReader(st).ReadToEnd().Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0 && l[0] != '#').ToArray();
+			}
+			int meshes = 0, missing = 0;
+			foreach (var line in _shapeIndex)
+			{
+				var f = line.Split('|');
+				if (f.Length < 4 || f[1] != r.Shape) continue;
+				if (f[0] == "mesh")
+				{
+					var mesh = ShapeMesh(f[3]);
+					if (mesh == null) { missing++; continue; }
+					foreach (var mf in model.GetComponentsInChildren<MeshFilter>(true).Where(x => x.name == f[2])) { mf.sharedMesh = mesh; meshes++; }
+				}
+				else if (f[0] == "capsule" && f.Length >= 7)
+				{
+					var c = f[3].Split(',').Select(x => float.Parse(x, CultureInfo.InvariantCulture)).ToArray();
+					foreach (var cc in model.GetComponentsInChildren<CapsuleCollider>(true).Where(x => x.name == f[2]))
+					{
+						cc.center = new Vector3(c[0], c[1], c[2]);
+						cc.radius = float.Parse(f[4], CultureInfo.InvariantCulture);
+						cc.height = float.Parse(f[5], CultureInfo.InvariantCulture);
+						cc.direction = int.Parse(f[6]);
+					}
+				}
+			}
+			if (missing > 0 || meshes == 0) MelonLogger.Warning($"{S.Tag}: the {r.Id} model's shape ({r.Shape}) is missing from the mod ({missing} pieces); its rounds keep the {r.Source} shape.");
+		}
+
+		static Mesh ShapeMesh(string resource)
+		{
+			if (_shapeMeshes.TryGetValue(resource, out var m) && m != null) return m;
+			using (var st = typeof(PortAmmo).Assembly.GetManifestResourceStream(resource))
+			{
+				if (st == null) return null;
+				var br = new BinaryReader(st);
+				int nv = br.ReadInt32(), nt = br.ReadInt32();
+				Vector3[] V3() { var a = new Vector3[nv]; for (int i = 0; i < nv; i++) a[i] = new Vector3(br.ReadSingle(), br.ReadSingle(), br.ReadSingle()); return a; }
+				var pos = V3(); var nrm = V3();
+				var uv = new Vector2[nv]; for (int i = 0; i < nv; i++) uv[i] = new Vector2(br.ReadSingle(), br.ReadSingle());
+				var tri = new int[nt * 3]; for (int i = 0; i < tri.Length; i++) tri[i] = br.ReadInt32();
+				m = new Mesh { name = Path.GetFileNameWithoutExtension(resource), hideFlags = HideFlags.DontUnloadUnusedAsset };
+				if (nv > 65535) m.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32;
+				m.vertices = pos; m.normals = nrm; m.uv = uv; m.triangles = tri;
+				m.RecalculateTangents();
+				m.RecalculateBounds();
+				m.UploadMeshData(true);
+			}
+			_shapeMeshes[resource] = m;
+			return m;
+		}
+
+		static Texture2D LookTexture(string resource, Texture like)
+		{
+			if (_looks.TryGetValue(resource, out var t) && t != null) return t;
+			byte[] buf;
+			using (var st = typeof(PortAmmo).Assembly.GetManifestResourceStream(resource))
+			{
+				if (st == null) return null;
+				buf = new byte[st.Length];
+				int got = 0;
+				while (got < buf.Length) { int n = st.Read(buf, got, buf.Length - got); if (n <= 0) break; got += n; }
+			}
+			t = new Texture2D(2, 2, TextureFormat.RGBA32, true) { name = Path.GetFileNameWithoutExtension(resource) };
+			if (!ImageConversion.LoadImage(t, buf, false)) return null;
+			t.filterMode = like.filterMode; t.anisoLevel = like.anisoLevel; t.wrapMode = like.wrapMode;
+			t.Compress(true);
+			t.Apply(false, true);
+			t.hideFlags = HideFlags.DontUnloadUnusedAsset;
+			_looks[resource] = t;
+			return t;
 		}
 
 		internal static void ApplyAtSpawn(Vehicle vehicle)
@@ -254,12 +377,27 @@ namespace T90A.Common
 				if (r.Counts != null) rl.AmmoCounts = r.Counts.Take(list.Count).ToArray();
 				if (missile >= 0 && r.MissileSlots.Length > 0)
 					rl.FixedChoices = r.MissileSlots.Select(s => new LoadoutManager.RackLoadoutFixedChoice { AmmoClipIndex = missile, RackSlotIndex = s }).ToArray();
+				if (r.NoRestockInto && rl.Rack != null && rl.Rack.GetComponent<NoRestockInto>() == null) rl.Rack.gameObject.AddComponent<NoRestockInto>();
 				kept.Add(rl);
 			}
-			if (kept.Count < lm.RackLoadouts.Length) string.Join(", ", lm.RackLoadouts.Except(kept).Select(x => x.Rack != null ? x.Rack.name : "?"));
+			var all = lm.RackLoadouts;
+			if (S.DropOtherRacks) kept = kept.OrderBy(rl => Array.FindIndex(S.Racks, x => x.Index == Array.IndexOf(all, rl))).ToList();
 			lm.RackLoadouts = kept.ToArray();
 			if (missile >= 0) AddGuidanceUnit(weapon);
 			RegisterAllBallistics.Invoke(lm, null);
+		}
+
+		internal sealed class NoRestockInto : MonoBehaviour { }
+
+		[HarmonyPatch(typeof(LoadoutManager), "RackHasRestockSpace")]
+		static class RestockTargetPatch
+		{
+			static bool Prefix(LoadoutManager.RackLoadout rackLoadout, ref bool __result)
+			{
+				if (rackLoadout?.Rack == null || rackLoadout.Rack.GetComponent<NoRestockInto>() == null) return true;
+				__result = false;
+				return false;
+			}
 		}
 
 		static readonly HashSet<string> reported = new HashSet<string>();
@@ -270,6 +408,7 @@ namespace T90A.Common
 			var problems = new List<string>();
 			var own = Apfsds.Select(kv => (kv.Key, kv.Value)).ToList();
 			if (Missile != null) own.Add((S.Missile.Id, Missile));
+			for (int i = 0; i < Extras.Count; i++) own.Add((S.Extra[i].Id, Extras[i]));
 			foreach (var (id, clip) in own)
 			{
 				var model = clip?.ClipType?.MinimalPattern?.FirstOrDefault()?.AmmoType?.VisualModel;
@@ -281,7 +420,7 @@ namespace T90A.Common
 			var lm = vehicle.GetComponent<LoadoutManager>();
 			var clips = lm?.LoadedAmmoList?.AmmoClips;
 			if (lm == null || clips == null) { Report(vehicle, problems.Concat(new[] { "no loadout" })); return; }
-			int expected = 3 + (Missile != null ? 1 : 0);
+			int expected = 3 + (Missile != null ? 1 : 0) + Extras.Count;
 			if (clips.Length != expected) problems.Add($"ammo list has {clips.Length} entries, expected {expected}");
 			if (clips.Length > 0 && !Apfsds.Values.Any(a => ReferenceEquals(a, clips[0]))) problems.Add($"APFSDS slot holds '{clips[0]?.ClipType?.Name}'");
 			if (clips.Length > 1 && !ReferenceEquals(clips[1], Heat)) problems.Add($"HEAT slot holds '{clips[1]?.ClipType?.Name}'");
@@ -338,7 +477,7 @@ namespace T90A.Common
 			MelonLogger.Warning($"{S.Tag} ammunition self-check ({vehicle.name}): {string.Join("; ", fresh)}. Please include this log in a bug report.");
 		}
 
-		static readonly FieldInfo InitialClipCounts = AccessTools.Field(typeof(GHPC.Weapons.AmmoRack), "_initialClipCounts");
+		static readonly FieldInfo InitialClipCounts = Reflect.Field(typeof(GHPC.Weapons.AmmoRack), "_initialClipCounts");
 
 		internal static void ApplyCoaxAtSpawn(Vehicle vehicle)
 		{
@@ -386,9 +525,9 @@ namespace T90A.Common
 	internal static class AmmoMenuSetsPatch
 	{
 		static readonly AccessTools.FieldRef<MissionConfigMenuPanel, AmmoLogisticsSetScriptable> AllSets =
-			AccessTools.FieldRefAccess<MissionConfigMenuPanel, AmmoLogisticsSetScriptable>("_allAmmoSetsScriptable");
+			Reflect.FieldRefAccess<MissionConfigMenuPanel, AmmoLogisticsSetScriptable>("_allAmmoSetsScriptable");
 		static readonly AccessTools.FieldRef<MissionConfigMenuPanel, UnitPrefabLookupScriptable> AllUnits =
-			AccessTools.FieldRefAccess<MissionConfigMenuPanel, UnitPrefabLookupScriptable>("_allUnitsScriptable");
+			Reflect.FieldRefAccess<MissionConfigMenuPanel, UnitPrefabLookupScriptable>("_allUnitsScriptable");
 
 		static void Postfix(MissionConfigMenuPanel __instance, string unitKey, ref List<AmmoLogisticsScriptable> __result, ref List<int> preferredIndices)
 		{
@@ -406,9 +545,9 @@ namespace T90A.Common
 	internal static class AmmoMenuLabelPatch
 	{
 		static readonly AccessTools.FieldRef<MissionConfigMenuPanel, List<GameObject>> Entries =
-			AccessTools.FieldRefAccess<MissionConfigMenuPanel, List<GameObject>>("_ammoDataObjects");
+			Reflect.FieldRefAccess<MissionConfigMenuPanel, List<GameObject>>("_ammoDataObjects");
 		static readonly AccessTools.FieldRef<MissionConfigAmmoSelectionEntry, TextMeshProUGUI> Label =
-			AccessTools.FieldRefAccess<MissionConfigAmmoSelectionEntry, TextMeshProUGUI>("_label");
+			Reflect.FieldRefAccess<MissionConfigAmmoSelectionEntry, TextMeshProUGUI>("_label");
 
 		static void Postfix(MissionConfigMenuPanel __instance, AmmoLogisticsScriptable ammoLogisticsScriptable)
 		{
@@ -459,7 +598,7 @@ namespace T90A.Common
 	[HarmonyPatch(typeof(LiveRound), "penCheck")]
 	internal static class TandemEraPatch
 	{
-		static readonly AccessTools.FieldRef<LiveRound, bool> Sacrificed = AccessTools.FieldRefAccess<LiveRound, bool>("_sacrificedWarhead");
+		static readonly AccessTools.FieldRef<LiveRound, bool> Sacrificed = Reflect.FieldRefAccess<LiveRound, bool>("_sacrificedWarhead");
 
 		static void Prefix(LiveRound __instance, Collider cObject)
 		{

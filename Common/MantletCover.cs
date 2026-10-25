@@ -1,6 +1,5 @@
 using System.Linq;
 using GHPC;
-using HarmonyLib;
 using UnityEngine;
 
 namespace T90A.Common
@@ -26,7 +25,7 @@ namespace T90A.Common
 			}
 			mesh.boneWeights = w;
 			var plat = root.GetComponentsInChildren<AimablePlatform>(true).FirstOrDefault(p => p.Transform == gun);
-			var restRot = plat != null ? (Quaternion)AccessTools.Field(typeof(AimablePlatform), "_originalLocalRotation").GetValue(plat) : gun.localRotation;
+			var restRot = plat != null ? (Quaternion)Reflect.Field(typeof(AimablePlatform), "_originalLocalRotation").GetValue(plat) : gun.localRotation;
 			var gunRestInTurret = gun.parent == turret ? Matrix4x4.TRS(gun.localPosition, restRot, gun.localScale) : turret.worldToLocalMatrix * gun.localToWorldMatrix;
 			mesh.bindposes = new[] { gunRestInTurret, Matrix4x4.identity };
 			var mats = mr.sharedMaterials;

@@ -10,10 +10,10 @@ using GHPC.Equipment;
 using GHPC.Utility;
 using GHPC.Vehicle;
 using GHPC.Weapons;
-using HarmonyLib;
 using UnityEngine;
 using DC = GHPC.Equipment.DestructibleComponent;
 using GHPC.PhysicsHelpers;
+using System.Runtime.CompilerServices;
 
 namespace T90A.Common
 {
@@ -45,21 +45,24 @@ namespace T90A.Common
 		};
 
 		const BindingFlags Any = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
-		static readonly FieldInfo DcHealth = AccessTools.Field(typeof(DC), "_health"), DcThreshold = AccessTools.Field(typeof(DC), "_damageThreshold"),
-			DcPressure = AccessTools.Field(typeof(DC), "_pressureTolerance"), DcChildren = AccessTools.Field(typeof(DC), "_children");
-		static readonly FieldInfo ArmourName = AccessTools.Field(typeof(UniformArmor), "_name"), ArmourRicochet = AccessTools.Field(typeof(UniformArmor), "_canRicochet"),
-			ArmourNormalizes = AccessTools.Field(typeof(UniformArmor), "_normalizesHits"), ArmourShatter = AccessTools.Field(typeof(UniformArmor), "_canShatterLongRods");
-		static readonly FieldInfo UnitStatuses = AccessTools.Field(typeof(Unit), "DamageStatuses");
-		static readonly FieldInfo GroupColliders = AccessTools.Field(typeof(RaycastColliderGroup), "childColliders");
+		static readonly FieldInfo DcHealth = Reflect.Field(typeof(DC), "_health"), DcThreshold = Reflect.Field(typeof(DC), "_damageThreshold"),
+			DcPressure = Reflect.Field(typeof(DC), "_pressureTolerance"), DcChildren = Reflect.Field(typeof(DC), "_children");
+		static readonly FieldInfo ArmourName = Reflect.Field(typeof(UniformArmor), "_name"), ArmourRicochet = Reflect.Field(typeof(UniformArmor), "_canRicochet"),
+			ArmourNormalizes = Reflect.Field(typeof(UniformArmor), "_normalizesHits"), ArmourShatter = Reflect.Field(typeof(UniformArmor), "_canShatterLongRods");
+		static readonly FieldInfo UnitStatuses = Reflect.Field(typeof(Unit), "DamageStatuses");
+		static readonly FieldInfo GroupColliders = Reflect.Field(typeof(RaycastColliderGroup), "childColliders");
 
 		internal sealed class ModuleSet : MonoBehaviour, IDamageStatus
 		{
 			internal ModuleSpec Spec;
 			internal readonly List<(ModuleSpec.Module m, DC dc)> Built = new List<(ModuleSpec.Module, DC)>();
 			internal readonly List<(DC dc, string text)> Lines = new List<(DC, string)>();
+			internal readonly Dictionary<DC, VehicleSmokeManager.SmokeSlot> Tubes = new Dictionary<DC, VehicleSmokeManager.SmokeSlot>();
 			internal bool Wired;
-			public bool Damaged => Lines.Any(l => l.dc != null && l.dc.IsDestroyed);
-			public string DamageStatus => string.Concat(Lines.Where(l => l.dc != null && l.dc.IsDestroyed).Select(l => l.text + "\n"));
+			int TubesLost => Tubes.Keys.Count(t => t != null && t.IsDestroyed);
+			public bool Damaged => Lines.Any(l => l.dc != null && l.dc.IsDestroyed) || TubesLost > 0;
+			public string DamageStatus => string.Concat(Lines.Where(l => l.dc != null && l.dc.IsDestroyed).Select(l => l.text + "\n"))
+				+ (TubesLost > 0 ? $"Smoke grenade launchers destroyed: {TubesLost} of {Tubes.Count}\n" : "");
 		}
 
 		internal static void Build(Vehicle vehicle, ModuleSpec spec, string label, List<string> problems)
@@ -87,20 +90,26 @@ namespace T90A.Common
 						var box = go.AddComponent<BoxCollider>();
 						box.center = toBone.MultiplyPoint3x4(b.Centre);
 						box.size = b.Size;
-						if (look.material != null)
+						if (look.material != null && m.XrayVerts == null)
 						{
 							var vis = GameObject.CreatePrimitive(PrimitiveType.Cube);
 							UnityEngine.Object.DestroyImmediate(vis.GetComponent<Collider>());
-							vis.name = "x-ray";
-							vis.layer = look.layer;
-							vis.transform.SetParent(go.transform, false);
 							vis.transform.localPosition = box.center;
 							vis.transform.localScale = box.size;
-							var r = vis.GetComponent<MeshRenderer>();
-							r.sharedMaterial = look.material;
-							r.enabled = look.enabled;
-							r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+							XrayLook(vis, go.transform, look);
 						}
+					}
+					if (look.material != null && m.XrayVerts != null)
+					{
+						var mesh = new Mesh { name = $"{label} {m.Id} x-ray" };
+						mesh.vertices = m.XrayVerts.Select(v => toBone.MultiplyPoint3x4(v)).ToArray();
+						mesh.triangles = m.XrayTris;
+						mesh.RecalculateNormals();
+						mesh.RecalculateBounds();
+						var vis = new GameObject();
+						vis.AddComponent<MeshFilter>().sharedMesh = mesh;
+						vis.AddComponent<MeshRenderer>();
+						XrayLook(vis, go.transform, look);
 					}
 					var dc = go.AddComponent<DC>();
 					dc.SetName(m.Name);
@@ -136,6 +145,17 @@ namespace T90A.Common
 			var f = root.GetComponentsInChildren<LateFollow>(true).FirstOrDefault(x => x.name.IndexOf(name + " COLLIDERS", StringComparison.OrdinalIgnoreCase) >= 0 && x.FollowTarget != null);
 			if (f == null) return (null, null);
 			return (f.transform.Find("AAR") ?? f.transform, f.FollowTarget);
+		}
+
+		static void XrayLook(GameObject vis, Transform zone, (AarVisual template, Material material, int layer, bool enabled) look)
+		{
+			vis.name = "x-ray";
+			vis.layer = look.layer;
+			vis.transform.SetParent(zone, false);
+			var r = vis.GetComponent<MeshRenderer>();
+			r.sharedMaterial = look.material;
+			r.enabled = look.enabled;
+			r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
 		}
 
 		static (AarVisual template, Material material, int layer, bool enabled) Look(Transform root)
@@ -179,7 +199,7 @@ namespace T90A.Common
 			{
 				foreach (var h in m.Hooks)
 				{
-					try { WireHook(vehicle, set, dc, h, replaced); }
+					try { WireHook(vehicle, set, m, dc, h, replaced); }
 					catch (Exception e) { problems.Add($"'{m.Name}' {h.Name}: {e.GetType().Name}: {e.Message}"); }
 				}
 				if (m.Status != null) set.Lines.Add((dc, m.Status));
@@ -190,10 +210,10 @@ namespace T90A.Common
 				var z = zones.FirstOrDefault(x => x.Name == m.Name);
 				if (z == null) problems.Add($"existing module '{m.Name}' not found");
 			}
-			if (set.Lines.Count > 0) AddStatus(vehicle, set);
+			if (set.Lines.Count > 0 || set.Tubes.Count > 0) AddStatus(vehicle, set);
 		}
 
-		static void WireHook(Vehicle vehicle, ModuleSet set, DC dc, ModuleSpec.Hook h, HashSet<DC> replaced)
+		static void WireHook(Vehicle vehicle, ModuleSet set, ModuleSpec.Module m, DC dc, ModuleSpec.Hook h, HashSet<DC> replaced)
 		{
 			var main = MainWeapon(vehicle);
 			if (h.Name == "Module.PowerDrive")
@@ -205,6 +225,15 @@ namespace T90A.Common
 				set.Lines.Add((dc, $"{p.Name} power drive destroyed"));
 				return;
 			}
+			if (h.Name == "Module.HandDrive")
+			{
+				var p = Platform(main, h.Target) ?? throw new InvalidOperationException($"no platform '{h.Target}'");
+				float hand = p.SpeedUnpowered;
+				dc.Destroyed += _ => p.SpeedUnpowered = 0f;
+				dc.Repaired += _ => p.SpeedUnpowered = hand;
+				set.Lines.Add((dc, $"{p.Name} hand drive destroyed"));
+				return;
+			}
 			if (h.Name == "Module.Stabiliser")
 			{
 				var fcs = main?.FCS ?? throw new InvalidOperationException("no main FCS");
@@ -213,6 +242,19 @@ namespace T90A.Common
 				dc.Destroyed += _ => { foreach (var x in mounts) x.Stabilized = false; };
 				dc.Repaired += _ => { for (int i = 0; i < mounts.Length; i++) if (mounts[i].PowerEnabled) mounts[i].Stabilized = was[i]; };
 				set.Lines.Add((dc, "Stabiliser destroyed"));
+				return;
+			}
+			if (h.Name == "Module.SmokeTube")
+			{
+				var smoke = vehicle.GetComponentInChildren<VehicleSmokeManager>(true) ?? throw new InvalidOperationException("no smoke manager");
+				Reflect.Field(typeof(VehicleSmokeManager), "_smokeSlots").GetValue(smoke);
+				var slot = SmokeLaunchers.SlotOfTube(smoke, m.Tube) ?? throw new InvalidOperationException($"no grenade slot seated on tube {m.Tube}");
+				var taken = set.Tubes.FirstOrDefault(t => t.Value == slot).Key;
+				if (taken != null) throw new InvalidOperationException($"slot already taken by '{taken.Name}'");
+				set.Tubes[dc] = slot;
+				int held = 0;
+				dc.Destroyed += _ => { held = slot.Rounds; slot.Rounds = 0; };
+				dc.Repaired += _ => { slot.Rounds = Math.Max(slot.Rounds, held); held = 0; };
 				return;
 			}
 			if (!Hooks.TryGetValue(h.Name, out var def)) throw new InvalidOperationException("unknown hook " + h.Name);
@@ -280,7 +322,7 @@ namespace T90A.Common
 			if (m.Fuel != null)
 				foreach (var kv in m.Fuel)
 				{
-					var f = AccessTools.Field(typeof(FlammableItem), kv.Key);
+					var f = Reflect.Field(typeof(FlammableItem), kv.Key);
 					if (f != null && kv.Value is double d) f.SetValue(fi, (float)d);
 					else if (f != null && kv.Value is bool b) f.SetValue(fi, b);
 				}
@@ -307,6 +349,8 @@ namespace T90A.Common
 			return null;
 		}
 
+		static readonly ConditionalWeakTable<FireControlSystem, CameraSlot> GunnerDay = new ConditionalWeakTable<FireControlSystem, CameraSlot>();
+
 		static object Owner(Vehicle v, WeaponSystem main, Type cls, string target)
 		{
 			if (cls == typeof(ChassisDamageManager) || cls == typeof(Radio)) return v.GetComponentInChildren(cls, true);
@@ -320,8 +364,14 @@ namespace T90A.Common
 			if (cls == typeof(AimablePlatform) && (target == "turret" || target == "gun")) return Platform(main, target);
 			if (cls == typeof(CameraSlot) && (target == "gunner_day" || target == "gunner_night"))
 			{
-				var o = main?.FCS?.MainOptic;
-				var day = o == null ? null : o.slot.IsLinkedNightSight ? o.slot.LinkedDaySight : o.slot;
+				var fcs = main?.FCS;
+				if (fcs == null) return null;
+				if (!GunnerDay.TryGetValue(fcs, out var day))
+				{
+					var o = fcs.MainOptic;
+					day = o == null ? null : o.slot.IsLinkedNightSight ? o.slot.LinkedDaySight : o.slot;
+					if (day != null) GunnerDay.Add(fcs, day);
+				}
 				return target == "gunner_day" ? day : day?.LinkedNightSight;
 			}
 			var objs = UnitObjects(v).SelectMany(t => t.GetComponentsInChildren(cls, true)).Distinct();

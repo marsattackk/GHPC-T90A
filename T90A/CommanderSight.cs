@@ -3,8 +3,8 @@ using GHPC;
 using GHPC.Camera;
 using GHPC.Equipment.Optics;
 using GHPC.Weapons;
-using HarmonyLib;
 using Reticle;
+using T90A.Common;
 using UnityEngine;
 
 namespace T90A
@@ -18,10 +18,10 @@ namespace T90A
 		internal const float NightFov = 11.5f;
 		internal static readonly Vector2 AutoElevation = new Vector2(-4f, 20f);
 		internal static readonly Vector2 RangeLimits = new Vector2(0f, 1600f);
-		internal static readonly Vector3 ZoneCentre = new Vector3(0.535f, 2.0205f, -0.9225f), ZoneSize = new Vector3(0.416f, 0.501f, 0.275f);
+		internal static readonly Vector3 ZoneCentre = new Vector3(0.535f, 2.0205f, -0.9025f), ZoneSize = new Vector3(0.416f, 0.501f, 0.235f);
 
-		static readonly FieldInfo SlotReparent = AccessTools.Field(typeof(CameraSlot), "_reparentTarget");
-		static readonly FieldInfo ReticleSmr = AccessTools.Field(typeof(ReticleMesh), "SMR");
+		static readonly FieldInfo SlotReparent = Reflect.Field(typeof(CameraSlot), "_reparentTarget");
+		static readonly FieldInfo ReticleSmr = Reflect.Field(typeof(ReticleMesh), "SMR");
 
 		internal static void Configure(UsableOptic day, UsableOptic night, UsableOptic nightLook, Transform head, FireControlSystem fcs, WeaponSystem kord,
 			GHPC.Weaponry.AmmoCodexScriptable b32, Transform level, CameraSlot pzu7, DC hitZone, ReticleSO reticle, ReticleSO nightReticle)
@@ -70,6 +70,7 @@ namespace T90A
 				if (night.post != null && nightLook.post != null) { night.post.sharedProfile = nightLook.post.sharedProfile; night.post.priority = nightLook.post.priority; night.post.weight = nightLook.post.weight; }
 				if (night.reticleMesh != null && nightLook.reticleMesh != null) night.reticleMesh.nightBrightness = nightLook.reticleMesh.nightBrightness;
 			}
+			foreach (var s in new[] { day.slot, ns }) { s.VibrationBlurScale = Sight1G46.MoveBlur; s.VibrationShakeMultiplier = Sight1G46.MoveShake; }
 		}
 
 		[DefaultExecutionOrder(-50)]

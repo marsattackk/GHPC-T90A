@@ -1,0 +1,1 @@
+{"name":"ESSA monitor (T-90A)","fov":6.75,"units":"mrad","vars":{"Hm":"Fov * PI / 0.18"},"elements":[],"screen":{"name":"ESSA monitor edges","items":[{"rect":"monitor edge","at":["-(2 / 3 + 1) * Hm",0],"size":["2 * Hm","1.02 * Hm"],"color":[0,0,0,1]},{"rect":"monitor edge","at":["(2 / 3 + 1) * Hm",0],"size":["2 * Hm","1.02 * Hm"],"color":[0,0,0,1]}]}}

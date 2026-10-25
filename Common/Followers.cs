@@ -9,8 +9,8 @@ namespace T90A.Common
 {
 	internal static class Followers
 	{
-		internal static readonly AccessTools.FieldRef<LateFollow, Vector3> PosShift = AccessTools.FieldRefAccess<LateFollow, Vector3>("_localPosShift");
-		internal static readonly AccessTools.FieldRef<LateFollow, Quaternion> RotShift = AccessTools.FieldRefAccess<LateFollow, Quaternion>("_localRotShift");
+		internal static readonly AccessTools.FieldRef<LateFollow, Vector3> PosShift = Reflect.FieldRefAccess<LateFollow, Vector3>("_localPosShift");
+		internal static readonly AccessTools.FieldRef<LateFollow, Quaternion> RotShift = Reflect.FieldRefAccess<LateFollow, Quaternion>("_localRotShift");
 
 		internal static void PlaceOnBone(Transform piece, Transform bone, Transform target)
 		{

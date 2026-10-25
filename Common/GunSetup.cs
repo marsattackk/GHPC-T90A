@@ -3,7 +3,6 @@ using System.Linq;
 using GHPC;
 using GHPC.Vehicle;
 using GHPC.Weapons;
-using HarmonyLib;
 using MelonLoader;
 using UnityEngine;
 
@@ -58,13 +57,13 @@ namespace T90A.Common
 			if (s.AutoloaderCycle <= 0f) return;
 			var feed = vehicle.GetComponent<WeaponsManager>()?.Weapons[0].Weapon?.Feed;
 			if (feed?.ClipReloadStages == null) return;
-			var dur = AccessTools.Field(typeof(AmmoFeed.ReloadStage), "Duration");
+			var dur = Reflect.Field(typeof(AmmoFeed.ReloadStage), "Duration");
 			float total = feed.ClipReloadStages.Sum(st => (float)dur.GetValue(st));
 			if (total <= 0f) return;
 			float k = s.AutoloaderCycle / total;
 			foreach (var st in feed.ClipReloadStages) dur.SetValue(st, (float)dur.GetValue(st) * k);
-			AccessTools.Method(typeof(AmmoFeed), "ResetLiveDurations")?.Invoke(feed, null);
-			AccessTools.Method(typeof(AmmoFeed), "CalculateTotalTime")?.Invoke(feed, new object[] { feed.ClipReloadStages, false });
+			Reflect.Method(typeof(AmmoFeed), "ResetLiveDurations")?.Invoke(feed, null);
+			Reflect.Method(typeof(AmmoFeed), "CalculateTotalTime")?.Invoke(feed, new object[] { feed.ClipReloadStages, false });
 		}
 
 		static void GunName(Vehicle vehicle, Settings s)
@@ -74,7 +73,7 @@ namespace T90A.Common
 			if (wm == null || wm.Weapons.Length == 0) return;
 			wm.Weapons[0].Name = s.GunName;
 			var gun = wm.Weapons[0].Weapon;
-			var codexField = AccessTools.Field(typeof(WeaponSystem), "CodexEntry");
+			var codexField = Reflect.Field(typeof(WeaponSystem), "CodexEntry");
 			var codex = gun != null ? (WeaponSystemCodexScriptable)codexField.GetValue(gun) : null;
 			if (codex == null || codex == _codex) return;
 			if (_codex == null)

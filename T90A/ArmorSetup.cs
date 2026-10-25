@@ -91,10 +91,10 @@ namespace T90A
 			}
 		}
 
-		static readonly AccessTools.FieldRef<UniformArmor, string> Name = AccessTools.FieldRefAccess<UniformArmor, string>("_name");
-		static readonly AccessTools.FieldRef<UniformArmor, ArmorCodexScriptable> Material = AccessTools.FieldRefAccess<UniformArmor, ArmorCodexScriptable>("_armorType");
-		static readonly AccessTools.FieldRef<UniformArmor, bool> IsEra = AccessTools.FieldRefAccess<UniformArmor, bool>("_isEra");
-		static readonly AccessTools.FieldRef<UniformArmor, bool> NoDecals = AccessTools.FieldRefAccess<UniformArmor, bool>("_noImpactDecals");
+		static readonly AccessTools.FieldRef<UniformArmor, string> Name = Reflect.FieldRefAccess<UniformArmor, string>("_name");
+		static readonly AccessTools.FieldRef<UniformArmor, ArmorCodexScriptable> Material = Reflect.FieldRefAccess<UniformArmor, ArmorCodexScriptable>("_armorType");
+		static readonly AccessTools.FieldRef<UniformArmor, bool> IsEra = Reflect.FieldRefAccess<UniformArmor, bool>("_isEra");
+		static readonly AccessTools.FieldRef<UniformArmor, bool> NoDecals = Reflect.FieldRefAccess<UniformArmor, bool>("_noImpactDecals");
 
 		static void Setup(GameObject go, ArmorValues.Entry e, string name, Vehicle vehicle)
 		{
@@ -108,7 +108,7 @@ namespace T90A
 			{
 				var va = go.AddComponent<VariableArmor>();
 				va.SetName(name);
-				AccessTools.Field(typeof(VariableArmor), "_armorType").SetValue(va, e.Material);
+				Reflect.Field(typeof(VariableArmor), "_armorType").SetValue(va, e.Material);
 				va.Unit = vehicle;
 				Xray(go, e);
 				return;

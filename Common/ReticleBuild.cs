@@ -211,6 +211,8 @@ namespace T90A.Common
 						var f = it.Font != null ? Font(it.Font) : null;
 						if (f != null) tmp.font = f;
 						else if (it.Font != null) problems.Add($"{it.Path}: no TMP font '{it.Font}' (default font used)");
+						var lacks = Missing(f ?? tmp.font, it.Value);
+						if (lacks.Length > 0) problems.Add($"{it.Path}: font '{(f ?? tmp.font)?.name}' lacks '{lacks}'");
 						tmp.fontSize = (float)it.Size * u;
 						tmp.color = col;
 						tmp.alignment = it.Align == "left" ? TextAlignmentOptions.Left : it.Align == "right" ? TextAlignmentOptions.Right : TextAlignmentOptions.Center;
@@ -250,6 +252,14 @@ namespace T90A.Common
 			rt.anchoredPosition = pos;
 			rt.sizeDelta = size;
 			return rt;
+		}
+
+		internal static string Missing(TMP_FontAsset font, string text)
+		{
+			if (font == null || string.IsNullOrEmpty(text)) return "";
+			string plain = System.Text.RegularExpressions.Regex.Replace(text, "<[^>]*>", "").Replace(" ", "");
+			if (plain.Length == 0 || font.HasCharacters(plain, out uint[] missing, true, true)) return "";
+			return new string((missing ?? new uint[0]).Distinct().Select(c => (char)c).ToArray());
 		}
 
 		static readonly Dictionary<string, TMP_FontAsset> Fonts = new Dictionary<string, TMP_FontAsset>();

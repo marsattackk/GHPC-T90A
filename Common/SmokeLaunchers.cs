@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using GHPC.Equipment;
 using GHPC.Vehicle;
 using HarmonyLib;
@@ -25,34 +26,43 @@ namespace T90A.Common
 			return a != null ? Parse(a.text) : null;
 		}
 
+		static readonly ConditionalWeakTable<VehicleSmokeManager, VehicleSmokeManager.SmokeSlot[]> TubeSlots =
+			new ConditionalWeakTable<VehicleSmokeManager, VehicleSmokeManager.SmokeSlot[]>();
+
+		internal static VehicleSmokeManager.SmokeSlot SlotOfTube(VehicleSmokeManager mgr, int n) =>
+			mgr != null && TubeSlots.TryGetValue(mgr, out var a) && n >= 1 && n <= a.Length ? a[n - 1] : null;
+
 		internal static void Seat(Vehicle vehicle, Vector3[] tubes)
 		{
 			if (tubes == null || tubes.Length == 0) return;
 			var mgr = vehicle.GetComponentInChildren<VehicleSmokeManager>(true);
 			var turret = vehicle.transform.Find("---MESH---/HULL/TURRET");
 			if (mgr == null || turret == null) return;
-			var slots = (VehicleSmokeManager.SmokeSlot[])AccessTools.Field(typeof(VehicleSmokeManager), "_smokeSlots").GetValue(mgr);
+			var slots = (VehicleSmokeManager.SmokeSlot[])Reflect.Field(typeof(VehicleSmokeManager), "_smokeSlots").GetValue(mgr);
 			if (slots == null) return;
-			var left = tubes.Where(t => t.x < 0).OrderByDescending(t => t.y).ToList();
-			var right = tubes.Where(t => t.x >= 0).OrderByDescending(t => t.y).ToList();
+			var left = Enumerable.Range(0, tubes.Length).Where(i => tubes[i].x < 0).OrderByDescending(i => tubes[i].y).ToList();
+			var right = Enumerable.Range(0, tubes.Length).Where(i => tubes[i].x >= 0).OrderByDescending(i => tubes[i].y).ToList();
 			var bySide = slots.Where(s => s.SpawnLocation != null).OrderBy(s => turret.InverseTransformPoint(s.SpawnLocation.position).x).ToList();
 			var slotsL = bySide.Take(left.Count).OrderByDescending(s => s.SpawnLocation.position.y).ToList();
 			var slotsR = bySide.Skip(left.Count).OrderByDescending(s => s.SpawnLocation.position.y).ToList();
-			for (int i = 0; i < slotsL.Count && i < left.Count; i++) { slotsL[i].SpawnLocation.position = turret.TransformPoint(left[i]); }
-			for (int i = 0; i < slotsR.Count && i < right.Count; i++) { slotsR[i].SpawnLocation.position = turret.TransformPoint(right[i]); }
+			var byTube = new VehicleSmokeManager.SmokeSlot[tubes.Length];
+			for (int i = 0; i < slotsL.Count && i < left.Count; i++) { slotsL[i].SpawnLocation.position = turret.TransformPoint(tubes[left[i]]); byTube[left[i]] = slotsL[i]; }
+			for (int i = 0; i < slotsR.Count && i < right.Count; i++) { slotsR[i].SpawnLocation.position = turret.TransformPoint(tubes[right[i]]); byTube[right[i]] = slotsR[i]; }
+			TubeSlots.Remove(mgr);
+			TubeSlots.Add(mgr, byTube);
 		}
 
 		internal static void RefreshCrew(VehicleSmokeManager mgr)
 		{
 			var t = typeof(VehicleSmokeManager);
-			var get = AccessTools.Method(t, "GetCrewBrainsArrayFromFlag");
-			if (AccessTools.Field(t, "_unitInfoBroker").GetValue(mgr) == null) return;
+			var get = Reflect.Method(t, "GetCrewBrainsArrayFromFlag");
+			if (Reflect.Field(t, "_unitInfoBroker").GetValue(mgr) == null) return;
 			foreach (var (cache, flag) in new[] { ("_smokeGrenadeCrewBrains", "_smokeGrenadeRequiredCrewPositions"), ("_smokeScreenCrewBrains", "_smokeScreenRequiredCrewPositions") })
 			{
-				var arr = (Array)AccessTools.Field(t, cache).GetValue(mgr);
+				var arr = (Array)Reflect.Field(t, cache).GetValue(mgr);
 				if (arr != null && arr.Cast<object>().All(b => b != null)) continue;
-				var fresh = get.Invoke(mgr, new[] { AccessTools.Field(t, flag).GetValue(mgr) });
-				AccessTools.Field(t, cache).SetValue(mgr, fresh);
+				var fresh = get.Invoke(mgr, new[] { Reflect.Field(t, flag).GetValue(mgr) });
+				Reflect.Field(t, cache).SetValue(mgr, fresh);
 			}
 		}
 

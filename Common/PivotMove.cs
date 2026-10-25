@@ -1,6 +1,5 @@
 using System.Linq;
 using GHPC;
-using HarmonyLib;
 using MelonLoader;
 using UnityEngine;
 
@@ -23,7 +22,7 @@ namespace T90A.Common
 			if (turret == null || gun == null) { MelonLogger.Warning($"{s.Tag}: TURRET/GUN bones not found; base pivots kept."); return; }
 
 			var plats = root.GetComponentsInChildren<AimablePlatform>(true);
-			var orig = AccessTools.Field(typeof(AimablePlatform), "_originalLocalRotation");
+			var orig = Reflect.Field(typeof(AimablePlatform), "_originalLocalRotation");
 			var gunPlat = plats.FirstOrDefault(p => p.Transform == gun);
 			var turretPlat = plats.FirstOrDefault(p => p.Transform == turret);
 			var gunRest = gunPlat != null ? (Quaternion)orig.GetValue(gunPlat) : gun.localRotation;

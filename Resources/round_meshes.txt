@@ -1,0 +1,12 @@
+mesh|3BM60|3BM42_AdditionalCharge|round_mesh_3bm60_charge.mesh|112|104|f786f414498c49bd
+mesh|3BM60|3BM42_ORing|round_mesh_3bm60_oring.mesh|468|432|fcda848e36c89f3a
+mesh|3BM60|3BM42_Rod|round_mesh_3bm60_rod.mesh|1995|1856|e063a21e30b973fe
+mesh|3BM60|3BM42_SabotPetal_001|round_mesh_3bm60_sabot_001.mesh|2944|2593|d0ab6ed1847b5a15
+mesh|3BM60|3BM42_SabotPetal_003|round_mesh_3bm60_sabot_003.mesh|2944|2593|3dc5f9fe248bf44b
+mesh|3BM60|3BM42_SabotPetal_004|round_mesh_3bm60_sabot_004.mesh|2944|2593|d26f18f309ef2dd3
+mesh|9M119M|9M112_warhead|round_mesh_9m119m_missile.mesh|1703|1606|1df9945bc5de1efd
+mesh|9M119M|9M112_booster|round_mesh_9x949_charge.mesh|2798|2435|22565161cfd8e2ff
+capsule|3BM60|3BM15 projectile hit zone|0.00000,0.42250,0.00000|0.0200|0.6050|1
+capsule|3BM60|3BM15 casing hit zone|0.00000,0.21250,0.00000|0.0600|0.4150|1
+capsule|9M119M|9M112 warhead hit zone|0.00000,0.35100,0.00000|0.0500|0.5980|1
+capsule|9M119M|throwing charge hit zone|0.00000,0.12500,0.00000|0.0600|0.2200|1

@@ -3,24 +3,20 @@ using System.Linq;
 using System.Reflection;
 using GHPC;
 using GHPC.Camera;
-using GHPC.Crew;
 using GHPC.Equipment.Optics;
 using GHPC.Utility;
 using GHPC.Vehicle;
 using GHPC.Weaponry;
 using GHPC.Weapons;
-using HarmonyLib;
 using MelonLoader;
 using Reticle;
 using T90A.Common;
 using UnityEngine;
-using UnityEngine.AddressableAssets;
 
 namespace T90A
 {
-	using AmmoRack = GHPC.Weapons.AmmoRack;
 	using DC = GHPC.Equipment.DestructibleComponent;
-	using IDamageStatus = GHPC.Equipment.IDamageStatus;
+	using Donor = T90A.Common.RemoteMg.Donor;
 
 	internal static class Kord
 	{
@@ -29,6 +25,15 @@ namespace T90A
 		static readonly Vector3 WtMuzzle = new Vector3(0.582f, 2.510f, 0.873f);
 		static readonly Vector3 PzuHead = new Vector3(0.187f, 2.280f, -0.850f);
 		internal static Vector3 Muzzle => Trunnion + Quaternion.AngleAxis(-RealAxis.GunLevelDeg, Vector3.right) * (WtMuzzle - Trunnion);
+		static readonly Vector3 WtCaseChute = new Vector3(0.612f, 2.505f, -0.090f);
+		internal static Vector3 CaseChute => Trunnion + Quaternion.AngleAxis(-RealAxis.GunLevelDeg, Vector3.right) * (WtCaseChute - Trunnion);
+		static readonly Vector3 CaseChuteDir = new Vector3(0.10f, -0.08f, 1f);
+		internal static readonly KordBelt.Settings BeltSettings = new KordBelt.Settings
+		{
+Prefix = "T90A_", MeshName = "T90A Kord", BeltMaterial = "t90a_mg_6p49_kord_ammo",
+			SpareRounds = 24,
+			MaxCases = BeltRounds * Belts,
+		};
 
 		internal const string Name = "12.7mm Machine Gun 6P49 Kord";
 		internal const int BeltRounds = 150, Belts = 2;
@@ -39,21 +44,15 @@ namespace T90A
 		const float ElevationSpeed = 24f;
 		const int BeltB32PerTracer = 3;
 
-		static readonly FieldInfo StageDuration = AccessTools.Field(typeof(AmmoFeed.ReloadStage), "Duration");
-		static readonly FieldInfo RackClipTypes = AccessTools.Field(typeof(AmmoRack), "_clipTypes");
-		static readonly FieldInfo RackInitialCounts = AccessTools.Field(typeof(AmmoRack), "_initialClipCounts");
-		static readonly FieldInfo SlotReparent = AccessTools.Field(typeof(CameraSlot), "_reparentTarget");
-		static readonly FieldInfo UnitSlots = AccessTools.Field(typeof(Unit), "_designatedCameraSlots");
-		static readonly PropertyInfo UnitPlatforms = AccessTools.Property(typeof(Unit), nameof(Unit.AimablePlatforms));
-		static readonly FieldInfo UnitStatuses = AccessTools.Field(typeof(Unit), "DamageStatuses");
-		static readonly FieldInfo ArmorName = AccessTools.Field(typeof(UniformArmor), "_name");
+		static readonly FieldInfo SlotReparent = Reflect.Field(typeof(CameraSlot), "_reparentTarget");
+		static readonly FieldInfo ArmorName = Reflect.Field(typeof(UniformArmor), "_name");
 
-		internal class Station : MonoBehaviour
+		internal class Station : RemoteMg.Station
 		{
-			internal WeaponSystemInfo Info;
 			internal UsableOptic Pzu7;
 			internal UsableOptic Tkn4s;
 			internal CommanderSight.Avtomat Auto;
+			internal override IEnumerable<CameraSlot> Sights => KordSlots(Pzu7?.slot, Tkn4s?.slot);
 		}
 
 		internal class Zones
@@ -62,11 +61,13 @@ namespace T90A
 		}
 
 		static readonly Vector3 GunZoneCentre = new Vector3(0.010f, 0.012f, 0.685f), GunZoneSize = new Vector3(0.112f, 0.176f, 1.562f);
+		const float CupolaDriveFrontZ = -1.36f;
 
 		internal static void Apply(Vehicle vehicle)
 		{
 			var root = vehicle.transform;
-			var d = Donor.Get();
+			RemoteMg.SetLogTag("T-90A Kord (ZPU): ");
+			var d = Donor.Get("T-90A");
 			if (d == null) return;
 			var turret = root.Find("---MESH---/HULL/TURRET");
 			var cupolaBone = turret?.Find("CUPOLA");
@@ -90,42 +91,22 @@ namespace T90A
 			var kordVis = turret.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == "T90A_KORD");
 			cupVis?.SetParent(cupolaBone, true);
 			kordVis?.SetParent(cradle, true);
+			KordBelt.Belt beltVis = null;
 			if (cupVis != null)
-				try { KordBelt.Fit(cupVis, cradle); }
+				try { beltVis = KordBelt.Fit(cupVis, cradle, BeltSettings); }
 				catch (System.Exception e) { MelonLogger.Error("T-90A Kord belt failed: " + e); }
 
 			var zones = FitZones(vehicle, d, cupolaBone, turret, cradle, holder.transform);
 
-			var gunGo = Object.Instantiate(d.Weapon.gameObject, holder.transform, false);
-			gunGo.name = Name;
-			StripReparent(gunGo);
-			var weapon = gunGo.GetComponent<WeaponSystem>();
-			var feed = gunGo.GetComponent<AmmoFeed>();
-			var rack = feed.ReadyRack;
-			if (rack == null || !rack.transform.IsChildOf(gunGo.transform)) { DonorParts.WarnOnce("Kord", "T-90A Kord (ZPU): the donor's ammo feed has no rack of its own; no Kord fitted."); Object.Destroy(holder); return; }
-			Scrub(gunGo, d.Root);
-			weapon.DamageName = "6P49 Kord";
+			var gun = RemoteMg.CloneGun(d, holder.transform, new RemoteMg.GunSettings { Name = Name, DamageName = "6P49 Kord", BeltRounds = BeltRounds, Belts = Belts, RoundsPerMinute = RoundsPerMinute, B32PerTracer = BeltB32PerTracer }, "T-90A");
+			if (gun == null) { Object.Destroy(holder); return; }
+			var gunGo = gun.Go; var weapon = gun.Weapon; var feed = gun.Feed; var b32 = gun.B32;
+			int removed = gun.Removed, scrubbed = gun.Scrubbed;
+			float cycle = gun.Cycle;
 			weapon.BarrelHitZone = zones.Gun;
-			float donorCycle = feed.RoundCycleStages.Sum(s => (float)StageDuration.GetValue(s));
-			float cycle = 60f / RoundsPerMinute;
-			foreach (var s in feed.RoundCycleStages) StageDuration.SetValue(s, (float)StageDuration.GetValue(s) * cycle / donorCycle);
-			var donorBelt = rack.ClipTypes[0];
-			var donorB32 = donorBelt.MinimalPattern[0];
-			var tracer = donorBelt.MinimalPattern.First(a => a != donorB32);
-			var pattern = Enumerable.Repeat(donorB32, BeltB32PerTracer).Append(tracer).ToArray();
-			var belt = new AmmoType.AmmoClip { Name = "12.7mm B-32 / BZT-44", MinimalPattern = pattern, Capacity = BeltRounds };
-			RackClipTypes.SetValue(rack, new[] { belt });
-			RackInitialCounts.SetValue(rack, new[] { Belts });
-			var b32 = belt.MinimalPattern[0];
 
-			var fcsGo = Object.Instantiate(d.Fcs.gameObject, holder.transform, false);
-			fcsGo.name = "T90A Kord fire control";
-			StripReparent(fcsGo);
-			var fcs = fcsGo.GetComponent<FireControlSystem>();
-			var opticGo = fcsGo.GetComponentInChildren<UsableOptic>(true).gameObject;
-			opticGo.transform.SetParent(holder.transform, false);
-			Scrub(fcsGo, d.Root);
-			Scrub(opticGo, d.Root);
+			var (fcsGo, fcs, opticGo, fcsRemoved, fcsScrubbed) = RemoteMg.CloneFcs(d, holder.transform, "T90A Kord fire control");
+			removed += fcsRemoved; scrubbed += fcsScrubbed;
 			var reference = new GameObject("T90A Kord aim reference").transform;
 			reference.SetParent(cupolaBone, false);
 			reference.SetPositionAndRotation(W(PzuHead), cupolaBone.rotation);
@@ -134,8 +115,8 @@ namespace T90A
 
 			var scripts = new GameObject("---T90A ZPU SCRIPTS---");
 			scripts.transform.SetParent(root, false);
-			var cupola = Platform(scripts.transform, "ZPU cupola drive", d.CupolaDrive, cupolaBone, EnumHelpers.Axis3.Y, Traverse, CupolaSpeed, zones.CupolaDrive);
-			var elev = Platform(scripts.transform, "ZPU elevation drive", d.ElevationDrive, cradle, EnumHelpers.Axis3.X, Elevation, ElevationSpeed, zones.ElevationDrive);
+			var cupola = RemoteMg.Platform(scripts.transform, "ZPU cupola drive", d.CupolaDrive, cupolaBone, EnumHelpers.Axis3.Y, Traverse, CupolaSpeed, zones.CupolaDrive);
+			var elev = RemoteMg.Platform(scripts.transform, "ZPU elevation drive", d.ElevationDrive, cradle, EnumHelpers.Axis3.X, Elevation, ElevationSpeed, zones.ElevationDrive);
 			fcs.Mounts = new[] { cupola, elev };
 
 			var optic = opticGo.GetComponent<UsableOptic>();
@@ -158,16 +139,8 @@ namespace T90A
 				tknHead = new GameObject("T90A TKN-4S head").transform;
 				tknHead.SetParent(cupolaBone, false);
 				tknHead.SetPositionAndRotation(W(CommanderSight.Head), cupolaBone.rotation);
-				UsableOptic CloneOptic()
-				{
-					var go = Object.Instantiate(d.CommanderOptic.gameObject, holder.transform, false);
-					StripReparent(go);
-					Scrub(go, d.Root);
-					foreach (var c in go.GetComponentsInChildren<Collider>(true)) Object.DestroyImmediate(c);
-					return go.GetComponent<UsableOptic>();
-				}
-				tkn = CloneOptic();
-				tknNight = CloneOptic();
+				tkn = RemoteMg.CloneOptic(d, d.CommanderOptic, holder.transform, ref removed, ref scrubbed);
+				tknNight = RemoteMg.CloneOptic(d, d.CommanderOptic, holder.transform, ref removed, ref scrubbed);
 				var gunnerDay = (wm.Weapons[0].FCS != null ? SightSetup.DayOptic(wm.Weapons[0].FCS) : null)
 					?? vehicle.GetComponentsInChildren<UsableOptic>(true).FirstOrDefault(o => o.FCS == wm.Weapons[0].FCS && o.slot != null && !o.slot.IsLinkedNightSight);
 				var fontHost = gunnerDay?.reticleMesh?.reticleSO;
@@ -201,16 +174,16 @@ namespace T90A
 				}
 			Object.Destroy(holder);
 			weapon.SetCycleTime(cycle);
+			if (beltVis != null)
+			{
+				beltVis.Attach(weapon, cycle);
+				if (T90AMod.KordCases.Value) KordBrass.Attach(vehicle, weapon, cycle, cradle, cradle.InverseTransformPoint(W(CaseChute)), CaseChuteDir, beltVis,
+					new[] { cupolaBone, turret.Find("GUN"), turret, turret.parent });
+			}
 
 			var info = new WeaponSystemInfo { Name = Name, Role = WeaponSystemRole.RoofGun, Weapon = weapon, FCS = fcs, PreAimWeapon = WeaponSystemRole.MainGun, PreAimAngleThreshold = 3f };
 			var gunner = new[] { wm.Weapons[0].Weapon, wm.Weapons[1].Weapon };
-			wm.Weapons = wm.Weapons.Concat(new[] { info }).ToArray();
-			UnitPlatforms.SetValue(vehicle, (vehicle.AimablePlatforms ?? new AimablePlatform[0]).Concat(new[] { cupola, elev }).ToArray());
-			var statuses = (IDamageStatus[])UnitStatuses.GetValue(vehicle) ?? new IDamageStatus[0];
-			var ours = new Component[] { cupola, elev, weapon, feed, fcs, slot, tkn?.slot, tknNight?.slot }.Where(c => c != null).OfType<IDamageStatus>().Where(s => !statuses.Contains(s)).ToArray();
-			UnitStatuses.SetValue(vehicle, statuses.Concat(ours).ToArray());
-			if (vehicle.DesignatedCameraSlots != null && vehicle.DesignatedCameraSlots.Length > 0)
-				UnitSlots.SetValue(vehicle, vehicle.DesignatedCameraSlots.Concat(KordSlots(slot, tkn?.slot)).ToArray());
+			RemoteMg.Register(vehicle, wm, info, new[] { cupola, elev }, new Component[] { cupola, elev, weapon, feed, fcs, slot, tkn?.slot, tknNight?.slot }, KordSlots(slot, tkn?.slot));
 			var dayOptic = wm.Weapons[0].FCS != null ? SightSetup.DayOptic(wm.Weapons[0].FCS) : null;
 			var gunnerSlots = new List<CameraSlot>();
 			var daySlot = dayOptic?.slot ?? vehicle.GetComponentsInChildren<UsableOptic>(true).FirstOrDefault(o => o.FCS == wm.Weapons[0].FCS && !o.slot.IsLinkedNightSight)?.slot;
@@ -227,121 +200,10 @@ namespace T90A
 			}
 		}
 
-		internal static void LateSetup(Vehicle vehicle)
-		{
-			var st = vehicle.GetComponentInChildren<Station>(true);
-			if (st == null) return;
-			var slots = vehicle.DesignatedCameraSlots;
-			var missing = KordSlots(st.Pzu7.slot, st.Tkn4s?.slot).Where(s => slots == null || !slots.Contains(s)).ToArray();
-			if (slots != null && slots.Length > 0 && missing.Length > 0) UnitSlots.SetValue(vehicle, slots.Concat(missing).ToArray());
-			var crew = vehicle.GetComponent<CrewManager>();
-			if (crew?.CrewMembers == null) return;
-			foreach (var m in crew.CrewMembers)
-			{
-				var module = m?.Brain?.WeaponsModule;
-				if (module?.Weapons == null || m.Position != CrewPosition.Gunner) continue;
-				if (!module.Weapons.Contains(st.Info)) module.Weapons.Add(st.Info);
-			}
-		}
+		internal static void LateSetup(Vehicle vehicle) => RemoteMg.LateSetup(vehicle);
 
-		[HarmonyPatch(typeof(CameraManager), "RescanCamSlots")]
-		static class CameraSlotsPatch
-		{
-			static void Prefix(ref CameraSlot[] cameraSlots)
-			{
-				if (cameraSlots == null || cameraSlots.Length == 0) return;
-				var unit = cameraSlots.FirstOrDefault(s => s != null)?.GetComponentInParent<Vehicle>();
-				var st = unit != null ? unit.GetComponentInChildren<Station>(true) : null;
-				if (st == null || st.Pzu7 == null) return;
-				var given = cameraSlots;
-				var missing = KordSlots(st.Pzu7.slot, st.Tkn4s?.slot).Where(s => !given.Contains(s)).ToArray();
-				if (missing.Length == 0) return;
-				cameraSlots = cameraSlots.Concat(missing).ToArray();
-			}
-		}
-
-		internal static CameraSlot LastSight { get; private set; }
-
-		static readonly FieldInfo FixedSlotsField = AccessTools.Field(typeof(CameraManager), "_allFixedCamSlots"),
-			FreeSlotsField = AccessTools.Field(typeof(CameraManager), "_allFreeLookCamSlots"),
-			ValidSlotsField = AccessTools.Field(typeof(CameraManager), "_validCamSlots"),
-			InteriorIndexField = AccessTools.Field(typeof(CameraManager), "_interiorSlotIndex"),
-			ExteriorIndexField = AccessTools.Field(typeof(CameraManager), "_exteriorSlotIndex");
-
-		static bool HasStation(IEnumerable<CameraSlot> slots)
-		{
-			var unit = slots?.FirstOrDefault(s => s != null)?.GetComponentInParent<Vehicle>();
-			return unit != null && unit.GetComponentInChildren<Station>(true) != null;
-		}
-
-		[HarmonyPatch(typeof(CameraManager), "AttachCamToSlotDirect")]
-		static class RememberSightPatch
-		{
-			static void Postfix(CameraSlot camSlot)
-			{
-				if (camSlot != null && !camSlot.AllowFreeLook) LastSight = camSlot.IsLinkedNightSight && camSlot.LinkedDaySight != null ? camSlot.LinkedDaySight : camSlot;
-			}
-		}
-
-		[HarmonyPatch(typeof(CameraManager), "ToggleCameraSlotSet")]
-		static class SlotSetPatch
-		{
-			static void Prefix(CameraManager __instance)
-			{
-				bool goingIn = __instance.ExteriorMode;
-				var all = (CameraSlot[])(goingIn ? FixedSlotsField : FreeSlotsField).GetValue(__instance);
-				if (all == null || !HasStation(all)) return;
-				var usable = all.Where(s => s != null && s.IsAvailable).ToList();
-				if (usable.Count == 0) return;
-				var field = goingIn ? InteriorIndexField : ExteriorIndexField;
-				int old = (int)field.GetValue(__instance);
-				int i;
-				if (goingIn) { i = LastSight != null ? usable.IndexOf(LastSight) : -1; if (i < 0) i = 0; }
-				else i = old >= 0 && old < usable.Count ? old : 0;
-				if (i == old) return;
-				field.SetValue(__instance, i);
-			}
-		}
-
-		[HarmonyPatch(typeof(CameraManager), "ResetTempAttach")]
-		static class TempAttachPatch
-		{
-			static void Prefix(CameraManager __instance)
-			{
-				var valid = (List<CameraSlot>)ValidSlotsField.GetValue(__instance);
-				if (valid == null || valid.Count == 0) return;
-				var field = __instance.ExteriorMode ? ExteriorIndexField : InteriorIndexField;
-				int old = (int)field.GetValue(__instance);
-				if (old >= 0 && old < valid.Count) return;
-				if (!HasStation(valid)) return;
-				int i = LastSight != null ? valid.IndexOf(LastSight) : -1;
-				field.SetValue(__instance, i < 0 ? 0 : i);
-			}
-		}
-
-		static IEnumerable<CameraSlot> KordSlots(CameraSlot pzu7, CameraSlot tkn) => new[] { pzu7, tkn }.Where(s => s != null);
+		static IEnumerable<CameraSlot> KordSlots(CameraSlot pzu7, CameraSlot tkn) => new[] { tkn, pzu7 }.Where(s => s != null);
 		static ReticleSO _pzuReticle;
-
-		static AimablePlatform Platform(Transform parent, string name, AimablePlatform donor, Transform turns, EnumHelpers.Axis3 axis, Vector2 limits, float speed, DC hitZone)
-		{
-			var go = new GameObject(name);
-			go.SetActive(false);
-			go.transform.SetParent(parent, false);
-			var p = go.AddComponent<AimablePlatform>();
-			foreach (var f in typeof(AimablePlatform).GetFields(BindingFlags.Public | BindingFlags.Instance))
-				if (!typeof(Object).IsAssignableFrom(f.FieldType) && !(f.FieldType.IsArray && typeof(Object).IsAssignableFrom(f.FieldType.GetElementType())))
-					f.SetValue(p, f.GetValue(donor));
-			p.Name = name;
-			p.Transform = turns;
-			p.Axis = axis;
-			p.LocalEulerLimits = limits;
-			p.ReverseLocalEuler = axis == EnumHelpers.Axis3.X;
-			p.SpeedPowered = speed;
-			p.HitZones = hitZone != null ? new[] { hitZone } : new DC[0];
-			p.ParentPlatform = null;
-			go.SetActive(true);
-			return p;
-		}
 
 		static Zones FitZones(Vehicle vehicle, Donor d, Transform cupolaBone, Transform turret, Transform cradle, Transform holder)
 		{
@@ -362,7 +224,7 @@ namespace T90A
 				var go = Object.Instantiate(src.gameObject, holder, false);
 				go.SetActive(false);
 				go.name = "T90A_" + name;
-				Scrub(go, d.Root);
+				RemoteMg.Scrub(go, d.Root);
 				return go;
 			}
 			DC Wake(GameObject go, Transform bone, Transform group, Matrix4x4 inBone, string dcName)
@@ -387,13 +249,30 @@ namespace T90A
 			Matrix4x4 Moved(DC src, Transform bone) =>
 				(root.worldToLocalMatrix * bone.localToWorldMatrix).inverse * Matrix4x4.Translate(shift) * (d.Root.transform.worldToLocalMatrix * src.transform.localToWorldMatrix);
 
-			if (d.CupolaDriveZone != null && turAar != null) z.CupolaDrive = Wake(Clone(d.CupolaDriveZone, "ZPU cupola drive"), turret, turAar, Moved(d.CupolaDriveZone, turret), "commander's cupola drive");
+			Matrix4x4 FrontTo(Matrix4x4 inBone, Transform bone, Mesh mesh, float zMax)
+			{
+				if (mesh == null) return inBone;
+				var toPrefab = (root.worldToLocalMatrix * bone.localToWorldMatrix) * inBone;
+				Vector3 Axis(int i) => i == 0 ? Vector3.right : i == 1 ? Vector3.up : Vector3.forward;
+				var b = mesh.bounds; int k = 0; float best = -1f;
+				for (int i = 0; i < 3; i++) { float a = Mathf.Abs(toPrefab.MultiplyVector(Axis(i)).normalized.z); if (a > best) { best = a; k = i; } }
+				var ax = Axis(k);
+				float s = Mathf.Sign(toPrefab.MultiplyVector(ax).z);
+				var front = b.center + ax * (s * b.extents[k]); var rear = b.center - ax * (s * b.extents[k]);
+				float fz = toPrefab.MultiplyPoint(front).z, rz = toPrefab.MultiplyPoint(rear).z;
+				if (fz <= zMax || rz >= zMax) return inBone;
+				var scale = Vector3.one; scale[k] = (zMax - rz) / (fz - rz);
+				return inBone * Matrix4x4.Translate(rear) * Matrix4x4.Scale(scale) * Matrix4x4.Translate(-rear);
+			}
+
+			if (d.CupolaDriveZone != null && turAar != null) z.CupolaDrive = Wake(Clone(d.CupolaDriveZone, "ZPU cupola drive"), turret, turAar,
+				FrontTo(Moved(d.CupolaDriveZone, turret), turret, d.CupolaDriveZone.GetComponent<MeshFilter>()?.sharedMesh, CupolaDriveFrontZ), "commander's cupola drive");
 			if (d.ElevationDriveZone != null && cupAar != null) z.ElevationDrive = Wake(Clone(d.ElevationDriveZone, "ZPU elevation drive"), cupolaBone, cupAar, Moved(d.ElevationDriveZone, cupolaBone), "ZPU elevation drive");
 			if (d.SightZone != null && cupAar != null) z.Sight = Wake(Clone(d.SightZone, "PZU-7 sight"), cupolaBone, cupAar, Moved(d.SightZone, cupolaBone), "PZU-7 sight");
 			if (d.SightZone != null && cupAar != null && d.CommanderOptic != null)
 			{
 				var go = Clone(d.SightZone, "TKN-4S sight");
-				go.GetComponent<MeshFilter>().sharedMesh = BoxMesh();
+				go.GetComponent<MeshFilter>().sharedMesh = RemoteMg.BoxMesh("T90A hit zone box");
 				var inBone = (root.worldToLocalMatrix * cupolaBone.localToWorldMatrix).inverse * Matrix4x4.TRS(CommanderSight.ZoneCentre, Quaternion.identity, CommanderSight.ZoneSize);
 				z.Tkn4s = Wake(go, cupolaBone, cupAar, inBone, "TKN-4S commander's sight");
 			}
@@ -413,32 +292,13 @@ namespace T90A
 				aar.SetParent(grp.transform, false);
 				grp.SetActive(true);
 				var go = Clone(d.ElevationDriveZone, "Kord barrel");
-				go.GetComponent<MeshFilter>().sharedMesh = BoxMesh();
+				go.GetComponent<MeshFilter>().sharedMesh = RemoteMg.BoxMesh("T90A hit zone box");
 				foreach (var v in go.GetComponentsInChildren<AarVisual>(true)) Object.DestroyImmediate(v);
 				foreach (var r in go.GetComponentsInChildren<Renderer>(true)) Object.DestroyImmediate(r);
 				z.Gun = Wake(go, cradle, aar, Matrix4x4.TRS(GunZoneCentre, Quaternion.identity, GunZoneSize), "6P49 Kord");
 			}
 			return z;
 		}
-
-		static Mesh _box;
-		static Mesh BoxMesh()
-		{
-			if (_box != null) return _box;
-			var c = GameObject.CreatePrimitive(PrimitiveType.Cube);
-			_box = Object.Instantiate(c.GetComponent<MeshFilter>().sharedMesh);
-			_box.name = "T90A hit zone box";
-			Object.DestroyImmediate(c);
-			return _box;
-		}
-
-		static void StripReparent(GameObject go)
-		{
-			var rs = go.GetComponentsInChildren<Reparent>(true);
-			foreach (var r in rs) Object.DestroyImmediate(r);
-		}
-
-		static void Scrub(GameObject clone, GameObject donorRoot) => DonorParts.Scrub(clone, donorRoot.transform);
 
 		static ReticleSO Pzu7Reticle(ReticleSO pzu5, AmmoCodexScriptable b32)
 		{
@@ -459,66 +319,6 @@ namespace T90A
 		{
 			internal Transform Source;
 			void LateUpdate() { if (Source != null) transform.localRotation = Source.localRotation; }
-		}
-
-		sealed class Donor
-		{
-			internal GameObject Root;
-			internal WeaponSystem Weapon;
-			internal FireControlSystem Fcs;
-			internal AimablePlatform CupolaDrive, ElevationDrive;
-			internal DC CupolaDriveZone, ElevationDriveZone, SightZone;
-			internal Vector3 Axis;
-			internal UsableOptic CommanderOptic, NightLook;
-
-			internal Transform Scripts;
-
-			static Donor _cached;
-
-			internal static Donor Get()
-			{
-				if (_cached != null && _cached.Root != null && _cached.Weapon != null) return _cached;
-				_cached = null;
-				var all = UnitRegistry.Lookup?.AllUnits;
-				if (all == null) { DonorParts.WarnOnce("Kord", "T-90A Kord (ZPU): no unit registry yet; no donor."); return null; }
-				var metas = all.Where(m => m?.Name != null && m.Name.StartsWith("T64") && m.PrefabReference != null && m.PrefabReference.RuntimeKeyIsValid())
-					.OrderByDescending(m => (m.Name.StartsWith("T64B") ? 2 : 0) + (m.Name.EndsWith("84") ? 1 : 0)).ToList();
-				var tried = new List<string>();
-				foreach (var meta in metas)
-				{
-					var prefab = Addressables.LoadAssetAsync<GameObject>(meta.PrefabReference.RuntimeKey).WaitForCompletion();
-					tried.Add($"{meta.Name} -> {(prefab == null ? "null" : prefab.name)}");
-					var found = prefab == null ? null : From(prefab, null);
-					if (found == null) continue;
-					var parts = new[] { found.Scripts.gameObject, found.CupolaDriveZone?.gameObject, found.ElevationDriveZone?.gameObject, found.SightZone?.gameObject, found.NightLook?.gameObject };
-					var box = DonorParts.Copy(prefab, "T-90A Kord donor (" + prefab.name + ")", parts);
-					var d = box != null ? From(box.gameObject, found.Axis) : null;
-					if (d == null) { tried[tried.Count - 1] += " (copy incomplete)"; continue; }
-					_cached = d;
-					return d;
-				}
-				DonorParts.WarnOnce("Kord", $"T-90A Kord (ZPU): no donor with a remote NSV station; tried {(tried.Count == 0 ? "nothing (no T64* registry entry)" : string.Join("; ", tried))}.");
-				return null;
-			}
-
-			static Donor From(GameObject root, Vector3? axis)
-			{
-				var scripts = root.transform.Cast<Transform>().FirstOrDefault(t => t.name.StartsWith("---CUPOLA SCRIPTS"));
-				var weapon = scripts?.GetComponentsInChildren<WeaponSystem>(true).FirstOrDefault(w => w.name.Contains("NSV"));
-				var fcs = scripts?.GetComponentsInChildren<FireControlSystem>(true).FirstOrDefault(f => f.LinkedWeaponSystems != null && f.LinkedWeaponSystems.Contains(weapon));
-				if (weapon == null || fcs == null || fcs.Mounts == null || fcs.Mounts.Length < 2 || fcs.Mounts.Any(m => m == null) || weapon.Feed?.ReadyRack == null || fcs.GetComponentInChildren<UsableOptic>(true) == null) return null;
-				if (axis == null && fcs.Mounts[0].Transform == null) return null;
-				var zones = root.GetComponentsInChildren<DC>(true);
-				DC Zone(string start) => zones.FirstOrDefault(z => z.name.StartsWith(start));
-				return new Donor
-				{
-					Root = root, Scripts = scripts, Weapon = weapon, Fcs = fcs, CupolaDrive = fcs.Mounts[0], ElevationDrive = fcs.Mounts[1],
-					CupolaDriveZone = Zone("Commander_Cupola_Drive"), ElevationDriveZone = Zone("Commander_AAMG_Elevation_Drive"), SightZone = Zone("Commander_Sight_PZU-5"),
-					Axis = axis ?? root.transform.InverseTransformPoint(fcs.Mounts[0].Transform.position),
-					CommanderOptic = scripts.GetComponentsInChildren<UsableOptic>(true).FirstOrDefault(o => o.name == "Commander's Optic" && o.slot != null),
-					NightLook = root.GetComponentsInChildren<UsableOptic>(true).FirstOrDefault(o => o.slot != null && o.slot.VisionType == NightVisionType.Intensifier && !o.slot.IsExterior),
-				};
-			}
 		}
 	}
 }

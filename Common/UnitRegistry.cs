@@ -11,6 +11,7 @@ using GHPC.Vehicle;
 using HarmonyLib;
 using MelonLoader;
 using UnityEngine;
+using UnityEngine.AddressableAssets;
 
 namespace T90A.Common
 {
@@ -25,6 +26,27 @@ namespace T90A.Common
 		public Func<float> CampaignPrevalence = () => 0.5f;
 		public Func<int> CampaignAfterMissions = () => 0;
 		public Action<Vehicle> OnSpawn;
+	}
+
+	internal sealed class CampaignConfig
+	{
+		internal MelonPreferences_Entry<bool> InRoster;
+		internal MelonPreferences_Entry<float> Prevalence;
+		internal MelonPreferences_Entry<int> AfterMissions;
+
+		internal static CampaignConfig Create(MelonPreferences_Category cfg, string friendlyName, float prevalence, int afterMissions) => new CampaignConfig
+		{
+			InRoster = cfg.CreateEntry("Add to campaign roster", true, description: $"Adds the {friendlyName} to the Soviet campaign roster."),
+			Prevalence = cfg.CreateEntry("Campaign prevalence", prevalence, description: "How common it is compared to other tanks (1 = as common as a typical tank)."),
+			AfterMissions = cfg.CreateEntry("Campaign unlock after missions", afterMissions),
+		};
+
+		internal void Use(UnitDef u)
+		{
+			u.InCampaign = () => InRoster.Value;
+			u.CampaignPrevalence = () => Prevalence.Value;
+			u.CampaignAfterMissions = () => AfterMissions.Value;
+		}
 	}
 
 	internal static class UnitRegistry
@@ -61,6 +83,9 @@ namespace T90A.Common
 			_running = false;
 		}
 
+		static AssetReference OwnReference(AssetReference r) =>
+			r == null ? null : new AssetReference(r.AssetGUID) { SubObjectName = r.SubObjectName };
+
 		internal static bool EnsureRegistered(UnitPrefabLookupScriptable lookup)
 		{
 			if (lookup?.AllUnits == null) return false;
@@ -77,7 +102,7 @@ namespace T90A.Common
 					Name = u.Key,
 					FriendlyName = u.FriendlyName(),
 					PrefabReference = baseMeta.PrefabReference,
-					BaseAmmoClipsReference = baseMeta.BaseAmmoClipsReference,
+					BaseAmmoClipsReference = OwnReference(baseMeta.BaseAmmoClipsReference),
 					UseDecalLayout = armyMeta.UseDecalLayout,
 					DecalLayout = armyMeta.DecalLayout,
 					Army = armyMeta.Army,
@@ -87,13 +112,20 @@ namespace T90A.Common
 				});
 				lookup.AllUnits = units.ToArray();
 				var spawner = UnitSpawner.Instance;
-				if (spawner != null) AccessTools.Field(typeof(UnitSpawner), "_prefabLookupCached").SetValue(spawner, null);
+				if (spawner != null) Reflect.Field(typeof(UnitSpawner), "_prefabLookupCached").SetValue(spawner, null);
 				MenuListPatch.ClearCache();
 			}
 			return all;
 		}
 
-		internal static IEnumerator AddToCampaignRoster()
+		static readonly HashSet<TheaterUnitMetadata> _added = new HashSet<TheaterUnitMetadata>();
+
+		internal static void StartCampaignRoster()
+		{
+			if (_added.Count > 0 || Units.Any(x => x.Enabled() && x.InCampaign())) MelonCoroutines.Start(UpdateCampaignRoster());
+		}
+
+		internal static IEnumerator UpdateCampaignRoster()
 		{
 			TheaterMetaScriptable meta = null;
 			for (int frame = 0; frame < 600 && meta == null; frame++)
@@ -103,6 +135,19 @@ namespace T90A.Common
 			}
 			if (meta?.AllTheaters == null) yield break;
 
+			foreach (var theater in meta.AllTheaters)
+			{
+				if (theater?.Factions == null) continue;
+				foreach (var faction in theater.Factions)
+				{
+					if (faction?.AllUnits == null) continue;
+					var gone = faction.AllUnits.Where(x => x != null && _added.Contains(x) && !Units.Any(u => u.Key == x.Key && u.Enabled() && u.InCampaign())).ToList();
+					if (gone.Count == 0) continue;
+					faction.AllUnits = faction.AllUnits.Except(gone).ToArray();
+					foreach (var x in gone) _added.Remove(x);
+				}
+			}
+
 			foreach (var u in Units.Where(x => x.Enabled() && x.InCampaign()))
 				foreach (var theater in meta.AllTheaters)
 				{
@@ -111,11 +156,16 @@ namespace T90A.Common
 					{
 						if (faction?.AllUnits == null) continue;
 						var units = faction.AllUnits.ToList();
-						if (units.Any(x => x != null && x.Key == u.Key)) continue;
+						var ours = units.FirstOrDefault(x => x != null && x.Key == u.Key);
+						if (ours != null)
+						{
+							if (_added.Contains(ours)) { ours.Prevalence = u.CampaignPrevalence(); ours.BlockUntilMissionsCompleted = u.CampaignAfterMissions(); }
+							continue;
+						}
 						var armyUnit = units.FirstOrDefault(x => x != null && x.Key == u.ArmyFrom());
 						if (armyUnit == null) continue;
 						var template = units.FirstOrDefault(x => x != null && x.Key == u.BaseUnit()) ?? armyUnit;
-						units.Add(new TheaterUnitMetadata
+						var entry = new TheaterUnitMetadata
 						{
 							Key = u.Key,
 							FriendlyName = u.FriendlyName(),
@@ -126,7 +176,9 @@ namespace T90A.Common
 							Prevalence = u.CampaignPrevalence(),
 							BlockUntilMissionsCompleted = u.CampaignAfterMissions(),
 							LogisticsModifierCurve = template.LogisticsModifierCurve,
-						});
+						};
+						units.Add(entry);
+						_added.Add(entry);
 						faction.AllUnits = units.ToArray();
 					}
 				}
@@ -136,8 +188,8 @@ namespace T90A.Common
 		internal static class MenuListPatch
 		{
 			static readonly AccessTools.FieldRef<MissionConfigMenuPanel, UnitPrefabLookupScriptable> AllUnits =
-				AccessTools.FieldRefAccess<MissionConfigMenuPanel, UnitPrefabLookupScriptable>("_allUnitsScriptable");
-			static readonly System.Reflection.FieldInfo Cache = AccessTools.Field(typeof(MissionConfigMenuPanel), "_unitKeysByClassCached");
+				Reflect.FieldRefAccess<MissionConfigMenuPanel, UnitPrefabLookupScriptable>("_allUnitsScriptable");
+			static readonly System.Reflection.FieldInfo Cache = Reflect.Field(typeof(MissionConfigMenuPanel), "_unitKeysByClassCached");
 
 			internal static void ClearCache() => (Cache?.GetValue(null) as IDictionary)?.Clear();
 
@@ -153,8 +205,8 @@ namespace T90A.Common
 		[HarmonyPatch(typeof(UnitSpawner), nameof(UnitSpawner.SpawnUnit), new[] { typeof(string), typeof(UnitMetaData), typeof(WaypointHolder), typeof(Transform) })]
 		internal static class SpawnPatch
 		{
-			static readonly AccessTools.FieldRef<Unit, string> UniqueName = AccessTools.FieldRefAccess<Unit, string>("_uniqueName");
-			static readonly AccessTools.FieldRef<Unit, string> FriendlyNameRef = AccessTools.FieldRefAccess<Unit, string>("_friendlyName");
+			static readonly AccessTools.FieldRef<Unit, string> UniqueName = Reflect.FieldRefAccess<Unit, string>("_uniqueName");
+			static readonly AccessTools.FieldRef<Unit, string> FriendlyNameRef = Reflect.FieldRefAccess<Unit, string>("_friendlyName");
 
 			static void Postfix(string uniqueName, IUnit __result)
 			{

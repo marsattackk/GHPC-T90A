@@ -27,6 +27,11 @@ namespace T90A.Common
 			return null;
 		}
 
+		internal static void Warm(MaterialRoles roles)
+		{
+			foreach (var e in roles?.Applied ?? Enumerable.Empty<MaterialRoles.Entry>()) Get(e.Vanilla, e.Units);
+		}
+
 		static string Bare(string name) => name.EndsWith(" (Instance)") ? name.Substring(0, name.Length - 11) : name;
 
 		internal static void Apply(Transform root, System.Func<Renderer, bool> filter, MaterialRoles roles)

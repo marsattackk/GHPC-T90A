@@ -1,7 +1,6 @@
 using GHPC;
 using GHPC.Effects.Voices;
 using GHPC.Vehicle;
-using HarmonyLib;
 using MelonLoader;
 using T90A.Common;
 using UnityEngine;
@@ -24,14 +23,14 @@ namespace T90A
 			voice.transform.localPosition = Vector3.zero;
 			voice.transform.localRotation = Quaternion.identity;
 			var handler = voice.GetComponent<CrewVoiceHandler>();
-			AccessTools.Field(typeof(CrewVoiceHandler), "_chassis").SetValue(handler, vehicle.Chassis as NwhChassis);
-			AccessTools.Field(typeof(CrewVoiceHandler), "_reloadType").SetValue(handler, CrewVoiceHandler.ReloaderType.AutoLoaderAZ);
-			AccessTools.Field(typeof(Unit), "_crewVoiceHandler").SetValue(vehicle, handler);
+			Reflect.Field(typeof(CrewVoiceHandler), "_chassis").SetValue(handler, vehicle.Chassis as NwhChassis);
+			Reflect.Field(typeof(CrewVoiceHandler), "_reloadType").SetValue(handler, CrewVoiceHandler.ReloaderType.AutoLoaderAZ);
+			Reflect.Field(typeof(Unit), "_crewVoiceHandler").SetValue(vehicle, handler);
 			voice.SetActive(true);
 			if (german != null) german.gameObject.SetActive(false);
 		}
 
-		static GameObject SovietVoice()
+		internal static GameObject SovietVoice()
 		{
 			if (_soviet != null) return _soviet;
 			var prefab = DonorParts.Prefab("T80B");

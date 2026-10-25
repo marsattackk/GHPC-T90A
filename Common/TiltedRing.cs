@@ -25,8 +25,8 @@ namespace T90A.Common
 		}
 
 		static readonly Dictionary<AimablePlatform, Link> Links = new Dictionary<AimablePlatform, Link>();
-		static readonly AccessTools.FieldRef<AimablePlatform, Quaternion> Orig = AccessTools.FieldRefAccess<AimablePlatform, Quaternion>("_originalLocalRotation");
-		static readonly AccessTools.FieldRef<AimablePlatform, Vector3> Stowed = AccessTools.FieldRefAccess<AimablePlatform, Vector3>("_stowedVectorInParentSpace");
+		static readonly AccessTools.FieldRef<AimablePlatform, Quaternion> Orig = Reflect.FieldRefAccess<AimablePlatform, Quaternion>("_originalLocalRotation");
+		static readonly AccessTools.FieldRef<AimablePlatform, Vector3> Stowed = Reflect.FieldRefAccess<AimablePlatform, Vector3>("_stowedVectorInParentSpace");
 
 		internal static void Apply(GHPC.Vehicle.Vehicle vehicle, Quaternion tilt, string tag = "tilted ring")
 		{
