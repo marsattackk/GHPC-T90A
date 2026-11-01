@@ -4,6 +4,7 @@ using UnityEngine;
 
 namespace T90A.Common
 {
+	// Vanilla glass is see-through Standard (FLIR) over dark geometry, an opaque coat of my own read as plastic.
 	internal static class VanillaMaterials
 	{
 		static readonly Dictionary<string, Material> Copies = new Dictionary<string, Material>();

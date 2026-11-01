@@ -7,6 +7,7 @@ using UnityEngine;
 
 namespace T90A.Common
 {
+	// First focal plane: widths are angles, so at the wide fields the strokes all but vanish.
 	internal class ReticleWidth : MonoBehaviour
 	{
 		const float Exponent = 0.6f;
@@ -18,6 +19,7 @@ namespace T90A.Common
 		float _applied = -1f;
 		static readonly Dictionary<ReticleTree.Line, float> _base = new Dictionary<ReticleTree.Line, float>();
 		static readonly FieldInfo Smr = Reflect.Field(typeof(ReticleMesh), "SMR");
+		// The asset is shared and every rebuild reads its current widths, so it goes back to the optic in view.
 		static readonly Dictionary<ReticleSO, float> Held = new Dictionary<ReticleSO, float>();
 		static readonly List<ReticleWidth> All = new List<ReticleWidth>();
 

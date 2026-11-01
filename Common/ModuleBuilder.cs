@@ -79,8 +79,10 @@ namespace T90A.Common
 					var (group, bone) = Group(root, m.Group);
 					if (group == null) { problems.Add($"'{m.Name}': no collider group '{m.Group}' on the unit; not built"); continue; }
 					var go = new GameObject($"{label} module {m.Id}");
+					// Set up inactive: Awake copies _health into _fullHealth, else it keeps the default 10.
 					go.SetActive(false);
 					go.layer = 8;
+					// penCheck stops a round dead on any collider not tagged Penetrable, Compartment or Target.
 					go.tag = "Penetrable";
 					Followers.PlaceOnBone(go.transform, bone, group);
 					var boneInRoot = root.worldToLocalMatrix * bone.localToWorldMatrix;
@@ -170,6 +172,7 @@ namespace T90A.Common
 			return (null, null, 8, false);
 		}
 
+		// GHPC's owners subscribe to their hit zone fields once, in Awake / Start / OnEnable. Set later, it's wired by hand.
 		internal static void Wire(Vehicle vehicle, List<string> problems)
 		{
 			var set = vehicle.GetComponent<ModuleSet>();
@@ -216,6 +219,7 @@ namespace T90A.Common
 		static void WireHook(Vehicle vehicle, ModuleSet set, ModuleSpec.Module m, DC dc, ModuleSpec.Hook h, HashSet<DC> replaced)
 		{
 			var main = MainWeapon(vehicle);
+			// GHPC has no power-drive hit zone of its own: this takes the engine-power-lost path.
 			if (h.Name == "Module.PowerDrive")
 			{
 				var p = Platform(main, h.Target) ?? throw new InvalidOperationException($"no platform '{h.Target}'");
@@ -234,6 +238,7 @@ namespace T90A.Common
 				set.Lines.Add((dc, $"{p.Name} hand drive destroyed"));
 				return;
 			}
+			// Stabilized is the capability, StabilizerActive only the player's switch.
 			if (h.Name == "Module.Stabiliser")
 			{
 				var fcs = main?.FCS ?? throw new InvalidOperationException("no main FCS");
@@ -246,6 +251,7 @@ namespace T90A.Common
 			}
 			if (h.Name == "Module.SmokeTube")
 			{
+				// By tube number: just after spawn the turret's collider group still lags the moved pivot by 7-11 cm.
 				var smoke = vehicle.GetComponentInChildren<VehicleSmokeManager>(true) ?? throw new InvalidOperationException("no smoke manager");
 				var slot = SmokeLaunchers.SlotOfTube(smoke, m.Tube) ?? throw new InvalidOperationException($"no grenade slot seated on tube {m.Tube}");
 				var taken = set.Tubes.FirstOrDefault(t => t.Value == slot).Key;
@@ -363,6 +369,7 @@ namespace T90A.Common
 			if (cls == typeof(AimablePlatform) && (target == "turret" || target == "gun")) return Platform(main, target);
 			if (cls == typeof(CameraSlot) && (target == "gunner_day" || target == "gunner_night"))
 			{
+				// Kept from the first lookup: GHPC repoints MainOptic at whichever sight is in view.
 				var fcs = main?.FCS;
 				if (fcs == null) return null;
 				if (!GunnerDay.TryGetValue(fcs, out var day))
@@ -379,6 +386,7 @@ namespace T90A.Common
 				|| (o is AimablePlatform p && p.Name.IndexOf(target ?? "", StringComparison.OrdinalIgnoreCase) >= 0));
 		}
 
+		// LateFollow.Start moves the collider groups to the scene root, so GetComponentsInChildren misses them.
 		internal static List<Transform> UnitObjects(Vehicle v)
 		{
 			var list = new List<Transform> { v.transform };

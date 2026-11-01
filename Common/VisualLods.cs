@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace T90A.Common
 {
+	// Before HeatSource collects its renderers, it only does that once.
 	internal static class VisualLods
 	{
 		internal static void Sync(Transform root, string[] dropMaterialPrefixes = null)
@@ -24,7 +25,7 @@ namespace T90A.Common
 					var drop = Enumerable.Range(0, mats.Length).Where(i => mats[i] != null && dropMaterialPrefixes.Any(p => mats[i].name.StartsWith(p))).ToList();
 					if (drop.Count > 0)
 					{
-						var m = Object.Instantiate(mf1.sharedMesh);
+						var m = Object.Instantiate(mf1.sharedMesh);   // the bundle's mesh is every unit's
 						m.name = mf1.sharedMesh.name;
 						foreach (int i in drop) m.SetTriangles(new int[0], i);
 						mf1.sharedMesh = m;

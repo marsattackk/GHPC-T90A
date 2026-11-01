@@ -5,6 +5,7 @@ using UnityEngine;
 
 namespace T90A
 {
+	// The CUPOLA bone move doesn't take the 'commander head' slot or the commander's figure with it.
 	internal static class CommanderSeat
 	{
 		internal static void Apply(Vehicle vehicle)

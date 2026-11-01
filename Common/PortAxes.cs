@@ -21,6 +21,7 @@ namespace T90A.Common
 			{
 				BaseTurret = s.BaseTurret, NewTurret = s.NewTurret, BaseGun = s.BaseGun, NewGun = s.NewGun, Tag = s.Tag + " turret axis", NewMuzzle = s.LevelledMuzzle,
 			});
+			// After the pivots, the seat goes on the moved one.
 			if (s.TiltRing && Mathf.Abs(s.PitchDeg) > 1e-4f)
 				TiltedRing.Apply(vehicle, Quaternion.AngleAxis(s.PitchDeg, Vector3.right), s.Tag + " tilted ring");
 		}

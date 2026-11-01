@@ -27,11 +27,13 @@ namespace T90A.Common
 			var turretPlat = plats.FirstOrDefault(p => p.Transform == turret);
 			var gunRest = gunPlat != null ? (Quaternion)orig.GetValue(gunPlat) : gun.localRotation;
 			var turretRest = turretPlat != null ? (Quaternion)orig.GetValue(turretPlat) : turret.localRotation;
+			// Rest pose first, the AI may already have turned the turret.
 			turret.localRotation = turretRest;
 			gun.localRotation = gunRest;
 
 			var muzzle = vehicle.GetComponent<GHPC.Weapons.WeaponsManager>()?.Weapons?.FirstOrDefault()?.Weapon?.MuzzleIdentity;
 
+			// Followers and skins are redone from the old bone poses, the collider groups may still be lagging.
 			var turretOld = (turret.position, turret.rotation); var gunOld = (gun.position, gun.rotation);
 			Followers.ShiftBone(turret, turret.parent.InverseTransformVector(root.TransformVector(s.NewTurret - s.BaseTurret)));
 			Followers.ShiftBone(gun, turret.InverseTransformVector(root.TransformVector(s.NewGun - s.BaseGun)));
@@ -51,6 +53,7 @@ namespace T90A.Common
 			}
 		}
 
+		// Never write the mesh, every T-72M1 shares it (#4). A child at the old pose stands in for the moved bone.
 		static void Rebind(Transform root, params (Transform bone, (Vector3 pos, Quaternion rot) old)[] moved)
 		{
 			var gun = moved[moved.Length - 1].bone;

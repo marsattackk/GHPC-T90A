@@ -50,6 +50,7 @@ namespace T90A.Common
 			return st;
 		}
 
+		// In a free-look slot GHPC aims the selected weapon at the cursor and fires it. The station is remote.
 		internal static bool InPlayerInput;
 
 		[HarmonyPatch(typeof(PlayerInput), "Update")]
@@ -129,6 +130,7 @@ namespace T90A.Common
 			g.Weapon.DamageName = s.DamageName;
 			g.DonorCycle = g.Feed.RoundCycleStages.Sum(x => (float)StageDuration.GetValue(x));
 			g.Cycle = 60f / s.RoundsPerMinute;
+			// The weapon takes its rate from the feed's stages in Awake.
 			foreach (var x in g.Feed.RoundCycleStages) StageDuration.SetValue(x, (float)StageDuration.GetValue(x) * g.Cycle / g.DonorCycle);
 			g.DonorBelt = g.Rack.ClipTypes[0];
 			var donorB32 = g.DonorBelt.MinimalPattern[0];
@@ -165,7 +167,7 @@ namespace T90A.Common
 		internal static AimablePlatform Platform(Transform parent, string name, AimablePlatform donor, Transform turns, EnumHelpers.Axis3 axis, Vector2 limits, float speed, DC hitZone)
 		{
 			var go = new GameObject(name);
-			go.SetActive(false);
+			go.SetActive(false);   // HitZones are hooked up in Awake
 			go.transform.SetParent(parent, false);
 			var p = go.AddComponent<AimablePlatform>();
 			foreach (var f in typeof(AimablePlatform).GetFields(BindingFlags.Public | BindingFlags.Instance))
@@ -190,6 +192,7 @@ namespace T90A.Common
 			var statuses = (IDamageStatus[])UnitStatuses.GetValue(vehicle) ?? new IDamageStatus[0];
 			var ours = reporters.Where(c => c != null).OfType<IDamageStatus>().Where(x => !statuses.Contains(x)).ToArray();
 			UnitStatuses.SetValue(vehicle, statuses.Concat(ours).ToArray());
+			// Empty means every slot under the unit. Append to it and ours are the only sights left.
 			if (vehicle.DesignatedCameraSlots != null && vehicle.DesignatedCameraSlots.Length > 0)
 				UnitSlots.SetValue(vehicle, vehicle.DesignatedCameraSlots.Concat(sights.Where(x => x != null)).ToArray());
 		}
@@ -214,6 +217,7 @@ namespace T90A.Common
 		static string _logTag = "";
 		internal static void SetLogTag(string tag) => _logTag = tag ?? "";
 
+		// Every path to the camera manager ends here, and the slots it gets don't have the station's sights.
 		[HarmonyPatch(typeof(CameraManager), "RescanCamSlots")]
 		static class CameraSlotsPatch
 		{
@@ -236,6 +240,8 @@ namespace T90A.Common
 			}
 		}
 
+		// Shift goes back in by a stored index into a list that shrinks when the Kord isn't selected. Out of range it throws
+		// and leaves the view stuck outside.
 		static CameraSlot _lastSight;
 		internal static CameraSlot LastSight
 		{

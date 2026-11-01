@@ -3,6 +3,8 @@ using UnityEngine;
 
 namespace T90A.Common
 {
+	// Plain Standard doesn't show in thermal. Spare slots: _DetailMask paint mask, _DetailAlbedoMap / _DetailNormalMap
+	// the clean albedo and metal-gloss under weathering.
 	public static class VehiclePaint
 	{
 		public static bool Clean;
@@ -46,6 +48,7 @@ namespace T90A.Common
 			if (mask != null) m.SetTexture("_PaintMask", mask);
 			var ao = src.HasProperty("_OcclusionMap") ? src.GetTexture("_OcclusionMap") : null;
 			m.SetTexture("_Occlusion", ao != null ? ao : Texture2D.whiteTexture);
+			// Camo's in the albedo. _PaintMask still places scorch and snow.
 			m.SetFloat("_CamoAmount", 0f);
 			m.SetFloat("_hackcamoUVs", 0f);
 			m.DisableKeyword("_HACKCAMOUVS_ON");

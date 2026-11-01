@@ -4,6 +4,7 @@ using UnityEngine;
 
 namespace T90A.Common
 {
+	// Rigid, it either cuts into the turret or lets the barrel slide out, so it's skinned to both.
 	internal static class MantletCover
 	{
 		internal static string Skin(Transform root, Transform turret, Transform gun, Transform cover)
@@ -24,6 +25,7 @@ namespace T90A.Common
 					: new BoneWeight { boneIndex0 = 0, weight0 = 1f - g, boneIndex1 = 1, weight1 = g };
 			}
 			mesh.boneWeights = w;
+			// The gun can already be elevated here, bind at rest.
 			var plat = root.GetComponentsInChildren<AimablePlatform>(true).FirstOrDefault(p => p.Transform == gun);
 			var restRot = plat != null ? (Quaternion)Reflect.Field(typeof(AimablePlatform), "_originalLocalRotation").GetValue(plat) : gun.localRotation;
 			var gunRestInTurret = gun.parent == turret ? Matrix4x4.TRS(gun.localPosition, restRot, gun.localScale) : turret.worldToLocalMatrix * gun.localToWorldMatrix;

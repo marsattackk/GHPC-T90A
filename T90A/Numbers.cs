@@ -5,6 +5,7 @@ namespace T90A
 {
 	internal static class Numbers
 	{
+		// Turret-bone space: prefab minus the T-72 ring centre.
 		static readonly TacticalNumbers.Settings S = new TacticalNumbers.Settings
 		{
 			LampFace = new Vector3(-0.489f, 2.380f - 1.369f, -1.684f + 0.527f),

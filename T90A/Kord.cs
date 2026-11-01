@@ -23,6 +23,7 @@ namespace T90A
 		internal static readonly Vector3 CupolaAxis = new Vector3(0.602f, 2.054f, -1.033f);
 		internal static readonly Vector3 Trunnion = new Vector3(0.583f, 2.526f, -0.593f);
 		static readonly Vector3 WtMuzzle = new Vector3(0.582f, 2.510f, 0.873f);
+		// Top front of the head. On the rod pivot the cradle filled half the view.
 		static readonly Vector3 PzuHead = new Vector3(0.187f, 2.280f, -0.850f);
 		internal static Vector3 Muzzle => Trunnion + Quaternion.AngleAxis(-RealAxis.GunLevelDeg, Vector3.right) * (WtMuzzle - Trunnion);
 		static readonly Vector3 WtCaseChute = new Vector3(0.612f, 2.505f, -0.090f);
@@ -41,7 +42,7 @@ Prefix = "T90A_", MeshName = "T90A Kord", BeltMaterial = "t90a_mg_6p49_kord_ammo
 		static readonly Vector2 Traverse = new Vector2(-45f, 60f);
 		static readonly Vector2 Elevation = new Vector2(-5f, 70f);
 		const float CupolaSpeed = 35f;
-		const float ElevationSpeed = 24f;
+		const float ElevationSpeed = 24f;   // inferred, it has to keep up with the ТКН-4С's slew
 		const int BeltB32PerTracer = 3;
 
 		static readonly FieldInfo SlotReparent = Reflect.Field(typeof(CameraSlot), "_reparentTarget");
@@ -98,6 +99,7 @@ Prefix = "T90A_", MeshName = "T90A Kord", BeltMaterial = "t90a_mg_6p49_kord_ammo
 				try { beltVis = KordBelt.Fit(cupVis, cradle, BeltSettings); }
 				catch (System.Exception e) { MelonLogger.Error("T-90A Kord belt failed: " + e); }
 
+			// Before anything wakes: the drives, gun and sight pick their hit zones up in Awake.
 			var zones = FitZones(vehicle, d, cupolaBone, turret, cradle, holder.transform);
 
 			var gun = RemoteMg.CloneGun(d, holder.transform, new RemoteMg.GunSettings { Name = Name, DamageName = "6P49 Kord", BeltRounds = BeltRounds, Belts = Belts, RoundsPerMinute = RoundsPerMinute, B32PerTracer = BeltB32PerTracer }, "T-90A");
@@ -107,6 +109,7 @@ Prefix = "T90A_", MeshName = "T90A Kord", BeltMaterial = "t90a_mg_6p49_kord_ammo
 			float cycle = gun.Cycle;
 			weapon.BarrelHitZone = zones.Gun;
 
+			// Last under the root, GetComponentInChildren<FireControlSystem>() elsewhere has to find the gunner's.
 			var (fcsGo, fcs, opticGo, fcsRemoved, fcsScrubbed) = RemoteMg.CloneFcs(d, holder.transform, "T90A Kord fire control");
 			removed += fcsRemoved; scrubbed += fcsScrubbed;
 			var reference = new GameObject("T90A Kord aim reference").transform;
@@ -130,6 +133,7 @@ Prefix = "T90A_", MeshName = "T90A Kord", BeltMaterial = "t90a_mg_6p49_kord_ammo
 			optic.RegisteredAmmoTypes = new[] { b32 };
 			slot.ExclusiveWeapons = new[] { weapon };
 			slot.HitZone = zones.Sight;
+			// Without a fallback the camera's left floating at the dead sight.
 			slot.SlotToUseOnDestroy = root.GetComponentsInChildren<CameraSlot>(true).FirstOrDefault(s => s.name == "commander head");
 			if (optic.reticleMesh != null && optic.reticleMesh.reticleSO != null)
 			{
@@ -169,6 +173,7 @@ Prefix = "T90A_", MeshName = "T90A Kord", BeltMaterial = "t90a_mg_6p49_kord_ammo
 			opticGo.transform.localPosition = Vector3.zero;
 			opticGo.transform.localRotation = Quaternion.identity;
 			opticGo.SetActive(true);
+			// Night channel first, the day slot marks its linked night sight when it wakes.
 			if (tkn != null)
 				foreach (var o in new[] { tknNight, tkn })
 				{
@@ -239,6 +244,7 @@ Prefix = "T90A_", MeshName = "T90A Kord", BeltMaterial = "t90a_mg_6p49_kord_ammo
 				go.transform.localPosition = m.GetColumn(3);
 				go.transform.localRotation = m.rotation;
 				go.transform.localScale = m.lossyScale;
+				// Box, not the donor's mesh collider: two are non-convex and the sight's a thin shell a round can thread.
 				var mesh = go.GetComponent<MeshFilter>()?.sharedMesh;
 				foreach (var c in go.GetComponents<Collider>()) Object.DestroyImmediate(c);
 				var box = go.AddComponent<BoxCollider>();
@@ -287,6 +293,7 @@ Prefix = "T90A_", MeshName = "T90A Kord", BeltMaterial = "t90a_mg_6p49_kord_ammo
 
 			if (d.ElevationDriveZone != null)
 			{
+				// Its own LateFollow group. A collider left under the unit joins its rigidbody.
 				var grp = new GameObject("T90A KORD COLLIDERS");
 				grp.SetActive(false);
 				grp.layer = 8;

@@ -52,6 +52,7 @@ namespace T90A.Common
 			TubeSlots.Add(mgr, byTube);
 		}
 
+		// VehicleSmokeManager caches its crew brains in Start, before a runtime-spawned unit has any, and then never fires.
 		internal static void RefreshCrew(VehicleSmokeManager mgr)
 		{
 			var t = typeof(VehicleSmokeManager);

@@ -133,6 +133,7 @@ namespace T90A.Common
 			return set;
 		}
 
+		// Clips match by value, so it holds no round to equal no option. Reusing the vanilla ClipType still matched.
 		static AmmoClipCodexScriptable heatStandIn;
 
 		static AmmoClipCodexScriptable HeatStandIn()
@@ -201,6 +202,7 @@ namespace T90A.Common
 			return sets;
 		}
 
+		// Rack rounds are Instantiates of these. Left live, anything the game did to one went into every round after.
 		static Transform _modelHolder;
 
 		static Transform ModelHolder
@@ -221,6 +223,7 @@ namespace T90A.Common
 			var ammo = new AmmoType();
 			foreach (var f in typeof(AmmoType).GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
 				if (!f.IsLiteral && !f.IsInitOnly) f.SetValue(ammo, f.GetValue(source));
+			// AmmoType.Equals compares names: a vanilla name drags the round into that round's logistics lists.
 			ammo.Name = r.Name;
 			ammo.ArmorOptimizations = new AmmoType.ArmorOptimization[0];
 			r.Set(ammo);
@@ -549,6 +552,7 @@ namespace T90A.Common
 			go.transform.localPosition = S.GuidancePosition;
 			go.transform.localEulerAngles = Vector3.zero;
 			var mgu = go.AddComponent<MissileGuidanceUnit>();
+			// Sight line, not the gun's axis: the autoloader drops the gun to load mid-guidance and the missile followed it.
 			var beam = new GameObject(S.BeamName).AddComponent<GuidanceBeam>();
 			beam.transform.SetParent(weapon.FCS.GetComponentInParent<Vehicle>()?.transform ?? parent, false);
 			beam.Fcs = weapon.FCS;
@@ -557,6 +561,8 @@ namespace T90A.Common
 			mgu.AimElement = beam.transform;
 			weapon.GuidanceUnit = mgu;
 			weapon.Feed.ReloadDuringMissileTracking = false;
+			// The feed only subscribes in RegisterWeaponSystem at Awake. Without this WaitingOnMissile sticks after the first
+			// missile and the gun stops reloading by itself.
 			FeedMissileGuidance.SetValue(weapon.Feed, mgu);
 			mgu.GuidanceStopped += (Action)Delegate.CreateDelegate(typeof(Action), weapon.Feed, FeedGuidanceStopped);
 			weapon.FireWhileGuidingMissile = false;
@@ -631,6 +637,7 @@ namespace T90A.Common
 	[HarmonyPatch(typeof(AmmoReplacementOrder), nameof(AmmoReplacementOrder.SelectAmmoType))]
 	internal static class AmmoCampaignUnlockPatch
 	{
+		// GHPC honours BlockUntilMissionsCompleted for units only, SelectAmmoType ignores it.
 		static void Prefix(AmmoReplacementOrder __instance, bool __2)
 		{
 			bool isCampaignMode = __2;
@@ -645,12 +652,14 @@ namespace T90A.Common
 	{
 		static readonly AccessTools.FieldRef<LiveRound, bool> Sacrificed = Reflect.FieldRefAccess<LiveRound, bool>("_sacrificedWarhead");
 
+		// Never throw out of a penCheck patch: the round fails every frame after, and in its first frame no new round flies.
 		static void Prefix(LiveRound __instance, Collider __0)
 		{
 			try { Precursor(__instance, __0); }
 			catch (Exception e) { PatchGuard.Failed("Tandem ERA charge", e); }
 		}
 
+		// GHPC's Tandem only beats slat armour.
 		static void Precursor(LiveRound __instance, Collider cObject)
 		{
 			AmmoType info = __instance.Info;

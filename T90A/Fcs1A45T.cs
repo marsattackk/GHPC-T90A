@@ -13,6 +13,7 @@ namespace T90A
 		const float LaserMin = 400f;
 		const float LaserMax = 5000f;
 
+		// Sight goes past the gun's stops, the fire gate just stays shut.
 		internal static readonly Vector2 LineOfSightLimits = new Vector2(-15f, 20f);
 
 		static readonly GunnerFcs.Settings Settings = new GunnerFcs.Settings
@@ -23,7 +24,7 @@ namespace T90A
 			LineOfSightAzimuth = 8f,
 			RangeStep = 100,
 			DisplayRangeIncrement = 50,
-			FireGateAngle = 0.1f,
+			FireGateAngle = 0.1f,   // 1V528's isn't published, this is GHPC's 1A33 value
 		};
 
 		public static void Apply(UsableOptic dayOptic)
@@ -99,6 +100,7 @@ namespace T90A
 				if (letter.text != glyph) letter.text = glyph;
 			}
 
+			// Seven segments can't do Cyrillic: 6 for Б, K for К, 0 for О, Y for У.
 			internal static string Glyph(AmmoType ammo) =>
 				ammo.Guidance != AmmoType.GuidanceType.Unguided ? "Y"
 				: ammo.Category == AmmoType.AmmoCategory.Penetrator ? "6"

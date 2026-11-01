@@ -5,6 +5,7 @@ namespace T90A.Common
 {
 	public static class Hashing
 	{
+		// Vector3Int's own hash collides in heaps on a millimetre grid.
 		public static readonly IEqualityComparer<Vector3Int> Vec3Int = new V3();
 
 		sealed class V3 : IEqualityComparer<Vector3Int>

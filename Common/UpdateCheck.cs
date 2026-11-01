@@ -60,6 +60,7 @@ namespace T90A.Common
 				if (code == 200 && m.Success) { tag = m.Groups[1].Value; via = "API"; }
 				else why = "API " + (error ?? "HTTP " + code);
 			});
+			// The API has an hourly limit per address, the release page's redirect still answers past it.
 			if (tag == null)
 			{
 				var tagIn = new Regex("/" + Regex.Escape(repo) + "/releases/tag/([^\"'?#<>\\s/]+)", RegexOptions.IgnoreCase);
@@ -95,7 +96,10 @@ namespace T90A.Common
 			}
 			catch (Exception e) { error = e.GetType().Name; }
 			float until = Time.realtimeSinceStartup + TimeoutSeconds + 5f;
-			while (op != null && !op.isDone && Time.realtimeSinceStartup < until) yield return null;
+			while (op != null && !op.isDone && Time.realtimeSinceStartup < until)
+			{
+				yield return null;
+			}
 			long code = 0; string body = null, location = null;
 			try
 			{
@@ -109,7 +113,10 @@ namespace T90A.Common
 				}
 			}
 			catch (Exception e) { error = e.GetType().Name; }
-			finally { try { req?.Dispose(); } catch { } }
+			finally
+			{
+				try { req?.Dispose(); } catch { }
+			}
 			try { done(code, body, location, error); } catch { }
 		}
 	}

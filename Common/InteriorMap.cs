@@ -141,6 +141,7 @@ namespace T90A.Common
 
 		static Quaternion Q(string s) { var a = s.Split(','); return new Quaternion(float.Parse(a[0], CI), float.Parse(a[1], CI), float.Parse(a[2], CI), float.Parse(a[3], CI)); }
 
+		// Run before LoadoutManager.Start: rounds spawn as their slot's child, so a moved slot gets its round in place.
 		internal void Apply(Transform root, List<string> problems = null)
 		{
 			var grown = new HashSet<GHPC.Weapons.AmmoRack>();
@@ -154,6 +155,7 @@ namespace T90A.Common
 				var copy = Object.Instantiate(t.gameObject, t.parent, false);
 				copy.name = c.Name;
 				copy.transform.localPosition = t.localPosition; copy.transform.localRotation = t.localRotation; copy.transform.localScale = t.localScale;
+				// A filled template's round comes along with Instantiate, and the rack doesn't know it.
 				foreach (var v in copy.GetComponentsInChildren<GHPC.Weapons.AmmoStoredVisual>(true)) Object.DestroyImmediate(v.gameObject);
 				var cph = copy.GetComponent<GHPC.Weapons.AmmoVisualPlaceholder>();
 				cph.RackIndex = c.RackIndex;
@@ -216,6 +218,7 @@ namespace T90A.Common
 				{
 					go.SetActive(true);
 				}
+				// Immediate: the colliders get registered below, and a deferred Destroy left them in the group.
 				var kids = new List<GameObject>(); foreach (Transform ch in go.transform) kids.Add(ch.gameObject);
 				foreach (var k in kids) Object.DestroyImmediate(k);
 				go.transform.localPosition = Vector3.zero; go.transform.localRotation = Quaternion.identity; go.transform.localScale = Vector3.one;

@@ -10,6 +10,7 @@ using UnityEngine;
 
 namespace T90A
 {
+	// Positions in mrad off Fig. 9 at 12x, the 0-08 chevron (8.378 mrad) as the scale. Origin's the chevron tip.
 	public static class Sight1G46
 	{
 		public static readonly float[] ZoomFovs = { 20f, 16.6f, 13.8f, 11.4f, 9.5f, 7.9f, 6.5f, 5.4f, 4.5f };
@@ -37,6 +38,7 @@ namespace T90A
 		const float StadiaX800 = -28.2f;
 		const float StadiaXPer400 = 3.39f;
 
+		// One per set of rounds, a shared one drew the first tank's Б scale in every T-90A after it.
 		static readonly Dictionary<string, ReticleSO> built = new Dictionary<string, ReticleSO>();
 
 		internal static string RoundsKey(params AmmoCodexScriptable[] rounds) => string.Join("|", rounds.Select(r => r != null ? r.name : "-"));
@@ -97,6 +99,7 @@ namespace T90A
 			return so;
 		}
 
+		// Nothing describes the ESSA's mark, so it's the 1G46 chevron and leads, lit.
 		public static ReticleSO BuildEssa()
 		{
 			ReticleSO so = ScriptableObject.CreateInstance<ReticleSO>();
@@ -267,6 +270,7 @@ namespace T90A
 			return group;
 		}
 
+		// Strokes, the reticle font may have no Cyrillic.
 		internal static void Glyph(ReticleTree.GroupBase parent, char letter, float cx, float cy, float h)
 		{
 			float w = h * 0.6f, l = cx - w / 2f, r = cx + w / 2f, b = cy - h / 2f, t = cy + h / 2f;

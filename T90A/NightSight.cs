@@ -19,6 +19,7 @@ namespace T90A
 
 		const float EssaWide = 6.75f, EssaNarrow = 2.25f, EssaElectronic = 1.125f;
 		const int EssaHeight = 576;
+		// 754 across a 4:3 picture, stretched over a 16:9 screen.
 		const int EssaWidth = 1005;
 		static readonly Vector2 EssaElevationLimits = new Vector2(-10f, 20f);
 		const float EssaAzimuth = 7.5f;
@@ -43,6 +44,7 @@ namespace T90A
 				GunnerFcs.AimClamp.SightAzimuth(night, EssaAzimuth);
 			}
 			night.gameObject.AddComponent<Marker>();
+			// VisibilityManager goes off the unit's night vision type for AI spotting, not the slot's.
 			ThermalSight.SetUnitNightVision(vehicle, slot);
 		}
 
@@ -91,6 +93,7 @@ namespace T90A
 			if (dSlot == null) { MelonLogger.Warning("T-90A: T-80B TPN-3-49 donor not found; Buran-M not applied (TPN-1-49-23 kept)."); return false; }
 			var slot = night.slot;
 
+			// Nothing on the Buran-M's field or look, the T-80B's TPN-3-49 stands in.
 			slot.VisionType = NightVisionType.Intensifier;
 			slot.DefaultFov = dSlot.DefaultFov;
 			slot.OtherFovs = dSlot.OtherFovs?.ToArray() ?? new float[0];
@@ -147,6 +150,7 @@ namespace T90A
 
 		static ReticleSO BuranReticle(UsableOptic day, ReticleSO tpn3, AmmoCodexScriptable apfsds)
 		{
+			// Tree's [SerializeReference], so this is a real deep copy.
 			var so = Object.Instantiate(tpn3);
 			so.name = "TPN3 Buran-M (T-90A)";
 			var host = day.reticleMesh.reticleSO;

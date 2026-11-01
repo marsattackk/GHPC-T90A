@@ -8,6 +8,8 @@ using UnityEngine;
 
 namespace T90A
 {
+	// The real strip's fed for Дубль, which isn't in the game, so it runs off the gunner's 2A46.
+	// Screen overlay, not reticle strokes: a stroke with no alignment bone takes the whole reticle down.
 	internal class Tkn4sReadout : MonoBehaviour
 	{
 		WeaponSystem _gun;

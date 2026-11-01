@@ -79,6 +79,7 @@ namespace T90A
 					string name = ArmorValues.PieceName(e.Kind, piece.name);
 					if (e.DrawnOnly) Xray(piece.gameObject, e);
 					else Setup(piece.gameObject, e, name, vehicle);
+					// Stored offset, not the group's pose this frame. It lags at spawn, the turret pieces went 16 cm low.
 					Followers.PlaceOnBone(piece, bone, target);
 				}
 			}
@@ -98,14 +99,16 @@ namespace T90A
 
 		static void Setup(GameObject go, ArmorValues.Entry e, string name, Vehicle vehicle)
 		{
-			go.layer = 8;
+			go.layer = 8;   // Raycast Only
 			go.tag = "Penetrable";
 			var col = go.AddComponent<MeshCollider>();
 			col.sharedMesh = go.GetComponent<MeshFilter>().sharedMesh;
+			// Only the insert's convex so a round enters it once. A box's convex hull stood 17 cm proud.
 			col.convex = e.Kind == "composite";
 
 			if (e.Variable)
 			{
+				// Needs the closed mesh and a non-convex collider on this object.
 				var va = go.AddComponent<VariableArmor>();
 				va.SetName(name);
 				Reflect.Field(typeof(VariableArmor), "_armorType").SetValue(va, e.Material);
@@ -127,6 +130,7 @@ namespace T90A
 			armor.DetonatedObjects = new GameObject[0];
 			armor.UndetonatedObjects = new GameObject[0];
 			armor.Unit = vehicle;
+			if (e.Era) EraBricks.Register(armor, vehicle.transform);
 			Xray(go, e);
 		}
 
@@ -160,6 +164,7 @@ namespace T90A
 			return m;
 		}
 
+		// Collider groups are at the scene root after Start.
 		static Transform ArmorRoot(Vehicle vehicle, string token)
 		{
 			Transform follower = vehicle.GetComponentsInChildren<LateFollowTarget>(true)

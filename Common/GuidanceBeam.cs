@@ -4,6 +4,8 @@ using UnityEngine;
 
 namespace T90A.Common
 {
+	// MissileGuidanceUnit's AimElement, placed before its Update reads it. Not the optic itself, that only turns while
+	// its view is on screen.
 	[DefaultExecutionOrder(-50)]
 	internal sealed class GuidanceBeam : MonoBehaviour
 	{

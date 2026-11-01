@@ -25,6 +25,7 @@ namespace T90A.Common
 
 		internal static void Apply(Vehicle vehicle, Settings s)
 		{
+			// GHPC re-parents the script containers under the mesh bones at Start, prefab paths are no use.
 			var traverse = vehicle.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == "---TURRET SCRIPTS---")?.GetComponent<AimablePlatform>();
 			if (traverse == null) MelonLogger.Warning($"{s.Tag}: turret traverse platform not found; the base's traverse speed kept.");
 			else if (s.TurretSpeed > 0f) traverse.SpeedPowered = s.TurretSpeed;
@@ -52,6 +53,7 @@ namespace T90A.Common
 			TraverseLimits.Apply(gun, traverse, knots);
 		}
 
+		// One stage list per gun, no per-type timing. The first stage waits for the carousel, so switches run longer anyway.
 		static void Autoloader(Vehicle vehicle, Settings s)
 		{
 			if (s.AutoloaderCycle <= 0f) return;
@@ -66,6 +68,7 @@ namespace T90A.Common
 			Reflect.Method(typeof(AmmoFeed), "CalculateTotalTime")?.Invoke(feed, new object[] { feed.ClipReloadStages, false });
 		}
 
+		// Every T-72M1 shares the codex entry, rename a copy or they all get the new gun name.
 		static void GunName(Vehicle vehicle, Settings s)
 		{
 			if (s.GunName == null) return;

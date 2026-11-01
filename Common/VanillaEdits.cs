@@ -10,6 +10,7 @@ namespace T90A.Common
 		public (string piece, Matrix4x4 m)[] Transforms = { };
 		public string[] Reshape = { };
 		public (string bone, string group, Vector3 delta)[] Bones = { };
+		// Off takes the children too, Strip leaves a hit zone hanging under the piece alone.
 		public string[] Strip = { };
 
 		public const string AssetName = "vanilla_edits", ReshapeKind = "reshape";

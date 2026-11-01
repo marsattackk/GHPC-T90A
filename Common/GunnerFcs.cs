@@ -18,12 +18,15 @@ namespace T90A.Common
 			public float LaserMin, LaserMax;
 			public Vector2 LineOfSightLimits;
 			public float LineOfSightAzimuth;
+			public bool ViewStopsAtAzimuth;
 			public int RangeStep = 100;
 			public int DisplayRangeIncrement = 50;
 			public float FireGateAngle = 0.1f;
 			public bool ManualMode = true;
 		}
 
+		// AimWorldVector takes input without limit. Past a stabilised sight's stop it piles up unseen and the sight sticks
+		// until it's wound back off. In azimuth the view has no limit at all.
 		internal static class AimClamp
 		{
 			static readonly Dictionary<FireControlSystem, List<UsableOptic>> Sights = new Dictionary<FireControlSystem, List<UsableOptic>>();
@@ -121,8 +124,12 @@ namespace T90A.Common
 			fcs.DisplayRangeIncrement = s.DisplayRangeIncrement;
 			fcs.EnableRangeInterpolation = false;
 
-			fcs.UseDeltaD = true;
-			fcs.ImperfectDeltaD = true;
+			// Delta-D on a fire control without TurretPlatform floods Player.log with an error every frame.
+			if (fcs.TurretPlatform != null)
+			{
+				fcs.UseDeltaD = true;
+				fcs.ImperfectDeltaD = true;
+			}
 
 			fcs.CurrentStabMode = StabilizationMode.Vector;
 			fcs.ImperfectFixedRangePointStab = false;
@@ -161,12 +168,15 @@ namespace T90A.Common
 			dayOptic.CantCorrect = true;
 			dayOptic.ForceHorizontalReticleAlign = true;
 			dayOptic.LocalElevationLimits = s.LineOfSightLimits;
+			if (s.ViewStopsAtAzimuth && s.LineOfSightAzimuth > 0f) dayOptic.LocalAzimuthLimits = new Vector2(-s.LineOfSightAzimuth, s.LineOfSightAzimuth);
 			AimClamp.Register(fcs, dayOptic, s.LineOfSightAzimuth);
 			SetPrivate(fcs, "_fixParallaxForVectorMode", false);
 
 			Resync(fcs, dayOptic);
 		}
 
+		// With an override GHPC opens the gate within superelevation + FireGateAngle of the sight line, sign ignored, so a
+		// shot before the gun has climbed goes low by up to the whole drop (3BK18M at 1500 m: 17 m).
 		internal static readonly HashSet<FireControlSystem> OwnLay = new HashSet<FireControlSystem>();
 
 		static void OwnLayGate(FireControlSystem fcs)
@@ -185,8 +195,24 @@ namespace T90A.Common
 
 			void Update() => Put();
 			void LateUpdate() => Put();
+
+			// AimablePlatform turns the turret in its LateUpdate, after this one, so once more before each camera culls.
+			static readonly HashSet<HeadPoint> Live = new HashSet<HeadPoint>();
+			static bool _hooked;
+			void OnEnable()
+			{
+				Live.Add(this);
+				if (!_hooked) { _hooked = true; Camera.onPreCull += PreCull; }
+			}
+
+			void OnDisable() => Live.Remove(this);
+			static void PreCull(Camera _)
+			{
+				foreach (var h in Live) if (h != null) h.Put();
+			}
 		}
 
+		// UpdateLaserAim points the laser at the aim wherever the turret is, mid-swing that's through the turret's own front.
 		internal static class LaserAim
 		{
 			static readonly Dictionary<FireControlSystem, (UsableOptic sight, Settings s)> Sights = new Dictionary<FireControlSystem, (UsableOptic, Settings)>();
@@ -241,6 +267,7 @@ namespace T90A.Common
 			}
 		}
 
+		// FireControlSystem caches these in Awake, RegisterOptic and DeferredStart.
 		static void Resync(FireControlSystem fcs, UsableOptic dayOptic)
 		{
 			SetPrivate(fcs, "_manualModeOnRangeSet", fcs.HasManualMode);

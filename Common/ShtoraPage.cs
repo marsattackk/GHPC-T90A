@@ -9,6 +9,7 @@ using UnityEngine.UI;
 
 namespace T90A.Common
 {
+	// Inferred: no source shows what the ПМФ-3.2's СПЗ page looks like.
 	internal static class ShtoraPage
 	{
 		static GameObject _root, _panel;
@@ -181,6 +182,7 @@ namespace T90A.Common
 			return t;
 		}
 
+		// The OS's Bahnschrift loads as a narrow instance of the variable font and comes out squeezed.
 		static Font LoadFont(string name)
 		{
 			if (_font != null) return _font;

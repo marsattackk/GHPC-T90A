@@ -15,6 +15,7 @@ namespace T90A.Common
 
 		internal static void Apply(Transform root, VanillaEdits e, IDictionary<string, (Mesh mesh, Transform bone)> reshape, List<string> problems = null)
 		{
+			// Through the groups' stored offsets with turret and gun at rest, the groups lag and the AI may be traversing.
 			var rest = new Dictionary<Transform, Quaternion>();
 			foreach (var p in root.GetComponentsInChildren<AimablePlatform>(true))
 				if (p.Transform != null) rest[p.Transform] = (Quaternion)RestRotation.GetValue(p);
@@ -64,6 +65,7 @@ namespace T90A.Common
 					mc.sharedMesh = r.mesh;
 					var mf = t.GetComponent<MeshFilter>();
 					if (mf != null) mf.sharedMesh = r.mesh;
+					// VariableArmor measures the exit through this clone, built from the old mesh in Awake.
 					var c = t.GetComponent<VariableArmor>() != null ? t.Find("inverted armor clone") : null;
 					if (c != null)
 					{
@@ -84,6 +86,7 @@ namespace T90A.Common
 				foreach (var f in fs) f.transform.SetPositionAndRotation(bone.TransformPoint(Followers.PosShift(f)), bone.rotation * Followers.RotShift(f));
 			}
 
+			// Last, the edits above find pieces by their collider.
 			foreach (var n in e.Strip)
 				foreach (var t in Find(n))
 				{

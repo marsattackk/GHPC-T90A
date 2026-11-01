@@ -133,6 +133,7 @@ namespace T90A.Common
 
 			void AiOn()
 			{
+				// WasFiredUpon still comes in after the knock-out.
 				if (On || Vehicle == null || Vehicle.Neutralized || (PlayerInput.Instance != null && PlayerInput.Instance.CurrentPlayerUnit == Vehicle)) return;
 				Set(true);
 			}
@@ -167,6 +168,7 @@ namespace T90A.Common
 		}
 
 		static readonly Dictionary<LiveRound, Flight> Flights = new Dictionary<LiveRound, Flight>();
+		// GHPC reseeds UnityEngine.Random from the clock all over the place (RandomUtil.RandomizeUnityRandom).
 		static readonly System.Random Rng = new System.Random();
 		static float Draw() => (float)Rng.NextDouble();
 
@@ -175,6 +177,7 @@ namespace T90A.Common
 
 		const float AimLineM = 4f, AimLinePerKm = 2f, HeadingM = 5f, HeadingPerKm = 17.5f;
 
+		// GHPC never gives a round its target, WeaponsModule.Fire passes none to LiveRound.Init.
 		static Station TargetOf(LiveRound r, Vector3 launch, Vector3 at)
 		{
 			var shooter = r.Shooter;
@@ -220,6 +223,7 @@ namespace T90A.Common
 
 		static void Step(LiveRound r)
 		{
+			// LiveRounds are pooled, a reused one restarts TimeTraveled at 0.
 			if (!Flights.TryGetValue(r, out var f) || r.TimeTraveled < f.Seen)
 			{
 				f = new Flight { Launch = r.transform.position, Noise = Draw() * 100f };
@@ -267,6 +271,7 @@ namespace T90A.Common
 			r.GoalVector = (fwd + cmd).normalized * Mathf.Max(1f, r.GoalVector.magnitude);
 		}
 
+		// No missile tracker in GHPC, every guided round from every shooter just turns towards GoalVector in here.
 		[HarmonyPatch(typeof(LiveRound), "DoUpdateImpl")]
 		static class RoundPatch
 		{

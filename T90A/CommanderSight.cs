@@ -13,8 +13,11 @@ namespace T90A
 
 	internal static class CommanderSight
 	{
+		// Eye 1.5 cm proud of the head's front plate. Put it any deeper and the view's a black wall.
 		internal static readonly Vector3 Head = new Vector3(0.600f, 2.240f, -0.665f);
+		// Measured off the photo with the reticle's rangefinder as the scale. Suvorov's table says 7.
 		internal const float DayFov = 7.8f;
+		// Inferred, day field x 7.5 / 5.1. Nothing gives the night field.
 		internal const float NightFov = 11.5f;
 		internal static readonly Vector2 AutoElevation = new Vector2(-4f, 20f);
 		internal static readonly Vector2 RangeLimits = new Vector2(0f, 1600f);
@@ -100,6 +103,7 @@ namespace T90A
 				if (on == On || _fcs == null) return;
 				On = on;
 				_elev.LocalEulerLimits = on ? AutoElevation : _manual;
+				// ProtectFromBadProjection drops a goal past the drive's travel. A quick aim from +20 to -4 froze the Kord at +20.
 				_elev.ProtectFromBadProjection = !on && _protect;
 				_elev.Stabilized = on;
 				_cupola.Stabilized = on;
@@ -120,6 +124,7 @@ namespace T90A
 
 			float Heading() => _turret == null ? 0f : Vector3.SignedAngle(Vector3.forward, Vector3.ProjectOnPlane(_turret.forward, Vector3.up), Vector3.up);
 
+			// Stabiliser would hold the cupola's heading in the world, the real one's dependent in traverse.
 			void Update()
 			{
 				float h = Heading();
@@ -149,6 +154,7 @@ namespace T90A
 			}
 		}
 
+		// Has to run after UsableOptic.LateUpdate.
 		[DefaultExecutionOrder(20)]
 		internal class RangeLine : MonoBehaviour
 		{

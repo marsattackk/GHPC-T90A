@@ -6,6 +6,7 @@ using UnityEngine;
 
 namespace T90A.Common
 {
+	// HeatSource collects its renderers once, in OnEnable. Anything parented later draws black in white-hot.
 	internal static class ThermalHeat
 	{
 		static readonly FieldInfo Serialized = Reflect.Field(typeof(HeatSource), "heat");
@@ -26,6 +27,8 @@ namespace T90A.Common
 				var hs = p.GetComponent<HeatSource>() ?? p.gameObject.AddComponent<HeatSource>();
 				Serialized.SetValue(hs, h);
 			}
+			// Heat's setter skips an unchanged value and only collects into an empty list, hence the clear and the NaN.
+			// Outer first, so a part's own value wins.
 			foreach (var hs in unit.GetComponentsInChildren<HeatSource>(true).OrderBy(Depth))
 			{
 				(Held.GetValue(hs) as System.Collections.IList)?.Clear();

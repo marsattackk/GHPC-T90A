@@ -10,7 +10,7 @@ I made this mod for myself first, but you're welcome to use it too.
   <img src="docs/images/t90a_firing.jpg" width="49%" alt="The T-90A firing">
 </p>
 
-This README describes **version 0.4.1**. No other mod needed, just MelonLoader.
+This README describes **version 0.4.2**. No other mod needed, just MelonLoader.
 
 ## What's in it
 
@@ -85,6 +85,12 @@ Line-of-sight protection straight from the front, in mm of steel, **without ERA*
 | M1IP (vanilla) | 516 / 999 | 348 / 361 |
 
 Kontakt-5 adds about **140 / 550** on top.
+
+A Kontakt-5 brick only goes off for something that's worth it. Machine-gun and autocannon rounds up to 30 mm, and
+fragments and spall, leave it whole, which is what btvt and the Russian papers on the real brick (4S22) say. The one
+exception is the fragments of a bigger HE shell bursting within 10 m of it. GHPC on its own sets ERA off on any hit, a
+PKT round included. A brick that has gone off still looks whole by default. With `ERA destruction effects` on (Settings,
+below) it blows open with a blast, charred inside, lid thrown off, the plate round it sooted and the nets over it cut.
 
 *Median over a grid of straight-on shots. The T-90A measured in game on its cheek block and glacis, the vanilla tanks
 from their armour in the game's files over the whole cheek face, so their thin edges pull their median down a bit.*
@@ -316,7 +322,7 @@ before editing it):
 | `Add to campaign roster` | true / false | true |
 | `Campaign prevalence` | how common it is (1 = as common as a typical tank) | 0.5 |
 | `Campaign unlock after missions` | number | 2 |
-| `APFSDS` | `"3BM42"` / `"3BM60"` (where the game doesn't pick one itself) | 3BM42 |
+| `APFSDS` | `"3BM42"` / `"3BM60"` (where the game doesn't pick one itself) | 3BM60 |
 | `Gunner night sight` | `"ESSA"` / `"Buran-M"` | ESSA |
 | `ESSA electronic zoom` | true / false | true |
 | `Armour preset` | `"game-scale"` / `"source-only"` | game-scale |
@@ -328,6 +334,7 @@ before editing it):
 | `Shtora-1 panel on screen` | true (the control panel shows on a laser warning) / false (no panel, the tone only) | true |
 | `Shtora-1 panel always on screen` | false (the panel comes up on a warning and goes away after) / true (always on screen while you're in the T-90A) | false |
 | `Kord spent cases` | true (the Kord throws out its spent cases, they lie on the tank) / false (no cases, the belt still feeds) | true |
+| `ERA destruction effects` | false (a brick that's gone off looks as before, it still works as armour once) / true (it blows open with a blast, charred, lid thrown, plate sooted, nets over it cut, the cheek stowage boxes gone with it) | false |
 | `Check for updates` | true (asks GitHub once per game start, one line in the MelonLoader console if there's a newer release) / false (no check) | true |
 
 There's also a `ConfigVersion` line at the end, the version that last wrote the section. Leave it alone, it's how the
@@ -386,8 +393,8 @@ The T-90A's commander fires a 12.7 mm Kord from under armour, hatch closed:
 
 | Round | Penetration |
 |---|---|
-| 3BM42 "Mango" (default) | ~580 mm at the muzzle, ~460 mm at 2 km |
-| 3BM60 "Svinets-2" | ~690 mm at the muzzle, ~600 mm at 2 km |
+| 3BM42 "Mango" | ~580 mm at the muzzle, ~460 mm at 2 km |
+| 3BM60 "Svinets-2" (default) | ~690 mm at the muzzle, ~600 mm at 2 km |
 | 9M119M "Invar" | 700 mm, tandem warhead (sets off ERA first), 100-5000 m, guided along the gunner's sight line |
 | 3BK18M HEAT, 3OF26 HE-Frag | the game's own rounds |
 
@@ -408,6 +415,7 @@ The T-90A's commander fires a 12.7 mm Kord from under armour, hatch closed:
 | Shtora-1 panel lamps | top row = the front heads, bottom row = the rear heads, left / right | The real panel has four lamps in a square, but no source I found says which lamp means what, so that's inferred from the four heads. The mode knob is drawing only. |
 | Shtora-1 own-shot hold | 15 s | The sources give the hold but not a clean figure, 15 s is the middle of what they suggest. |
 | Spare round racks | frames, trays and cups in the T-72B manual's places | The places are from the manual, the racks' shapes are a best guess. |
+| Kontakt-5 that's gone off (`ERA destruction effects` on) | an empty open container, lid off on the outside | The War Thunder model has no set-off brick, so the look is a best guess. |
 | Autoloader | 6.5 s for every round | GHPC has one reload time per gun. |
 
 </details>

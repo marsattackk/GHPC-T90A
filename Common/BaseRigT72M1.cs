@@ -15,6 +15,8 @@ namespace T90A.Common
 			"nsv_mount", "lp_R123",
 		};
 
+		// Collapsed, they leave the skirt vertices blended with HULL half-pulled, slivers through the new hull sides.
+		// Hence the trimmed skin, the collapse stays as the fallback.
 		public static bool IsHullDetailBone(string n) =>
 			n == "fender_L" || n == "fender_R" || n == "flaps" || n.StartsWith("gill_") || n.StartsWith("skirt_");
 
@@ -98,10 +100,12 @@ namespace T90A.Common
 			}
 		}
 
+		// The T-72 interior pokes through the new turret. The IR searchlight's light stays, the night sight needs it.
 		public static readonly string[] LeftoverMaterials = { "T72_interior", "GST emission", "IR searchlight glow" };
 		public static readonly string[] LeftoverNames = { "Luna lens glow", "Luna visible glow" };
 		public const string LeftoverLightPrefix = "GST light";
 
+		// GHPC turns some back on (lamps, damage states).
 		class KeepHidden : MonoBehaviour
 		{
 			internal Renderer[] Renderers;

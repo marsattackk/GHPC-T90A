@@ -4,6 +4,8 @@ using MelonLoader;
 
 namespace T90A.Common
 {
+	// LiveRoundBatchHandler doesn't catch the unborn rounds' first update, one throw from a patch there kills the batch
+	// every frame.
 	internal static class PatchGuard
 	{
 		internal const int Logged = 3;

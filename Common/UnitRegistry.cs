@@ -101,7 +101,9 @@ namespace T90A.Common
 				{
 					Name = u.Key,
 					FriendlyName = u.FriendlyName(),
+					// Shared on purpose, the spawner loads each reference once.
 					PrefabReference = baseMeta.PrefabReference,
+					// Not shared: the customizer loads every unit's ammo list and Addressables moans at a second load.
 					BaseAmmoClipsReference = OwnReference(baseMeta.BaseAmmoClipsReference),
 					UseDecalLayout = armyMeta.UseDecalLayout,
 					DecalLayout = armyMeta.DecalLayout,
@@ -118,6 +120,7 @@ namespace T90A.Common
 			return all;
 		}
 
+		// A campaign save holds no unit list, each mission draws from AllUnits, so entries can come and go.
 		static readonly HashSet<TheaterUnitMetadata> _added = new HashSet<TheaterUnitMetadata>();
 
 		internal static void StartCampaignRoster()
@@ -184,6 +187,7 @@ namespace T90A.Common
 				}
 		}
 
+		// The customizer has its own registry reference, not necessarily the one I added to.
 		[HarmonyPatch(typeof(MissionConfigMenuPanel), "GetUnitKeysByClass")]
 		internal static class MenuListPatch
 		{
@@ -214,6 +218,7 @@ namespace T90A.Common
 				var u = Units.FirstOrDefault(x => string.Equals(uniqueName, x.Key, StringComparison.OrdinalIgnoreCase));
 				if (u == null) return;
 				if (!(__result is Vehicle vehicle)) { MelonLogger.Warning($"{u.Key} spawn returned no Vehicle."); return; }
+				// Now, not later: other mods convert the base unit by name at PlayerReady.
 				UniqueName(vehicle) = u.Key;
 				FriendlyNameRef(vehicle) = u.FriendlyName();
 				u.OnSpawn?.Invoke(vehicle);

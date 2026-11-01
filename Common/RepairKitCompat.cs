@@ -13,6 +13,7 @@ using DC = GHPC.Equipment.DestructibleComponent;
 
 namespace T90A.Common
 {
+	// RepairKit searches under the unit, and the collider groups with every module in them sit at the scene root.
 	internal static class RepairKitCompat
 	{
 		const string ApplierType = "RepairKit.RepairApplier";
@@ -30,6 +31,7 @@ namespace T90A.Common
 			catch (Exception e) { MelonLogger.Warning($"RepairKit found, but its repair method couldn't be patched ({e.GetType().Name}: {e.Message}): the modules in the collider groups won't be repaired by it."); }
 		}
 
+		// Not TypeByName, it warns in every game without RepairKit.
 		internal static Type ApplierTypeOrNull() => AppDomain.CurrentDomain.GetAssemblies()
 			.Select(a => a.GetType(ApplierType, false)).FirstOrDefault(t => t != null);
 
@@ -68,10 +70,12 @@ namespace T90A.Common
 			{
 				if (d.HealthPercent >= target) continue;
 				bool wasDestroyed = d.IsDestroyed;
+				// Fires Repaired on a destroyed zone, the owners undo their effects.
 				d.SetHealthPercent(target);
 				if (wasDestroyed) healed.Add(d);
 			}
 			if (healed.Count == 0) return;
+			// Neither GHPC nor RepairKit ever repairs the radio or the missile guidance.
 			var objs = ModuleBuilder.UnitObjects(v);
 			foreach (var g in objs.SelectMany(t => t.GetComponentsInChildren<MissileGuidanceUnit>(true)).Distinct())
 				if (g.Damaged && healed.Contains(g.GuidanceComponent)) GuidanceDamagedSet.Invoke(g, new object[] { false });

@@ -37,6 +37,7 @@ namespace T90A.Common
 
 		static IEnumerator Spawn(GameState _)
 		{
+			// The scene's own vehicles can still be turning up at GameReady.
 			var anchors = Entries.SelectMany(e => e.Anchors).ToList();
 			Vehicle[] vehicles = new Vehicle[0];
 			for (int i = 0; i < 300; i++)

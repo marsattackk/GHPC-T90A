@@ -6,6 +6,7 @@ namespace T90A.Common
 {
 	internal static class SmokeCaps
 	{
+		// Needs the launch points already moved onto the tubes (SmokeLaunchers.Seat).
 		internal static void Apply(Transform unit, float maxOffAxis = 0.04f, float maxBehind = 0.6f)
 		{
 			var mgr = unit.GetComponentInChildren<VehicleSmokeManager>(true);

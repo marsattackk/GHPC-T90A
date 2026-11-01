@@ -14,7 +14,8 @@ namespace T90A
 
 		const string PaintedPrefix = "t90a_t_90a_";
 
-		const float ReverseTrackFactor = 4.52f / 4.17f;
+		const float ReverseTrackFactor = 4.52f / 4.17f;   // GHPC's tracks run ~8 % over NWH's gear formula
+		// Caps are cruise-control targets. One at the real 4.18 held it at 2.4, the gearing limits it instead.
 		const float ReverseCapKmh = 12.5f;
 
 		internal static void Convert(Vehicle vehicle, bool atSpawn = false)
@@ -43,6 +44,7 @@ namespace T90A
 			catch (Exception e) { MelonLogger.Error("T-90A hatches failed (left closed): " + e); }
 			try { RealAxis.Apply(vehicle); }
 			catch (Exception e) { MelonLogger.Error("T-90A turret axis failed: " + e); }
+			// Spawn only: Unit builds its weapon and camera lists straight after, a late Kord never makes it in.
 			if (atSpawn) try { Kord.Apply(vehicle); }
 			catch (Exception e) { MelonLogger.Error("T-90A Kord failed: " + e); }
 			else MelonLogger.Warning("T-90A Kord: " + vehicle.name + " was converted after spawn; no remote Kord fitted.");
@@ -70,7 +72,7 @@ namespace T90A
 			SectorAz = 20f,
 			SectorEl = 2.25f,
 			BreakChance = 0.6f,
-			Relock = new Vector2(0.3f, 0.7f),
+			Relock = new Vector2(0.3f, 0.7f),   // no source says where the lock comes back, this and the jitter are mine
 			JitterDeg = 30f,
 			Missiles = new[] { "BGM-71", "HOT", "MILAN", "9M111", "9M113", "9M112", "9M17", "9M114" },
 			OnAtSpawn = true,
@@ -88,6 +90,7 @@ namespace T90A
 			CloudLife = 20f,
 			FuseSeconds = 1f, TubeHeight = 2.3f,
 			WhiteSmokeDonors = new[] { "LEO2A3", "M60A3", "LEO1A3", "M1" }, CloudBottomHeight = 2f,
+			// GHPC's sight blockers are half a particle wide, fewer or smaller particles leave gaps the AI sees through.
 			CloudSpread = 8f, CloudSizeScale = 4f, CloudParticles = 60, CloudRise = 0f,
 			AiLaseDelay = new Vector2(0.5f, 1f), AiRelase = 10f,
 			SameThreatDeg = 20f,
@@ -100,7 +103,7 @@ namespace T90A
 			TurretSpeed = 24f,
 			GunSpeed = 28f,
 			GunLimits = new Vector2(-(6f + 13f / 60f), 13f + 47f / 60f),
-			DepressionProfile = "gun_depression.txt",
+			DepressionProfile = "gun_depression.txt",   // mine, no source: barrel kept 1 cm off the hull all the way round
 			AutoloaderCycle = 6.5f,
 			GunName = "125mm Gun 2A46M-5",
 			CodexName = "T90A 2A46M-5",
@@ -111,6 +114,7 @@ namespace T90A
 			MaxPower = 1000f,
 			MaxRpm = 2000f,
 			FinalDrive = 5.297f,
+			// NWH clamps the up-shift to 0.95 x max rpm. The T-72M1's 2250 sat above that and it never shifted up.
 			ShiftUpRpm = 1900f,
 			ReverseGears = new[] { -14.35f * ReverseTrackFactor },
 			MaxForwardKmh = 60f,
@@ -126,7 +130,7 @@ namespace T90A
 			Mobility.Apply(vehicle, Drive);
 
 			var peri = FindDeep(vehicle.transform, "Gunner's Periscope Camera")?.GetComponent<GHPC.Camera.CameraSlot>();
-			if (peri != null) peri.DirectAttachOnly = true;
+			if (peri != null) peri.DirectAttachOnly = true;   // Unit skips these when it lists the views
 			else MelonLogger.Warning("T-90A: gunner's periscope slot not found.");
 		}
 
@@ -138,6 +142,7 @@ namespace T90A
 			try
 			{
 				var smoke = vehicle.GetComponentInChildren<GHPC.Equipment.VehicleSmokeManager>(true);
+				// VehicleSmokeManager cached the crew brains before they existed, no smoke ever without this.
 				if (smoke != null) SmokeLaunchers.RefreshCrew(smoke);
 			}
 			catch (Exception e) { MelonLogger.Error("T-90A smoke crew refresh failed: " + e); }

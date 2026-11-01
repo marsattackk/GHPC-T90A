@@ -66,6 +66,7 @@ namespace T90A.Common
 			return Mathf.Max(Min, v);
 		}
 
+		// Update, so the limit's in before the platforms' LateUpdate.
 		void Update()
 		{
 			if (Gun == null || Traverse == null || Traverse.Transform == null) return;
@@ -73,6 +74,8 @@ namespace T90A.Common
 			var l = Gun.LocalEulerLimits;
 			if (l.x != lim) { l.x = lim; Gun.LocalEulerLimits = l; }
 			if (!Gun.enabled || Destroyed(Gun)) return;
+			// The limits only clamp inside doRotation, which an idle unstabilised gun never runs. It'd sit under the new
+			// limit forever.
 			if (Gun.GetCurrentEulerAngle() < lim - 0.001f)
 			{
 				Enforce(Gun);

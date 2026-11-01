@@ -7,8 +7,10 @@ using UnityEngine;
 
 namespace T90A.Common
 {
+	// Exceptions in my MonoBehaviours and coroutines only reach Unity's own log, where nobody looks.
 	internal static class UnityErrors
 	{
+		// Every port compiles this class: one table in AppDomain data, mscorlib types only, the first copy hooks the event.
 		const string Key = "GHPCMods.UnityErrors.v1";
 		internal const int PerMessage = 3, Total = 60;
 		const int StackLines = 12;
@@ -37,6 +39,7 @@ namespace T90A.Common
 			catch (Exception e) { MelonLogger.Warning("Unity error copy not installed: " + e.Message); }
 		}
 
+		// MelonLoader names the mod from the calling frame.
 		[MethodImpl(MethodImplOptions.NoInlining)]
 		static void Write(string s) => MelonLogger.Error(s);
 
@@ -66,6 +69,7 @@ namespace T90A.Common
 			finally { _inside = false; }
 		}
 
+		// Both ports compile the shared namespace, the module id in the frame tells them apart.
 		static object[] Owner(string stack)
 		{
 			if (string.IsNullOrEmpty(stack)) return null;

@@ -7,6 +7,8 @@ using UnityEngine;
 
 namespace T90A.Common
 {
+	// Collider groups only re-sync while something moves, after spawn the turret group can sit 16 cm low for a second.
+	// Place off the stored offset, never the current pose.
 	internal static class Followers
 	{
 		internal static readonly AccessTools.FieldRef<LateFollow, Vector3> PosShift = Reflect.FieldRefAccess<LateFollow, Vector3>("_localPosShift");
@@ -31,6 +33,7 @@ namespace T90A.Common
 			piece.localScale = Vector3.one;
 		}
 
+		// Groups live at the scene root, LateFollowers is the only way back to them.
 		internal static HashSet<LateFollow> On(Transform root, Transform bone)
 		{
 			var set = new HashSet<LateFollow>(root.GetComponentsInChildren<LateFollow>(true).Where(f => f.FollowTarget == bone));

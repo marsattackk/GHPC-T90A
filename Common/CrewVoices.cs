@@ -1,6 +1,9 @@
+using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using GHPC;
 using GHPC.Effects.Voices;
+using GHPC.Effects.Voices.VoiceRoutines;
 using GHPC.Vehicle;
 using MelonLoader;
 using UnityEngine;
@@ -39,6 +42,36 @@ namespace T90A.Common
 			var box = DonorParts.Copy(prefab, $"{tag} voices donor ({prefab.name})", handler.gameObject);
 			_soviet = box != null ? box.GetComponentInChildren<CrewVoiceHandler>(true)?.gameObject : null;
 			return _soviet;
+		}
+
+		static readonly FieldInfo TurnStamp = Reflect.Field(typeof(GHPC.Weapons.AmmoCarousel), "_lastRotationStartTime");
+		static readonly FieldInfo RoutineHandler = Reflect.Field(typeof(VoiceRoutinesBase), "_crewVoiceHandler");
+		static readonly Dictionary<CrewVoiceHandler, float> Announced = new Dictionary<CrewVoiceHandler, float>();
+
+		// AmmoCarousel stalls short of its slot and restarts, firing StartedRotation each time, so "AZ" got spammed.
+		// One callout per _lastRotationStartTime, the restarts keep that stamp.
+		[HarmonyLib.HarmonyPatch(typeof(USSRVoiceRoutines), nameof(USSRVoiceRoutines.AmmoCarouselStartedRotation))]
+		static class OneCalloutPerTurn
+		{
+			static bool Prefix(USSRVoiceRoutines __instance)
+			{
+				try { return Announce(__instance); }
+				catch (System.Exception e) { PatchGuard.Failed("Autoloader callout", e); return true; }
+			}
+
+			static bool Announce(USSRVoiceRoutines routine)
+			{
+				if (TurnStamp == null || RoutineHandler == null) return true;
+				var h = RoutineHandler.GetValue(routine) as CrewVoiceHandler;
+				if (h == null || !h.name.StartsWith("RU Tank Voice (")) return true;
+				var carousel = h.GetComponentInParent<Unit>()?.LoadoutManager?.Weapon?.Feed?.Carousel;
+				if (carousel == null) return true;
+				float stamp = (float)TurnStamp.GetValue(carousel);
+				if (Announced.TryGetValue(h, out float last) && last == stamp) return false;
+				foreach (var dead in Announced.Keys.Where(k => k == null).ToList()) Announced.Remove(dead);
+				Announced[h] = stamp;
+				return true;
+			}
 		}
 	}
 }

@@ -4,9 +4,12 @@ using System.Reflection;
 using MelonLoader;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
+using UnityEngine.ResourceManagement.AsyncOperations;
 
 namespace T90A.Common
 {
+	// VanillaAssetUtil DestroyImmediates vanilla prefabs even with my handle open, so I keep copies.
+	// Parts only, never a whole unit: SceneUnitsManager and ObjectPoolManager search inactive objects too.
 	internal static class DonorParts
 	{
 		static Transform _store;
@@ -18,7 +21,7 @@ namespace T90A.Common
 			{
 				if (_store != null) return _store;
 				var go = new GameObject("T90A.Common donor parts (inactive copies)");
-				go.SetActive(false);
+				go.SetActive(false);   // first, so no copy ever wakes up
 				Object.DontDestroyOnLoad(go);
 				_store = go.transform;
 				return _store;
@@ -34,12 +37,19 @@ namespace T90A.Common
 			return prefab;
 		}
 
+		// Never released, the copies draw this prefab's meshes and textures.
 		static readonly Dictionary<string, GameObject> Loaded = new Dictionary<string, GameObject>();
 		internal static GameObject Load(GHPC.Mission.UnitPrefabLookupScriptable.UnitPrefabMetadata meta)
 		{
 			if (meta?.PrefabReference == null || !meta.PrefabReference.RuntimeKeyIsValid()) return null;
 			string k = meta.PrefabReference.RuntimeKey.ToString();
 			if (Loaded.TryGetValue(k, out var had) && had != null) return had;
+			if (_atMenu)
+			{
+				if (FailedAtMenu.Contains(k)) return null;
+				if (!Pending.ContainsKey(k)) Pending[k] = (meta.Name, Addressables.LoadAssetAsync<GameObject>(meta.PrefabReference.RuntimeKey));
+				throw new NotLoadedYet();
+			}
 			var prefab = Addressables.LoadAssetAsync<GameObject>(meta.PrefabReference.RuntimeKey).WaitForCompletion();
 			if (prefab != null) Loaded[k] = prefab;
 			return prefab;
@@ -110,6 +120,16 @@ namespace T90A.Common
 			MelonCoroutines.Start(Warm(tag, steps));
 		}
 
+		// A blocking load right after Ammo Upgrade Pack releases its vehicles in leo2_menu never comes back: WaitForCompletion
+		// makes the main thread wait out the released bundles' UnloadAsync. An async load just queues behind the unload.
+		static bool _atMenu;
+		static readonly Dictionary<string, (string name, AsyncOperationHandle<GameObject> handle)> Pending = new Dictionary<string, (string, AsyncOperationHandle<GameObject>)>();
+		static readonly HashSet<string> FailedAtMenu = new HashSet<string>();
+		sealed class NotLoadedYet : System.Exception { }
+
+		const float LoadSeconds = 120f;
+		const int Rounds = 16;
+
 		static System.Collections.IEnumerator Warm(string tag, System.Action[] steps)
 		{
 			for (int frame = 0; frame < 600; frame++)
@@ -118,13 +138,39 @@ namespace T90A.Common
 				yield return null;
 			}
 			if (UnitRegistry.Lookup?.AllUnits == null) { _warmed = false; yield break; }
-			foreach (var step in steps)
+			var pending = steps.Where(s => s != null).ToList();
+			for (int round = 1; pending.Count > 0; round++)
 			{
-				if (step == null) continue;
-				try { step(); }
-				catch (System.Exception e) { MelonLogger.Warning($"{tag}: copying a vanilla donor part at the main menu failed ({e.GetType().Name}: {e.Message}); it is copied at the first spawn."); }
-				yield return null;
+				var again = new List<System.Action>();
+				foreach (var step in pending)
+				{
+					_atMenu = true;
+					try { step(); }
+					catch (NotLoadedYet) { again.Add(step); }
+					catch (System.Exception e) { MelonLogger.Warning($"{tag}: copying a vanilla donor part at the main menu failed ({e.GetType().Name}: {e.Message}); it is copied at the first spawn."); }
+					finally { _atMenu = false; }
+					yield return null;
+				}
+				if (again.Count == 0) break;
+				float start = Time.realtimeSinceStartup;
+				while (Pending.Values.Any(p => !p.handle.IsDone) && Time.realtimeSinceStartup - start < LoadSeconds) yield return null;
+				var done = Pending.Where(p => p.Value.handle.IsDone).ToList();
+				foreach (var p in done)
+				{
+					var h = p.Value.handle;
+					var prefab = h.IsValid() && h.Status == AsyncOperationStatus.Succeeded ? h.Result : null;
+					if (prefab != null) Loaded[p.Key] = prefab;
+					else { FailedAtMenu.Add(p.Key); if (h.IsValid()) Addressables.Release(h); }
+					Pending.Remove(p.Key);
+				}
+				if (Pending.Count > 0 || round == Rounds)
+				{
+					MelonLogger.Warning($"{tag}: vanilla donor prefabs not loaded at the main menu ({(Pending.Count > 0 ? string.Join(", ", Pending.Values.Select(p => p.name)) + $" still loading after {LoadSeconds:0} s" : $"{Rounds} rounds")}); {again.Count} donor part(s) are copied at the first spawn.");
+					break;
+				}
+				pending = again;
 			}
+			FailedAtMenu.Clear();
 		}
 	}
 }

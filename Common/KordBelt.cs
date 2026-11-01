@@ -67,6 +67,7 @@ namespace T90A.Common
 			centres = rounds.Select(Centre).ToList();
 			if (rounds.Count < 3) return null;
 
+			// The dark backs behind the belt's faces live in the other submeshes. Left behind, they're black slivers.
 			var roundOfRoot = new Dictionary<int, int>();
 			for (int r = 0; r < rounds.Count; r++) foreach (int t in rounds[r]) roundOfRoot[Find(W(t))] = r;
 			var otherSubs = new Dictionary<int, int[]>();
@@ -127,6 +128,7 @@ namespace T90A.Common
 			for (int i = 1; i < nr; i++) if (s[i] <= s[i - 1]) s[i] = s[i - 1] + 0.001f;
 			belt.FeedPitch = s[nr - 1] / (nr - 1);
 
+			// The belt twists, so shapes are stored per cartridge, not per place on the curve.
 			var cartPos = new Vector3[nr]; var cartRot = new Quaternion[nr];
 			for (int i = 0; i < nr; i++)
 			{
@@ -278,6 +280,7 @@ namespace T90A.Common
 		[DefaultExecutionOrder(20)]
 		internal class Belt : MonoBehaviour
 		{
+			// Half is a guess, the source only gives the order of the motions.
 			const float FeedPart = 0.5f;
 
 			internal Settings Set;
@@ -371,6 +374,7 @@ namespace T90A.Common
 					var (t, s0) = Rounds[i];
 					int q = ((i - _head) % nAll + nAll) % nAll;
 					float s = q * FeedPitch - frac + (s0 - i * FeedPitch) * fade;
+					// Renderer, not the object: the burn effect and heat source collect active renderers once, at Start.
 					bool show = s <= c.Length + 0.3f * Pitch && s > -0.95f * FeedPitch && q < left;
 					if (_renderers[i].enabled != show) _renderers[i].enabled = show;
 					if (!show) continue;

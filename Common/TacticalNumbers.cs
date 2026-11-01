@@ -4,6 +4,7 @@ using UnityEngine;
 
 namespace T90A.Common
 {
+	// MergedVehicleNumberControl draws the digits as UV shifts, so the meshes can go anywhere.
 	internal static class TacticalNumbers
 	{
 		internal sealed class Settings
@@ -26,6 +27,7 @@ namespace T90A.Common
 				var mf = r.GetComponent<MeshFilter>();
 				if (mf != null)
 				{
+					// Not sharedMesh, the number control works on the instance.
 					var mesh = mf.mesh;
 					if (done.Add(mesh)) ScaleDigits(mesh, s.DigitScale);
 				}

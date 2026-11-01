@@ -7,6 +7,9 @@ using UnityEngine;
 
 namespace T90A.Common
 {
+	// AimablePlatform turns about the parent's up and wipes other tilt, the tilted turret rode up to 4 cm off its seat.
+	// A tilted parent would break every HULL/TURRET path, hence the drive.
+	// AzimuthLock measures off the drive, so the gun loads up to Tilt low. Left as is.
 	internal static class TiltedRing
 	{
 		internal sealed class Link : MonoBehaviour
@@ -21,6 +24,7 @@ namespace T90A.Common
 				Turret.localRotation = Tilt * Drive.localRotation * Quaternion.Inverse(Tilt);
 			}
 
+			// For poses set straight on the drive, like the AAR replay's, which the postfix never sees.
 			void LateUpdate() => Sync();
 		}
 
@@ -52,6 +56,7 @@ namespace T90A.Common
 			link.Unit = vehicle; link.Hull = hull; link.Turret = turret; link.Drive = drive; link.Tilt = tilt;
 
 			var stowed = Stowed(plat);
+			// Rest and stowed vector are in the bone's parent space, the seat from here on.
 			plat.Transform = drive;
 			Orig(plat) = Quaternion.identity;
 			Stowed(plat) = Quaternion.Inverse(tilt) * stowed;
@@ -69,6 +74,7 @@ namespace T90A.Common
 			}
 		}
 
+		// The AAR snapshots the drive now. TURRET too, or a replay can't put a blown-off turret back on the hull.
 		[HarmonyPatch(typeof(GHPC.Weapons.ShotInfo), nameof(GHPC.Weapons.ShotInfo.PopulateUnitPoses))]
 		static class AarPose
 		{

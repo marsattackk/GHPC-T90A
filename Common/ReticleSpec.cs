@@ -139,6 +139,7 @@ namespace T90A.Common
 			string here = path + "/" + kind + "[" + into.Count + "]";
 			bool rangedParent = parent != null && parent.Ranged;
 			double K = style.K;
+			// y is range in m here, and GHPC puts +range below the origin.
 			(double, double) At(object v, string w)
 			{
 				var p = Floats(v ?? new List<object> { 0.0, 0.0 }, env, w);
@@ -354,6 +355,7 @@ namespace T90A.Common
 			into.Add(it);
 		}
 
+		// GHPC's reticle fonts have no Cyrillic.
 		internal const string GlyphLetters = "П ш Б Г Л Н";
 		internal static List<(double, double, double, double)> Glyph(string letter, double cx, double cy, double h)
 		{

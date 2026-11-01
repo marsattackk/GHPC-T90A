@@ -9,12 +9,14 @@ using UnityEngine;
 
 namespace T90A.Common
 {
+	// No colliders or rigid bodies, nothing a round or GHPC's raycasts can hit.
 	[DefaultExecutionOrder(20)]
 	internal sealed class KordBrass : MonoBehaviour
 	{
 		internal const float CaseLength = 0.108f;
 		const float Radius = 0.0105f;
 		const float EjectAt = 0.9f;
+		// Speeds, spread, bounce and friction are guesses.
 		const float EjectSpeed = 3f, SpeedSpread = 0.2f;
 		const float DirSpread = 6f;
 		const float Drag = 0.3f;
@@ -79,6 +81,7 @@ namespace T90A.Common
 		Mesh _mesh;
 		Grid[] _grids;
 		static readonly Grid[] NoGrids = new Grid[0];
+		// On the main thread the maps cost a 160-190 ms frame.
 		Task<Grid[]> _gridTask;
 		Mesh.MeshDataArray _meshData;
 		bool _meshDataHeld;
@@ -112,6 +115,7 @@ namespace T90A.Common
 		{
 			if (_weapon != null) _weapon.Fired -= OnFired;
 			if (_holder != null) Destroy(_holder);
+			// Don't wait on the worker here, that held the main thread up to 2 s.
 			if (_meshDataHeld && _gridTask != null && !_gridTask.IsCompleted)
 			{
 				_meshDataHeld = false;
@@ -256,6 +260,7 @@ namespace T90A.Common
 			{
 				best = th + Radius; on = -1; n = tn; top = new Vector3(c.P.x, th + Radius, c.P.z);
 			}
+			// Short hops keep the clocks, or a case bouncing on a slope never comes to rest.
 			if (on == -2)
 			{
 				c.Air += h;

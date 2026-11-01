@@ -11,6 +11,7 @@ namespace T90A.Common
 {
 	internal static class HatchRig
 	{
+		// AnimatedPart swings the base rig's bone about the base vehicle's hinge, so the lid gets its own and follows Openness.
 		internal sealed class Follower : MonoBehaviour
 		{
 			public AnimatedPart Part;
@@ -102,6 +103,7 @@ namespace T90A.Common
 			}
 		}
 
+		// Jiggle only reacts to its own bone moving, firing and hits do nothing to it.
 		internal sealed class FlapKicks : MonoBehaviour
 		{
 			internal readonly List<Jiggle> Flaps = new List<Jiggle>();
@@ -129,10 +131,12 @@ namespace T90A.Common
 				if (Torque == null || j == null) return 0f;
 				float s = Vector3.Dot(dir.normalized, j.transform.right) * degS;
 				if (Mathf.Abs(s) < 0.5f) return 0f;
+				// m_Torque is a rotation per millisecond.
 				Torque(j) = Quaternion.AngleAxis(s * 0.001f, Vector3.forward) * Torque(j);
 				return Mathf.Abs(s);
 			}
 
+			// In the same frame the blast and the jolt cancel out on the front and rear nets.
 			internal const float RecoilDelayS = 0.1f;
 
 			void OnFired(WeaponSystem gun)
@@ -215,11 +219,13 @@ namespace T90A.Common
 			smr.shadowCastingMode = shadows;
 			var bounds = mesh.bounds; bounds.Expand(0.4f);
 			smr.localBounds = bounds;
+			NetCut.Register(root, vis, smr, along, half);
 			float limit = Mathf.Min(SkirtLimit, f.Limit > 0f ? f.Limit : SkirtLimit);
 			var j = hinge.gameObject.AddComponent<Jiggle>();
 			j.UseCenterOfMass = true;
 			j.CenterOfMass = new Vector3(0f, -SkirtCom, 0f);
 			j.CenterOfMassInertia = SkirtInertia;
+			// Not the skirt's 1: that holds the bone's world turn and the nets trail a slewing turret, twisted.
 			j.RotationInertia = 0f;
 			j.SpringStrength = SkirtSpring;
 			j.Dampening = SkirtDamping;
@@ -233,8 +239,11 @@ namespace T90A.Common
 			jiggle = j;
 		}
 
+		// Centres of mass not scaled to the whip's length, so it bends as far in angle as the R-123.
 		const float R123Second = 0.1f, R123Com1 = 1.5f, R123Com2 = 3.0f, R123Inertia1 = 1f, R123Inertia2 = 0.681f, R123Spring = 0.4f, R123Damping = 0.4f;
 
+		// Skinned straight on the springs it kinks at the foot and bends in an S. A skinned bend only shows at vertices,
+		// hence the extra rings.
 		const int BendBones = 12;
 		const float SliceStep = 0.025f;
 

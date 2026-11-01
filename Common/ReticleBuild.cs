@@ -26,6 +26,7 @@ namespace T90A.Common
 				if (!Enum.TryParse(kv.Key, out ReticleTree.Light.Type t)) { problems.Add($"lights: unknown light '{kv.Key}'"); continue; }
 				if (!so.lights.Any(l => l.type == t)) so.lights.Add(new ReticleTree.Light { type = t, color = Rgb(kv.Value) });
 			}
+			// GHPC ignores Second, every reticle draws in the first focal plane.
 			var plane = new ReticleTree.FocalPlane(spec.Plane == "second" ? ReticleTree.FocalPlane.Type.Second : ReticleTree.FocalPlane.Type.First);
 			plane.elements = new List<ReticleTree.TransformElement>();
 			so.planes.Add(plane);
@@ -84,6 +85,7 @@ namespace T90A.Common
 				}
 				return grp;
 			}
+			// Outside an aligned group ReticleMesh gives it bone -1, which hides the whole reticle without a word.
 			if (!aligned)
 			{
 				problems.Add($"{n.Path}: not under a group with an alignment (it would hide the whole reticle; left out)");
@@ -267,6 +269,7 @@ namespace T90A.Common
 		internal static TMP_FontAsset Font(string name)
 		{
 			if (Fonts.TryGetValue(name, out var f) && f != null) return f;
+			// Loaded fonts only, one that lives in a vehicle bundle turns up with its vehicle.
 			f = Resources.FindObjectsOfTypeAll<TMP_FontAsset>().FirstOrDefault(x => x.name == name) ?? Resources.LoadAll<TMP_FontAsset>("").FirstOrDefault(x => x.name == name);
 			if (f != null) Fonts[name] = f;
 			return f;

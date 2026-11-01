@@ -29,8 +29,9 @@ namespace T90A
 		{
 			["era"] = new Entry
 			{
+				// GHPC's ERA is a flat thickness, these are the sources' factors at this turret.
 				Kind = "era", Name = "Kontakt-5 ERA", Ke = 140f, Ce = 550f, Era = true, AngleMatters = false, Xray = "era",
-				KeAfter = 0f, CeAfter = 0f,
+				KeAfter = 0f, CeAfter = 0f,   // a spent block's an empty box
 			},
 			["composite"] = new Entry
 			{
@@ -89,6 +90,7 @@ namespace T90A
 			},
 		};
 
+		// GHPC rates cast steel x0.95, rolled is 10-15 % better than that.
 		const float SteelKe = 1.05f;
 		const float SteelCe = 1.0f;
 		internal const float MantletDepthMm = 749f;
@@ -247,6 +249,7 @@ namespace T90A
 			codex.ArmorType = new ArmorType
 			{
 				Name = e.Name, ThicknessSource = ArmorType.RhaSource.Multipliers, RhaeMultiplierKe = e.Ke, RhaeMultiplierCe = e.Ce,
+				// No ricochet or normalising in the cavity, the round would get steered about by every pack face.
 				CanRicochet = false, NormalizesHits = false, CanShatterLongRods = steel, HarderIsBetter = false, BHN = steel ? 450f : 100f,
 				SpallAngleMultiplier = 0.5f, SpallPowerMultiplier = 0.5f, CrushThicknessModifier = 1f,
 			};
@@ -282,6 +285,7 @@ namespace T90A
 				RhaeMultiplierCe = ce,
 				CanRicochet = kind == "composite",
 				CanShatterLongRods = kind == "composite",
+				// Keep it. Otherwise a skimming round meets a new mantlet facet every cm and pays the whole block each time.
 				NormalizesHits = true,
 				SpallAngleMultiplier = kind == "composite" ? 0.5f : 1f,
 				SpallPowerMultiplier = kind == "composite" ? 0.5f : 1f,

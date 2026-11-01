@@ -23,6 +23,7 @@ namespace T90A.Common
 			return n;
 		}
 
+		// The model's own UVs land the undersides on bolt and cast detail, hence flat UVs into a smooth patch.
 		public static void Paint(Transform root, string innerName, string paintName, RectInt patch, Vector2Int atlas)
 		{
 			float W = atlas.x, H = atlas.y;

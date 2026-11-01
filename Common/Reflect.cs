@@ -6,6 +6,8 @@ using MelonLoader;
 
 namespace T90A.Common
 {
+	// After a game update renames a member, AccessTools warns untagged on every call and FieldRefAccess throws, which
+	// kills its whole class from a static initializer.
 	internal static class Reflect
 	{
 		static readonly Dictionary<string, MemberInfo> Cache = new Dictionary<string, MemberInfo>();

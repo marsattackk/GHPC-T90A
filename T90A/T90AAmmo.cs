@@ -20,6 +20,7 @@ namespace T90A
 			UnitKey = T90AMod.UnitKey,
 			Prefix = "t90a",
 			SourceUnit = "T80B",
+			// Pen and drag set as a pair so each round meets the maker's 2000 m figure at 2000 m.
 			Apfsds = new[]
 			{
 				new PortAmmo.Round
@@ -40,6 +41,7 @@ namespace T90A
 					Set = a =>
 					{
 						a.RhaPenetration = 693f;
+						// Placeholder, only the 8.4 kg with sabot is official.
 						a.Mass = 5.12f;
 						a.MuzzleVelocity = 1660f;
 						a.Coeff = 0.106f;
@@ -59,6 +61,7 @@ namespace T90A
 					a.RhaPenetration = 700f;
 					a.Tandem = true;
 					a.Mass = 17.2f;
+					// GHPC flies a missile at constant speed, 284 m/s gives the real 17.6 s to 5 km.
 					a.MuzzleVelocity = 284f;
 					a.MaximumRange = 5000f;
 					a.ArmingDistance = 100f;

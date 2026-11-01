@@ -33,6 +33,8 @@ namespace T90A.Common
 			if (version.Value != modVersion) version.Value = modVersion;
 		}
 
+		// A quoted "0,3" from a decimal-comma Windows: MelonLoader silently keeps the default and saves it over the
+		// player's value at exit.
 		static void Rescue(MelonPreferences_Category cfg)
 		{
 			if (!File.Exists(_file)) return;
@@ -123,10 +125,23 @@ namespace T90A.Common
 		}
 	}
 
+	// The file keeps every value, a new default in code never reaches an existing install.
 	internal sealed class SettingsMigration
 	{
 		internal string Entry, ChangedIn;
 		internal Func<MelonPreferences_Entry, bool> AtOld;
 		internal Action<MelonPreferences_Entry> ToNew;
+
+		internal static SettingsMigration Default<T>(string entry, string changedIn, T oldDefault) => new SettingsMigration
+		{
+			Entry = entry, ChangedIn = changedIn,
+			AtOld = e => e is MelonPreferences_Entry<T> t && Same(t.Value, oldDefault),
+			ToNew = e => { var t = (MelonPreferences_Entry<T>)e; t.Value = t.DefaultValue; },
+		};
+
+		static bool Same(object a, object b) =>
+			a is float fa && b is float fb ? Math.Abs(fa - fb) < 1e-6f
+			: a is double da && b is double db ? Math.Abs(da - db) < 1e-6
+			: Equals(a, b);
 	}
 }

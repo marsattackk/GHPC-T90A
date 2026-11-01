@@ -222,6 +222,7 @@ namespace T90A.Common
 				var slot = Slots[i];
 				var prefab = PrefabField?.GetValue(Smoke) as GameObject;
 				if (prefab == null || ImpulseMethod == null || ObjectPoolManager.Instance == null) return false;
+				// The pool wipes its table during the after-action review but keeps the instance. Re-register every launch.
 				ObjectPoolManager.Instance.Register(prefab);
 				var obj = ObjectPoolManager.Instance.Get(prefab);
 				if (obj == null) return false;
@@ -293,6 +294,7 @@ namespace T90A.Common
 			st.Setup(v, s);
 		}
 
+		// CalculateLaunchImpulse wants a flat-ground landing range, so hand it the one whose speed covers R in FuseSeconds.
 		static float Speed(float r, Settings s) => r / (Mathf.Cos(s.LaunchAngle * Mathf.Deg2Rad) * s.FuseSeconds);
 		internal static float LandingFor(float r, Settings s) { float v = Speed(r, s); return v * v * Mathf.Sin(2f * s.LaunchAngle * Mathf.Deg2Rad) / -Physics.gravity.y; }
 
@@ -340,6 +342,8 @@ namespace T90A.Common
 							continue;
 						}
 						if (!ps.gameObject.activeInHierarchy && ps.transform.parent != null && !ps.transform.parent.gameObject.activeSelf) continue;
+						// Vision blockers scale with particle alpha, so the 3Д6's fade-in blocks nothing for 2 s, and its plume
+						// climbs clear of any line of sight.
 						int max = Mathf.Max(s.CloudParticles, main.maxParticles);
 						main.maxParticles = max;
 						main.duration = s.CloudBuild;
@@ -472,6 +476,7 @@ namespace T90A.Common
 			return lf != null && lf.OriginalParent != null ? lf.OriginalParent.GetComponent<Unit>() : null;
 		}
 
+		// GHPC's laser ray doesn't skip the shooter's own colliders, step past them.
 		static bool LineClear(Vector3 a, Vector3 b, Unit shooter, Unit target)
 		{
 			var cm = ConstantsAndInfoManager.Instance;
@@ -523,6 +528,8 @@ namespace T90A.Common
 
 		static readonly Dictionary<UnitAI, object> Lasing = Shared<Dictionary<UnitAI, object>>("GHPCMods.ShtoraScreen.Lasing.v2");
 
+		// One table per game, not per DLL: every port compiles its own copy of this class. Game and mscorlib types only,
+		// no ValueTuple.
 		static T Shared<T>(string key) where T : class, new()
 		{
 			var had = AppDomain.CurrentDomain.GetData(key);
@@ -559,6 +566,8 @@ namespace T90A.Common
 		}
 
 		static readonly FieldInfo GunnerAiField = Reflect.Field(typeof(UnitAI), "_gunnerAI");
+		// MaxLaserRange is 4000 on every FCS, coincidence rangefinders included, so go by RangefinderType.
+		// Neutral is out both ways, GHPC lets a Neutral unit target anyone.
 		static bool Lases(UnitAI ai, Unit target)
 		{
 			var rf = Blinded.TryGetValue(ai, out var was) ? BlindRf(was) : ai.RangefinderType;
@@ -664,6 +673,7 @@ namespace T90A.Common
 			}
 		}
 
+		// WeaponHud pins its text by the top, so extra lines push it down onto the speed text. Lift it by what I add.
 		[HarmonyPatch(typeof(WeaponHud), "Update")]
 		static class WeaponHudPatch
 		{
@@ -706,6 +716,7 @@ namespace T90A.Common
 
 			static string _ours;
 
+			// Unwrapped: with zero extents and wrapping on, every character gets a line of its own.
 			static float Height(Text t, string s)
 			{
 				var g = t.GetGenerationSettings(Vector2.zero);

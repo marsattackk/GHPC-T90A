@@ -30,7 +30,7 @@ namespace T90A
 			ReticleWidth.Attach(day);
 			day.slot.ZoomInAudioEvent = "event:/Effects/Optic/Optic_Zoom_In";
 			day.slot.ZoomOutAudioEvent = "event:/Effects/Optic/Optic_Zoom_Out";
-			day.slot.fovAspect = true;
+			day.slot.fovAspect = true;   // horizontal FOV like the 1G42, otherwise the field's 1.7x too big
 			Fcs1A45T.Apply(day);
 			NightSight.Apply(vehicle, day);
 		}

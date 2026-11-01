@@ -5,10 +5,12 @@ using UnityEngine;
 
 namespace T90A.Common
 {
+	// Before Start: NwhChassis caches maxPower there, VehicleController.Initialize doubles the final drive on tracks.
 	internal static class Mobility
 	{
 		internal sealed class Settings
 		{
+			// hp, as GHPC's tanks have it, not NWH's kW
 			public float? MaxPower;
 			public float? MaxRpm;
 			public float? FinalDrive;
@@ -30,10 +32,13 @@ namespace T90A.Common
 				{
 					bool initialised = vc.IsInitialized;
 					float k = vc.tracks.wheelEnlargementCoefficient;
+					// NWH scales the brakes with the final drive, keep the base's.
 					if (!initialised && k > 1f) vc.brakes.maxTorque *= vc.transmission.gearMultiplier / s.FinalDrive.Value;
 					vc.transmission.gearMultiplier = s.FinalDrive.Value;
+					// Past Initialize the doubling is mine to do, else it drives at twice the speed.
 					if (initialised && k > 1f) vc.transmission.gearMultiplier *= k;
 				}
+				// Keep it under max rpm, the fuel cut never lets the engine reach it otherwise.
 				if (s.ShiftUpRpm.HasValue) vc.transmission.targetShiftUpRPM = s.ShiftUpRpm.Value;
 				if (s.ReverseGears != null) vc.transmission.ReverseGears = new List<float>(s.ReverseGears);
 			}

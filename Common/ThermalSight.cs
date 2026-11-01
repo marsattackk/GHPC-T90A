@@ -3,10 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using GHPC.Camera;
+using GHPC.Crew;
 using GHPC.Equipment.Optics;
+using GHPC.Player;
 using GHPC.Shaders.CRT;
 using GHPC.Vehicle;
 using GHPC.Weapons;
+using HarmonyLib;
 using MelonLoader;
 using UnityEngine;
 using UnityEngine.Rendering.PostProcessing;
@@ -32,6 +35,7 @@ namespace T90A.Common
 
 		static readonly FieldInfo UnitNightVision = Reflect.Field(typeof(GHPC.Unit), "_nightVisionType");
 
+		// AI night spotting (VisibilityManager) reads the unit's type, not the slot's.
 		internal static void SetUnitNightVision(Vehicle vehicle, CameraSlot slot) => UnitNightVision?.SetValue(vehicle, slot.VisionType);
 
 		internal static bool Apply(UsableOptic day, UsableOptic night, Settings s)
@@ -105,10 +109,12 @@ namespace T90A.Common
 
 			night.gameObject.AddComponent<Resolution>().Init(slot, s.ElectronicFov, s.Width, s.Height);
 
+			// The gate's on the day sight's GPS, which freezes once it isn't the view: from the thermal the gun read off after a reload.
 			if (day.FCS != null) night.gameObject.AddComponent<GateFollowsSight>().Init(day.FCS, slot);
 			GunnerFcs.AimClamp.Register(day.FCS, night);
 			if (s.Monitor) night.gameObject.AddComponent<NoScopeMask>().Init(slot);
 			night.gameObject.AddComponent<CompassScale>().Init(slot);
+			night.gameObject.AddComponent<WithoutDaySight>().Slot = slot;
 
 			s.Reticle?.Invoke(night);
 			s.Readout?.Invoke(night);
@@ -152,6 +158,7 @@ namespace T90A.Common
 				bool electronic = _electronicFov > 0f && Mathf.Approximately(_slot.FovIndex == 0 ? _slot.DefaultFov : _slot.OtherFovs[_slot.FovIndex - 1], _electronicFov);
 				_slot.FLIRWidth = electronic ? _width / 2 : _width;
 				_slot.FLIRHeight = electronic ? _height / 2 : _height;
+				// CameraSlot only hands FLIRWidth / Height over on going active.
 				var flir = GHPC.Thermals.FLIRCamera.Instance;
 				if (_slot.IsActive && flir != null && flir.enabled)
 				{
@@ -185,6 +192,7 @@ namespace T90A.Common
 				return _sprites = FindObjectOfType<CameraSpriteManager>();
 			}
 
+			// CameraSpriteManager never turns its scope or goggles sprite off, and a monitor wants neither.
 			void LateUpdate()
 			{
 				if (_slot == null || !_slot.IsActive) return;
@@ -203,6 +211,7 @@ namespace T90A.Common
 			}
 		}
 
+		// Below _minimumTickCount (2) Compass shows its whole 32-tick pool, a 30 deg tape on the 1.99998 deg x2 field.
 		internal class CompassScale : MonoBehaviour
 		{
 			static readonly FieldInfo MinTicks = Reflect.Field(typeof(GHPC.UI.Hud.Compass), "_minimumTickCount");
@@ -269,6 +278,79 @@ namespace T90A.Common
 				if (GunnerFcs.OwnLay.Contains(_fcs)) return;
 				if (active) _fcs.FireGateOverrideTransform = _line;
 				else if (_fcs.FireGateOverrideTransform == _line) _fcs.FireGateOverrideTransform = Original;
+			}
+		}
+
+		// GHPC's night toggle only goes from the view to its own LinkedNightSight, and a dead day sight is never the view.
+		internal class WithoutDaySight : MonoBehaviour { internal CameraSlot Slot; }
+
+		[HarmonyPatch(typeof(PlayerInput), "Update")]
+		internal static class NightToggleWithoutDaySight
+		{
+			static readonly FieldInfo FullControl = Reflect.Field(typeof(PlayerInput), "_hasFullVehicleControl"),
+				Position = Reflect.Field(typeof(PlayerInput), "_controlledPosition");
+			static CameraSlot _before;
+
+			static void Prefix() => _before = CameraSlot.ActiveInstance;
+
+			static void Postfix(PlayerInput __instance)
+			{
+				try
+				{
+					var view = _before;
+					_before = null;
+					if (view == null || CameraSlot.ActiveInstance != view || view.IsExterior || view.AllowFreeLook || view.IsLinkedNightSight || !view.NightSightNullOrInvalid) return;
+					var p = __instance;
+					if (!p.IsInitialized || !p.AllowPlayerStrictLiveInput || !p.PlayerCanControlGunnerNow || p.CurrentPlayerCrewBrain == null) return;
+					if (FullControl != null && Position != null && !(bool)FullControl.GetValue(p) && (CrewPosition)Position.GetValue(p) != CrewPosition.Gunner) return;
+					if (!GHPC.Utility.InputUtil.MainPlayer.GetButtonDown("Toggle Night Sight")) return;
+					Toggle(p, view);
+				}
+				catch (Exception e) { PatchGuard.Failed("Night sight with the day sight destroyed", e); }
+			}
+
+			internal static void Toggle(PlayerInput p, CameraSlot view)
+			{
+				var fcs = p.CurrentPlayerCrewBrain?.WeaponsModule?.ActiveWeapon?.FCS;
+				if (fcs == null || p.CurrentPlayerUnit == null) return;
+				foreach (var w in p.CurrentPlayerUnit.GetComponentsInChildren<WithoutDaySight>(true))
+				{
+					var night = w.Slot;
+					var day = night != null ? night.LinkedDaySight : null;
+					if (day == null || !day.Damaged || day.PairedOptic?.FCS != fcs || day.NightSightNullOrInvalid || !night.IsAvailable) continue;
+					var cam = CameraManager.Instance;
+					if (cam == null) return;
+					day.WasUsingNightMode = true;
+					cam.TempAttachToSlot(night);
+					if (CameraSlot.ActiveInstance == night) { _from = view; _to = night; }
+					return;
+				}
+			}
+
+			// ResetTempAttach goes back by slot list index, and the dead sight's fallback isn't in the list.
+			static CameraSlot _from, _to;
+			static readonly MethodInfo AttachDirect = Reflect.Method(typeof(CameraManager), "AttachCamToSlotDirect", new[] { typeof(CameraSlot) });
+
+			[HarmonyPatch(typeof(CameraManager), "AttachCamToSlotDirect")]
+			static class Forget
+			{
+				static void Postfix(CameraSlot __0) { if (__0 != _to) _from = _to = null; }
+			}
+
+			[HarmonyPatch(typeof(CameraManager), "ResetTempAttach")]
+			static class Back
+			{
+				static bool Prefix(CameraManager __instance)
+				{
+					try
+					{
+						var from = _from;
+						if (from == null || AttachDirect == null || CameraSlot.ActiveInstance == null || CameraSlot.ActiveInstance != _to || !from.IsAvailable) return true;
+						AttachDirect.Invoke(__instance, new object[] { from });
+						return false;
+					}
+					catch (Exception e) { PatchGuard.Failed("Night sight off with the day sight destroyed", e); return true; }
+				}
 			}
 		}
 
@@ -345,6 +427,7 @@ namespace T90A.Common
 				return _blits[(crt, monitor)] = m;
 			}
 
+			// Grey from the «Сосна-У» figures, the ESSA's is inferred.
 			static Material GreyMonitor(Material green, string tag)
 			{
 				var m = new Material(green) { name = "Thermal grey (from " + green.name + ")" };
