@@ -5,6 +5,9 @@ ESSA thermal, Shtora-1, the remote Kord on the commander's cupola, 3BM42 / 3BM60
 
 I made this mod for myself first, but you're welcome to use it too.
 
+There's also my [T-90M](https://github.com/marsattackk/GHPC-T90M) now, what the T-90A turned into, as a separate mod. You
+don't need one for the other, and the two work fine installed together.
+
 <p align="center">
   <img src="docs/images/t90a_hero.jpg" width="49%" alt="The T-90A in GHPC">
   <img src="docs/images/t90a_firing.jpg" width="49%" alt="The T-90A firing">
