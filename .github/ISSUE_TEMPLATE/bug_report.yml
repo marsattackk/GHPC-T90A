@@ -7,6 +7,8 @@ body:
       value: |
         Thanks for reporting it. The log is the bit that actually lets me find the cause, so please don't skip it.
 
+        I only test the mod on the current Steam version of GHPC. If you're on a cracked copy or an old build, I can't help with it.
+
   - type: textarea
     id: what
     attributes:

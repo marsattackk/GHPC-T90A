@@ -315,6 +315,9 @@ Found a bug? Open an [issue](../../issues) and attach `MelonLoader\Latest.log` f
 warning there whenever something didn't load right, a game update has renamed something it uses, or one of its hooks
 into the game failed (the game carries on without it).
 
+I only make and test the mod on the current Steam version of GHPC. A cracked copy or an old build might not load it at
+all, and I can't help with those, so make sure you're on the latest Steam version before opening an issue.
+
 ---
 
 ## More details
