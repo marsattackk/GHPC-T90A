@@ -1,0 +1,31 @@
+name: Realism / accuracy
+description: Something the mod has different from the real T-90A.
+labels: ["realism"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        I copy the real tank as closely as the sources let me, so if something's off I want to know. Russian sources are the most useful: manuals, official documents, books, photos of the actual part.
+
+  - type: textarea
+    id: wrong
+    attributes:
+      label: What the mod gets wrong
+      description: The part, system or value, and what the mod has now.
+    validations:
+      required: true
+
+  - type: textarea
+    id: real
+    attributes:
+      label: What the real tank has
+    validations:
+      required: true
+
+  - type: textarea
+    id: sources
+    attributes:
+      label: Sources
+      description: Links, document names, book titles with page numbers, or photos. Without a source I can't really change it.
+    validations:
+      required: true

@@ -1,0 +1,96 @@
+name: Bug report
+description: Something in the mod is broken, looks wrong, or the game won't load or crashes with it.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting it. The log is the bit that actually lets me find the cause, so please don't skip it.
+
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of problem
+      options:
+        - Something in game is wrong or doesn't work
+        - The game hangs or won't load
+        - The game crashes or closes
+        - Something else
+    validations:
+      required: true
+
+  - type: textarea
+    id: where
+    attributes:
+      label: Where and how
+      description: The mission or mode, which vehicle you were in, and what you did right before it happened.
+      placeholder: |
+        Instant Action, BMP Barricade, T-90A with 3BM60, fired the second round and ...
+    validations:
+      required: true
+
+  - type: input
+    id: mod_version
+    attributes:
+      label: T-90A version
+      description: From the zip you installed, or the MelonLoader console when the game starts.
+      placeholder: "0.4.2"
+    validations:
+      required: true
+
+  - type: input
+    id: loader_version
+    attributes:
+      label: MelonLoader version
+      description: First line of the MelonLoader console. The mod needs 0.7.3 or newer.
+      placeholder: "0.7.3"
+
+  - type: dropdown
+    id: alone
+    attributes:
+      label: Does it happen with only the T-90A installed?
+      description: Move your other mods out of the `Mods` folder for one go. It tells me straight away if it's a clash with another mod.
+      options:
+        - Haven't tried
+        - "Yes, it happens with only the T-90A"
+        - "No, only with my other mods"
+    validations:
+      required: true
+
+  - type: textarea
+    id: other_mods
+    attributes:
+      label: Other mods
+      description: The other mods you have installed, with versions if you know them. Write "none" if there aren't any.
+
+  - type: textarea
+    id: latest_log
+    attributes:
+      label: MelonLoader log
+      description: |
+        Drag `MelonLoader\Latest.log` from the game folder (where `GHPC.exe` is) in here, from a session where it went wrong. It gets overwritten every time the game starts, so grab it before you start the game again, or take the matching dated one from `MelonLoader\Logs`.
+      placeholder: Drop Latest.log here
+    validations:
+      required: true
+
+  - type: textarea
+    id: player_log
+    attributes:
+      label: Unity log (for hangs and crashes)
+      description: |
+        If the game hung or crashed, drag this one in too: `%USERPROFILE%\AppData\LocalLow\Radian Simulations LLC\GHPC\Player.log` (paste that path into the Explorer address bar). It shows where the game itself stopped. If you've started the game again since, send `Player-prev.log` from the same folder instead.
+      placeholder: Drop Player.log here
+
+  - type: textarea
+    id: pictures
+    attributes:
+      label: Screenshots or video
+      description: If it's something you can see, a screenshot helps a lot.

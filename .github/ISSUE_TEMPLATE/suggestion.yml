@@ -1,0 +1,23 @@
+name: Suggestion
+description: Something you'd like the mod to have or do differently.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What you'd like
+      description: The feature or change, as concrete as you can make it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: What it would add in game, or what bugs you about how it is now.
+
+  - type: textarea
+    id: sources
+    attributes:
+      label: Sources
+      description: If it's about the real tank, links, manuals, book pages or photos that show it.
