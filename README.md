@@ -1,9 +1,16 @@
 # T-90A for Gunner, HEAT, PC!
 
-A Russian **T-90A** you can actually drive and fight in GHPC, as its own unit. Welded turret, Kontakt-5, 1G46 sight,
-ESSA thermal, Shtora-1, the remote Kord on the commander's cupola, 3BM42 / 3BM60 and the Invar missile.
+> [!NOTE]
+> The T-90A is still being worked on, so a few things can change between versions. If something looks or behaves
+> wrong, tell me (see [Bugs and suggestions](#bugs-and-suggestions)).
+
+A Russian **T-90A** you can actually drive and fight in GHPC, as its own unit. Welded turret, Kontakt-5, the 1G46
+sight with the ESSA thermal, Shtora-1, the remote Kord on the commander's cupola, 3BM42 / 3BM60 and the Invar missile.
 
 I made this mod for myself first, but you're welcome to use it too.
+
+It's a separate mod from my [T-90M](https://github.com/marsattackk/GHPC-T90M). You don't need the T-90M for it, and the
+two work fine installed together.
 
 <p align="center">
   <img src="docs/images/t90a_hero.jpg" width="49%" alt="The T-90A in GHPC">
@@ -11,32 +18,6 @@ I made this mod for myself first, but you're welcome to use it too.
 </p>
 
 This README describes **version 0.4.2**. No other mod needed, just MelonLoader.
-
-### Also out: the T-90M
-
-My [T-90M](https://github.com/marsattackk/GHPC-T90M) is what the T-90A turned into: Relikt instead of Kontakt-5, the
-commander's thermal panorama with the Kord on top, 10 rounds moved out to an armoured box on the turret rear, a faster
-turret, the Invar-M and the Telnik air-burst round. It's a separate mod. You don't need one for the other, and the two
-work fine installed together.
-
-<p align="center">
-  <a href="https://github.com/marsattackk/GHPC-T90M"><img src="docs/images/t90m_promo.jpg" width="60%" alt="The T-90M, my other mod"></a>
-</p>
-
-## What's in it
-
-- **Armour built for GHPC**, from Russian sources, laid plate by plate onto the T-90A's own hull and turret, with
-  Kontakt-5 on top.
-- **The real sights**: the gunner's 1G46 with the 1A45T fire control, the ESSA thermal (or the Buran-M), and the
-  commander's TKN-4S, reticles drawn from the real ones.
-- **Shtora-1, all of it working**: an IR jammer against wire- and radio-guided missiles, laser warning on the
-  commander's panel, and automatic aerosol screens.
-- **The remote Kord** on the cupola, fired from under armour, belt feeding and spent cases included.
-- **42 rounds**, 22 in the carousel and the spares in the T-72B manual's places, the 3BM60 and the Invar as their own
-  models.
-- **Weathered paint** made for the T-90A's own shape, or clean factory paint if you'd rather.
-
-AI T-90As use the sights, Shtora-1 and the ammo the same way you do. Only the Kord is yours alone.
 
 ## Installing it
 
@@ -48,41 +29,56 @@ AI T-90As use the sights, Shtora-1 and the ammo the same way you do. Only the Ko
    Mods\T90A.dll
    Mods\T90A\t90a
    ```
-4. Start the game. The T-90A is in **Instant Action** (unit "T-90A"), in the **Soviet
-   campaign** roster, and in the "Showcase of most playable vehicles" mission.
+4. Start the game. The T-90A is in **Instant Action** (unit "T-90A"), in the **Soviet campaign** roster, and in the
+   "Showcase of most playable vehicles" mission.
 
-Once per game start the mod asks GitHub whether there's a newer release, and if there is, it puts one line in the
-MelonLoader console with a link to the releases page. Nothing in game, nothing gets downloaded or installed, and if
-you're offline it just doesn't say anything. Set `Check for updates` to false (Settings, below) to turn it off.
+Once per game start the mod asks GitHub whether there's a newer release, and if there is, it puts one line with a link
+in the MelonLoader console. Nothing in game, nothing gets downloaded, and offline it just stays quiet. `Check for
+updates` in the settings turns it off.
 
-To remove it, delete `Mods\T90A.dll` and the `Mods\T90A` folder. That's safe mid-campaign too, the game's campaign
-save doesn't keep a list of units, so nothing in it points at the T-90A.
+To remove it, delete `Mods\T90A.dll` and the `Mods\T90A` folder. That's safe mid-campaign too, the campaign save doesn't
+keep a list of units, so nothing in it points at the T-90A.
+
+## What's in it
+
+- **Armour built for GHPC** from Russian sources, laid plate by plate, with Kontakt-5 on top.
+- **The real sights**: the 1G46 and the ESSA thermal for the gunner, the TKN-4S for the commander.
+- **Shtora-1, all of it working**: the IR jammer, the laser warning and the automatic screens.
+- **The remote Kord** on the cupola, fired from under armour.
+- **42 rounds** in the real tank's places, and **weathered paint** made for its own shape.
+
+AI T-90As use the sights, Shtora-1 and the ammo the same way you do. Only the Kord is yours alone.
 
 ## "It's a War Thunder model, does it even work in GHPC?"
 
-Yes. Only the **looks** come from War Thunder. Everything that decides what happens when a round hits was built for
-GHPC, on GHPC's own rules:
+Yes. Only the **looks** come from War Thunder. The armour, the modules inside, the AI and the damage all run on GHPC's
+own rules, and it's been shot at hundreds of times next to a vanilla T-72M1 getting the same.
 
-- **It's GHPC armour.** The same kind of armour pieces the vanilla tanks use, laid onto the T-90A's own plates. No War
-  Thunder armour value is used anywhere, War Thunder was only a checklist of what parts exist.
+<details>
+<summary><b>How it's built for GHPC</b></summary>
+
+- **It's GHPC armour.** The same kind of armour pieces the vanilla tanks use. No War Thunder armour value is used
+  anywhere, War Thunder was only a checklist of what parts exist.
 - **It's covered all round.** The turret has no gaps from any direction, turned or not. The hull is the T-72's (which
   the T-90's really is), and the few gaps it has are the ones the vanilla T-72M1 has too.
-- **The inside works like a vanilla tank.** Engine, transmission, drives, sights, fire control, radio, the Shtora
-  lamps and each of the 12 smoke tubes are damageable modules wired into the game's own systems, so knocking out a
-  sight does what it does on any vanilla tank.
+- **The inside works like a vanilla tank.** Engine, transmission, drives, sights, fire control, radio, the Shtora lamps
+  and each of the 12 smoke tubes are damageable modules wired into the game's own systems, so knocking out a sight does
+  what it does on any vanilla tank.
 - **It's been shot at properly.** Hundreds of rounds in game, all over the tank, next to a vanilla T-72M1 getting the
   same, checking where every round stopped.
-- **The AI handles it like a vanilla tank.** It picks ammo and shoots at the T-72M1's and T-80B's pace, and it burns and
-  cooks off the same way.
+- **The AI handles it like a vanilla tank.** It picks ammo and shoots at the T-72M1's and T-80B's pace, and it burns
+  and cooks off the same way.
 - **It fits in.** The game's own glass, the vanilla paint finish, smoke tube caps that pop off on a salvo, and a lighter
   model at range so it costs no more to draw than a vanilla tank.
+
+</details>
 
 <p align="center">
   <img src="docs/images/xray_inside.jpg" width="49%" alt="Hit x-ray from above: crew, ammo and the cheek plate packages">
   <img src="docs/images/t90a_turret_closeup.jpg" width="49%" alt="Turret close-up: sight windows, Shtora lenses and smoke tube caps">
 </p>
 
-*Left: the hit x-ray from above, every armour layer in its own colour: the plate packages in both cheeks, the crew
+*Left: the hit x-ray from above, every armour layer in its own colour, the plate packages in both cheeks, the crew
 (light blue), the modules (grey) and the ammo. Right: the sight windows, the Shtora lenses and the smoke tube caps.*
 
 ## The armour
@@ -95,16 +91,32 @@ Line-of-sight protection straight from the front, in mm of steel, **without ERA*
 | T-80B (vanilla) | 595 / 669 | 485 / 602 |
 | M1IP (vanilla) | 516 / 999 | 348 / 361 |
 
-Kontakt-5 adds about **140 / 550** on top.
+Kontakt-5 adds about **140 / 550** on top, and a brick only goes off for something that's worth it, not a PKT round.
+
+The upper glacis and the main face of the cheeks stop 3BM42, 3BK18M and the Invar, and the glacis still does with its
+ERA already gone. Away from those it has the holes every T-72 descendant has.
+
+<details>
+<summary><b>How it was measured</b></summary>
+
+Median over a grid of straight-on shots. The T-90A measured in game on its cheek block and glacis, the vanilla tanks
+from their armour in the game's files over the whole cheek face, so their thin edges pull their median down a bit.
+
+</details>
+
+<details>
+<summary><b>Kontakt-5</b></summary>
 
 A Kontakt-5 brick only goes off for something that's worth it. Machine-gun and autocannon rounds up to 30 mm, and
 fragments and spall, leave it whole, which is what btvt and the Russian papers on the real brick (4S22) say. The one
 exception is the fragments of a bigger HE shell bursting within 10 m of it. GHPC on its own sets ERA off on any hit, a
-PKT round included. A brick that has gone off still looks whole by default. With `ERA destruction effects` on (Settings,
-below) it blows open with a blast, charred inside, lid thrown off, the plate round it sooted and the nets over it cut.
+PKT round included. A brick that's gone off still looks whole by default, with `ERA destruction effects` on it blows
+open with a blast, charred inside, lid thrown off, the plate round it sooted and the nets over it cut.
 
-*Median over a grid of straight-on shots. The T-90A measured in game on its cheek block and glacis, the vanilla tanks
-from their armour in the game's files over the whole cheek face, so their thin edges pull their median down a bit.*
+</details>
+
+<details>
+<summary><b>Test firing</b></summary>
 
 Fired in game straight at the front (ERA on, turret straight and turned 17°):
 
@@ -114,6 +126,31 @@ Fired in game straight at the front (ERA on, turret straight and turned 17°):
 | 3BM42 at the turret cheek | stopped by the cheek | stopped by the turret |
 | 3BK18M HEAT at the turret cheek | stopped in the cheek packages | stopped by the turret |
 | 9M119M Invar at the turret cheek | stopped by the cheek | depends on where it lands |
+
+</details>
+
+<details>
+<summary><b>Weak spots</b></summary>
+
+If you're fighting one, or trying to keep one alive, this is where it goes wrong. Straight from the front, from my test
+firing (turret straight and turned 17°):
+
+| Spot | vs APFSDS | 3BM42 | 3BK18M HEAT | Invar |
+|---|---|---|---|---|
+| Lower front plate | ~200 mm | through | through, all the way back | borderline |
+| Mantlet, next to the gun | ~320 mm | through on the right, coin toss on the left | stopped by the breech | stopped by the breech |
+| Mantlet / cheek join, ~30 cm either side of the gun | ~210 mm | through on the right, depends on the left | usually through on the right | through |
+| Turret ring, the strip above the glacis | ~290 mm | through | stopped | usually stopped |
+
+- **The sight heads** on the roof front are thin. APFSDS and the Invar go through and out the back without reaching
+  the crew, but the sight's gone.
+- **The cheek's inner edge**, where it meets the mantlet, stops APFSDS and HEAT, the Invar gets through with a bit left.
+- **Along the cheek plates**, about 50° off the nose, a couple of spots let a 3BM42 through with around 50 mm left.
+- **From the side it's a T-72.** The hull behind the skirts stops nothing a tank fires, and on the left that's
+  straight into the carousel. The right side by the driver stops HEAT only. The bustle sides are the same.
+- **From above** at 60°, anything a tank fires goes through the turret roof and the engine deck.
+
+</details>
 
 <details>
 <summary><b>Where the armour design comes from</b></summary>
@@ -140,44 +177,6 @@ cheeks).
 
 </details>
 
-### Weak spots
-
-The upper glacis and the main face of the cheeks stop 3BM42, 3BK18M and the Invar, and the glacis still does with its
-ERA already gone. Away from those, it has the holes every T-72 descendant has, so if you're fighting one, or trying to keep
-one alive, this is where it goes wrong.
-
-Straight from the front, from my test firing (turret straight and turned 17°):
-
-| Spot | vs APFSDS | 3BM42 | 3BK18M HEAT | Invar |
-|---|---|---|---|---|
-| Lower front plate | ~200 mm | through | through, all the way back | borderline |
-| Mantlet, next to the gun | ~320 mm | through on the right, coin toss on the left | stopped by the breech | stopped by the breech |
-| Mantlet / cheek join, ~30 cm either side of the gun | ~210 mm | through on the right, depends on the left | usually through on the right | through |
-| Turret ring, the strip above the glacis | ~290 mm | through | stopped | usually stopped |
-
-- **The sight heads** on the roof front are thin. APFSDS and the Invar go through and out the back without reaching
-  the crew, but the sight's gone.
-- **The cheek's inner edge**, where it meets the mantlet, stops APFSDS and HEAT, the Invar gets through with a bit left.
-- **Along the cheek plates**, about 50° off the nose, a couple of spots let a 3BM42 through with around 50 mm left.
-- **From the side it's a T-72.** The hull behind the skirts stops nothing a tank fires, and on the left that's
-  straight into the carousel. The right side by the driver stops HEAT only. The bustle sides are the same.
-- **From above** at 60°, anything a tank fires goes through the turret roof and the engine deck.
-
-## The ammo inside
-
-![The T-90A's ammo in the game's X-ray view](docs/images/xray_stowage.jpg)
-
-*Pressing O: the carousel's ring under the turret, the spares round it, the Invar missiles (grey-green) and the 3BM60s.*
-
-42 rounds, stowed where the real tank keeps them:
-
-- **22 in the autoloader's carousel** under the turret floor.
-- **20 spares** in the T-72B manual's places: against the rear bulkhead, at the front right beside the driver, along
-  the left wall and on the turret's rotating floor, each group in its own rack.
-- **The rounds look like the real ones.** The 3BM60 has its own longer rod and sabot, the Invar is its own missile with
-  the 9Kh949 charge instead of the game's Kobra, and each has the right stencils. They're made from the game's own round
-  models, so they don't look out of place next to the vanilla shells.
-
 ## The sights
 
 <p align="center">
@@ -191,23 +190,44 @@ Straight from the front, from my test firing (turret straight and turned 17°):
 
 *Top: the gunner's 1G46 by day and the ESSA thermal. Bottom: the commander's TKN-4S, day and night channels.*
 
-- **1G46 + 1A45T fire control** for the gunner: 2.7-12x, stabilised independently of the gun like the real one, laser
-  rangefinder, range and ammo readout under the picture.
-- **ESSA** thermal (default, most T-90As from 2006), shown the way the gunner actually sees it: the camera's 754 x 576
-  on a 4:3 CRT monitor, scan lines and black bars either side. Or, as a setting, the **Buran-M** image intensifier of the first 32 tanks.
-- **TKN-4S "Agat-S"** for the commander, day and night channels with reticles drawn from a photo of the real one and the
-  PNK-4S manual. It's also how you aim the remote Kord.
+- **1G46 + 1A45T fire control** for the gunner: 2.7-12x, stabilised on its own like the real one, laser rangefinder.
+- **ESSA** thermal on its 4:3 CRT monitor, the way the gunner actually sees it, or the **Buran-M** as a setting.
+- **TKN-4S "Agat-S"** for the commander, day and night channels. It's also how you aim the remote Kord.
 
 <details>
 <summary><b>Sight details</b></summary>
 
-- **1G46:** line of sight -15° / +20°, stabilised in both planes. The sight can run up to 8° ahead of the turret
+- **1G46:** stabilised independently of the gun, range and ammo readout under the picture. Line of sight -15° / +20°, stabilised in both planes. The sight can run up to 8° ahead of the turret
   sideways, the real head's travel, and the turret catches up. Its head is the low hooded box on the roof in front of
   the gunner's hatch.
-- **ESSA:** 9 × 6.75° / 3 × 2.25°, electronic x2 zoom, up to 7.5° ahead of the turret. **Buran-M** (2004): on its own
-  stabilised head, -10° / +20°. The night sight's head is the tall box behind the 1G46's.
-- **TKN-4S:** aiming chevron, lead marks, stadiametric rangefinder, the Kord's ballistic scale and the ammo / ready
+- **ESSA** (default, most T-90As from 2006): the camera's 754 x 576 on a 4:3 CRT monitor, scan lines and black bars
+  either side. 9 × 6.75° / 3 × 2.25°, electronic x2 zoom, up to 7.5° ahead of the turret. **Buran-M** (2004, the image intensifier of the first 32
+  tanks): on its own stabilised head, -10° / +20°. The night sight's head is the tall box behind the 1G46's.
+- **TKN-4S:** reticles drawn from a photo of the real one and the PNK-4S manual. Aiming chevron, lead marks, stadiametric rangefinder, the Kord's ballistic scale and the ammo / ready
   indicator at the bottom. Select the Kord and you're straight in it ("Cycle View" goes to the PZU-7 and back).
+
+</details>
+
+## The remote Kord
+
+![The remote Kord on the commander's cupola](docs/images/t90a_kord.jpg)
+
+A 12.7 mm Kord the commander fires from under armour, hatch closed, 2 belts of 150 at 625 rounds a minute, aimed
+through the TKN-4S or the PZU-7. The belt feeds round by round and the spent cases land on the tank.
+
+<details>
+<summary><b>Kord details</b></summary>
+
+- The belts are three B-32 armour-piercing incendiary to one BZT-44 tracer.
+- **PZU-7** sight for semi-automatic mode, or the **TKN-4S** in "Avtomat" mode: stabilised, follows the sight, range
+  keys set the superelevation. Selecting the Kord opens the TKN-4S, "Cycle View" swaps to the PZU-7. You only aim and
+  fire it from those two, not from the commander's free-look head view.
+- The spent cases go out of the chute on the right, forward like on the real 6P49. They lie on the tank until it tilts
+  or brakes hard enough to shake them off. `Kord spent cases` turns them off.
+- The cupola turns with it at up to 35°/s (45° left / 60° right of the gun), the Kord elevates -5° / +70° at 24°/s.
+- Drives, sight and barrel can be knocked out. The ammo belt flexes as the gun elevates.
+
+![The Kord's belt feeding in, from above](docs/images/kord_belt.jpg)
 
 </details>
 
@@ -225,10 +245,10 @@ The T-90A's soft-kill system. It doesn't shoot anything down, it messes with how
 
 - **Missiles steered from the launcher** (TOW, HOT, MILAN, Fagot, Konkurs, Kobra and co.) coming in within 20° of where
   your gun points go wide about 6 times in 10.
-- **Get lased** and the commander's panel pops up bottom right with a warning tone and a lamp for the direction. The
-  direction is taken from where the turret points, not the hull.
-- **Lased from in front of the turret**, a white cloud goes up between you and the shooter by itself, and a tank lasing through it
-  has to judge the range by eye.
+- **Get lased** and the commander's panel pops up bottom right with a warning tone and a lamp for the direction, taken
+  from where the turret points, not the hull.
+- **Lased from in front of the turret**, a white cloud goes up between you and the shooter by itself, and a tank lasing
+  through it has to judge the range by eye.
 
 AI T-90As have all of it too: lase one from the front and it screens itself, lase it from the side and it turns its
 turret towards you. All of it can be switched off or toned down in the settings.
@@ -262,8 +282,8 @@ laser from higher than that isn't seen.
 
 - **The panel** is the PU TShU-1M, drawn after a photo of the real one. Its four red lamps are the heads' sectors, all
   relative to the turret: top row front left / front right (up to 45° off the turret's axis), bottom row rear left /
-  rear right (the rest of that side). Looking through a sight it shrinks into the black strip under
-  the picture. A new warning while the tone's still going doesn't cut it off, the lamps just follow the new one.
+  rear right (the rest of that side). Looking through a sight it shrinks into the black strip under the picture. A new
+  warning while the tone's still going doesn't cut it off, the lamps just follow the new one.
 - **From the front, in automatic mode**, it fires a 3D17 grenade from the tube pointing closest to the laser. It goes
   out 50-80 m, bursts after a second, and the cloud builds up in about 3 s and hangs for about 20 s. It blocks lasers
   and eyes, not thermal sights (the real one is made for visible light and near infrared).
@@ -294,6 +314,27 @@ knocked out (a destroyed tube's grenade can't be fired by anything until it's re
 
 </details>
 
+## The ammo
+
+![The T-90A's ammo in the game's X-ray view](docs/images/xray_stowage.jpg)
+
+*Pressing O: the carousel's ring under the turret, the spares round it, the Invar missiles (grey-green) and the 3BM60s.*
+
+42 rounds, stowed where the real tank keeps them, 22 in the carousel and 20 spares round the crew, the 3BM60 and the
+Invar as their own models. You pick the APFSDS (3BM42 or 3BM60) in the game's normal ammo menu.
+
+<details>
+<summary><b>Where they go</b></summary>
+
+- **22 in the autoloader's carousel** under the turret floor.
+- **20 spares** in the T-72B manual's places: against the rear bulkhead, at the front right beside the driver, along
+  the left wall and on the turret's rotating floor, each group in its own rack.
+- **The rounds look like the real ones.** The 3BM60 has its own longer rod and sabot, the Invar is its own missile with
+  the 9Kh949 charge instead of the game's Kobra, and each has the right stencils. They're made from the game's own round
+  models, so they don't look out of place next to the vanilla shells.
+
+</details>
+
 ## The paint
 
 <p align="center">
@@ -317,6 +358,10 @@ into the game failed (the game carries on without it).
 
 I only make and test the mod on the current Steam version of GHPC. A cracked copy or an old build might not load it at
 all, and I can't help with those, so make sure you're on the latest Steam version before opening an issue.
+
+## More GHPC mods
+
+I've made a few other mods for GHPC too, check out my [other repos](https://github.com/marsattackk?tab=repositories).
 
 ---
 
@@ -358,36 +403,12 @@ If your Windows uses a decimal comma and a settings editor saved a number as tex
 the mod reads it anyway, with a comma or a point, and says so in the log. MelonLoader on its own would quietly use the
 default instead.
 
-In Instant Action and the campaign, the T-90A gets its own APFSDS choice (3BM42 or 3BM60) in the game's normal
-ammo menu.
-
 The three campaign settings take effect at the next mission load, no restart needed: switch `Add to campaign roster`
 off and the T-90A comes out of the roster, change the prevalence or unlock and the roster follows.
 
 The few parts the T-90A borrows from the base game (T-80B sight sounds and voices, the T-64B's machine-gun station, the
 M60A3 TTS thermal screen effect) are copied once from the game's own files, the first time a T-90A spawns, or at the
 main menu if those vehicles would be unloaded again before then.
-
-</details>
-
-<details>
-<summary><b>The remote Kord</b></summary>
-
-The T-90A's commander fires a 12.7 mm Kord from under armour, hatch closed:
-
-- 2 belts of 150 (three B-32 armour-piercing incendiary to one BZT-44 tracer), 625 rounds/min. The cupola turns with
-  it at up to 35°/s (45° left / 60° right of the gun), the Kord elevates -5° / +70° at 24°/s.
-- **PZU-7** sight for semi-automatic mode, or the **TKN-4S** in "Avtomat" mode: stabilised, follows the sight, range keys
-  set the superelevation. Selecting the Kord opens the TKN-4S, "Cycle View" swaps to the PZU-7. You only aim and fire it
-  from those two sights, not from the commander's free-look head view.
-- Drives, sight and barrel can be knocked out. The ammo belt flexes as the gun elevates.
-- Firing, the belt feeds into the gun round by round, and the spent cases go out of the chute on the right, forward
-  like on the real 6P49. They land on the tank and stay there until it tilts or brakes hard enough to shake them off.
-  Don't want them? Set `Kord spent cases` to false.
-
-![The remote Kord on the commander's cupola](docs/images/t90a_kord.jpg)
-
-![The Kord's belt feeding in, from above](docs/images/kord_belt.jpg)
 
 </details>
 
