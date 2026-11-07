@@ -6,6 +6,7 @@ using GHPC.Vehicle;
 using GHPC.Weapons;
 using Unity.Collections;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace T90A.Common
 {
@@ -30,7 +31,7 @@ namespace T90A.Common
 		const float WakeAccel = 4f;
 		const float Cell = 0.02f;
 		const float MaxStep = 1f / 120f;
-		int MaxCases => _belt != null && _belt.Set != null ? _belt.Set.MaxCases : 300;
+		int MaxCases => _src != null ? _src.MaxCases : 300;
 
 		sealed class Case
 		{
@@ -73,7 +74,7 @@ namespace T90A.Common
 		Vehicle _vehicle;
 		Rigidbody _body;
 		WeaponSystem _weapon;
-		KordBelt.Belt _belt;
+		CaseSource _src;
 		Transform _cradle;
 		Transform[] _frames;
 		Vector3 _chute, _dir;
@@ -96,11 +97,34 @@ namespace T90A.Common
 		internal static void Attach(Vehicle vehicle, WeaponSystem weapon, float cycle, Transform cradle, Vector3 chuteOnCradle, Vector3 dirOnCradle, KordBelt.Belt belt, Transform[] frames)
 		{
 			if (belt == null || belt.CaseMesh == null) return;
+			Attach(vehicle, weapon, cycle, cradle, chuteOnCradle, dirOnCradle, CaseSource.FromBelt(belt), frames);
+		}
+
+		internal sealed class CaseSource
+		{
+			internal Mesh Mesh;
+			internal Material Material;
+			internal ShadowCastingMode Shadows = ShadowCastingMode.On;
+			internal int Layer;
+			internal KordBelt.Belt Belt;
+			internal string MeshName = "Kord", Prefix = "", BeltObject;
+			internal int MaxCases = 300;
+
+			internal static CaseSource FromBelt(KordBelt.Belt belt) => new CaseSource
+			{
+				Mesh = belt.CaseMesh, Belt = belt, MeshName = belt.Set.MeshName, Prefix = belt.Set.Prefix,
+				BeltObject = belt.Set.BeltObject, MaxCases = belt.Set.MaxCases,
+			};
+		}
+
+		internal static void Attach(Vehicle vehicle, WeaponSystem weapon, float cycle, Transform cradle, Vector3 chuteOnCradle, Vector3 dirOnCradle, CaseSource src, Transform[] frames)
+		{
+			if (src == null || src.Mesh == null) return;
 			var b = cradle.gameObject.AddComponent<KordBrass>();
 			b._vehicle = vehicle; b._body = vehicle.GetComponent<Rigidbody>();
 			if (b._body == null) b._body = vehicle.GetComponentInParent<Rigidbody>();
-			b._weapon = weapon; b._cycle = cycle; b._cradle = cradle; b._belt = belt;
-			b._chute = chuteOnCradle; b._dir = dirOnCradle.normalized; b._frames = frames; b._mesh = belt.CaseMesh;
+			b._weapon = weapon; b._cycle = cycle; b._cradle = cradle; b._src = src;
+			b._chute = chuteOnCradle; b._dir = dirOnCradle.normalized; b._frames = frames; b._mesh = src.Mesh;
 			b._cases = new Case[b.MaxCases];
 			weapon.Fired += b.OnFired;
 		}
@@ -157,7 +181,7 @@ namespace T90A.Common
 			float dt = Time.deltaTime;
 			if (dt <= 0f || _holder == null) return;
 			var vel = _body != null ? _body.velocity : Vector3.zero;
-			bool jolt = (vel - _lastVel).magnitude / dt > WakeAccel;
+			bool jolt = (vel - _lastVel).magnitude / Mathf.Max(dt, Time.fixedDeltaTime) > WakeAccel;
 			_lastVel = vel;
 			_terrains = null;
 			int steps = Mathf.Max(1, Mathf.CeilToInt(dt / MaxStep));
@@ -187,7 +211,7 @@ namespace T90A.Common
 
 		void Eject()
 		{
-			if (_holder == null) _holder = new GameObject(_belt.Set.MeshName + " cases");
+			if (_holder == null) _holder = new GameObject(_src.MeshName + " cases");
 			if (_grids == null && _gridTask == null) StartGrids();
 			var c = _cases[_next] ?? (_cases[_next] = NewCase(_next));
 			_next = (_next + 1) % _cases.Length;
@@ -205,14 +229,14 @@ namespace T90A.Common
 
 		Case NewCase(int i)
 		{
-			var go = new GameObject($"{_belt.Set.MeshName} case {i:000}");
-			go.layer = _belt.gameObject.layer;
+			var go = new GameObject($"{_src.MeshName} case {i:000}");
+			go.layer = _src.Belt != null ? _src.Belt.gameObject.layer : _src.Layer;
 			go.transform.SetParent(_holder.transform, false);
 			go.AddComponent<MeshFilter>().sharedMesh = _mesh;
 			var r = go.AddComponent<MeshRenderer>();
-			var beltRenderer = _belt.Rounds[0].t.GetComponent<Renderer>();
-			r.sharedMaterial = beltRenderer.sharedMaterial;
-			r.shadowCastingMode = beltRenderer.shadowCastingMode;
+			var beltRenderer = _src.Belt != null ? _src.Belt.Rounds[0].t.GetComponent<Renderer>() : null;
+			r.sharedMaterial = beltRenderer != null ? beltRenderer.sharedMaterial : _src.Material;
+			r.shadowCastingMode = beltRenderer != null ? beltRenderer.shadowCastingMode : _src.Shadows;
 			r.enabled = false;
 			return new Case { T = go.transform, R = r };
 		}
@@ -346,8 +370,8 @@ namespace T90A.Common
 				bool ours = false;
 				for (var x = t; x != null && x != root; x = x.parent)
 				{
-					if (x == _cradle || x.name.StartsWith(_belt.Set.BeltObject)) return false;
-					if (x.name.StartsWith(_belt.Set.Prefix)) ours = true;
+					if (x == _cradle || (_src.BeltObject != null && x.name.StartsWith(_src.BeltObject))) return false;
+					if (x.name.StartsWith(_src.Prefix)) ours = true;
 				}
 				return ours;
 			}

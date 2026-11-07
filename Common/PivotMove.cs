@@ -17,8 +17,8 @@ namespace T90A.Common
 		internal static void Apply(GHPC.Vehicle.Vehicle vehicle, Settings s)
 		{
 			var root = vehicle.transform;
-			var turret = root.Find("---MESH---/HULL/TURRET");
-			var gun = turret != null ? turret.Find("GUN") : null;
+			var turret = RigBones.Turret(root);
+			var gun = turret != null ? RigBones.Gun(root) : null;
 			if (turret == null || gun == null) { MelonLogger.Warning($"{s.Tag}: TURRET/GUN bones not found; base pivots kept."); return; }
 
 			var plats = root.GetComponentsInChildren<AimablePlatform>(true);

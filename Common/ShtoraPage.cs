@@ -327,11 +327,13 @@ namespace T90A.Common
 
 		static void Place(bool inSight)
 		{
-			if (_layout == (inSight ? 1 : 0)) return;
-			_layout = inSight ? 1 : 0;
+			int key = ShtoraScreen.Hud.LayoutKey(inSight);
+			if (_layout == key) return;
+			_layout = key;
 			var panel = (RectTransform)_panel.transform;
-			panel.anchoredPosition = inSight ? ShtoraScreen.Hud.SightAt : ShtoraScreen.Hud.OutsideAt;
-			float k = inSight ? Mathf.Min(PageScale, ShtoraScreen.Hud.SightMaxHeight / panel.sizeDelta.y) : PageScale;
+			var bar = inSight ? ShtoraScreen.Hud.MonitorBar(panel.sizeDelta) : null;
+			panel.anchoredPosition = bar?.at ?? (inSight ? ShtoraScreen.Hud.SightAt : ShtoraScreen.Hud.OutsideAt);
+			float k = bar?.scale ?? (inSight ? Mathf.Min(PageScale, ShtoraScreen.Hud.SightMaxHeight / panel.sizeDelta.y) : PageScale);
 			panel.localScale = new Vector3(k, k, 1f);
 		}
 

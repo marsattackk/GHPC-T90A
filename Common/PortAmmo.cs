@@ -62,6 +62,7 @@ namespace T90A.Common
 			public bool DropOtherRacks = false;
 			public Vector3 GuidancePosition;
 			public string GuidanceName = "guidance computer", BeamName = "guidance beam";
+			public bool BeamOnBaseUnit;
 			public string CoaxFeed = "PKT";
 			public int CoaxRounds, CoaxBelt = 250;
 		}
@@ -545,7 +546,11 @@ namespace T90A.Common
 
 		static void AddGuidanceUnit(WeaponSystem weapon)
 		{
-			if (weapon.GuidanceUnit != null) return;
+			if (weapon.GuidanceUnit != null)
+			{
+				if (S.BeamOnBaseUnit) BeamOnBase(weapon);
+				return;
+			}
 			var parent = weapon.FCS.transform.parent;
 			var go = new GameObject(S.GuidanceName);
 			go.transform.SetParent(parent, false);
@@ -566,6 +571,18 @@ namespace T90A.Common
 			FeedMissileGuidance.SetValue(weapon.Feed, mgu);
 			mgu.GuidanceStopped += (Action)Delegate.CreateDelegate(typeof(Action), weapon.Feed, FeedGuidanceStopped);
 			weapon.FireWhileGuidingMissile = false;
+		}
+
+		static void BeamOnBase(WeaponSystem weapon)
+		{
+			var mgu = weapon.GuidanceUnit;
+			if (mgu.AimElement != null && mgu.AimElement.GetComponent<GuidanceBeam>() != null) return;
+			var beam = new GameObject(S.BeamName).AddComponent<GuidanceBeam>();
+			beam.transform.SetParent(weapon.FCS.GetComponentInParent<Vehicle>()?.transform ?? mgu.transform, false);
+			beam.Fcs = weapon.FCS;
+			beam.Gun = mgu.transform;
+			beam.Sync();
+			mgu.AimElement = beam.transform;
 		}
 	}
 

@@ -26,6 +26,7 @@ namespace T90A.Common
 			public int Tube;
 			public Vector3[] XrayVerts;
 			public int[] XrayTris;
+			public bool NoXray;
 			public Bounds Bounds
 			{
 				get
@@ -72,7 +73,8 @@ namespace T90A.Common
 					mod.Armour = new Armour { Ke = Num(a, "ke", 0f), Ce = Num(a, "ce", 0f), AngleMatters = Flag(a, "angle_matters"), Ricochet = Flag(a, "ricochet"), Normalizes = Flag(a, "normalizes"), Shatter = Flag(a, "shatter") };
 				if (m.TryGetValue("replaces", out var r) && r is List<object> rl) mod.Replaces.AddRange(rl.OfType<string>());
 				mod.Tube = (int)Num(m, "tube", 0f);
-				if (m.TryGetValue("xray", out var xo) && xo is MiniJson.Obj xm)
+				if (m.TryGetValue("xray", out var xo) && xo is bool drawn && !drawn) mod.NoXray = true;
+				else if (xo is MiniJson.Obj xm)
 				{
 					var v = Floats(Str(xm, "v", ""));
 					mod.XrayVerts = new Vector3[v.Length / 3];

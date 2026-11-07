@@ -14,12 +14,14 @@ namespace T90A.Common
 			public Vector3? BoxFaceR, BoxNormalR, BoxFaceL, BoxNormalL;
 			public float Standoff = 0.008f;
 			public float DigitScale = 1.25f;
+			public float? DigitSpacing;
+			public string[] PlateNames = { "convoy number lights" };
 		}
 
 		internal static void Apply(Transform root, Transform turret, Settings s)
 		{
 			if (s.Mode == "T-72 position") return;
-			var plates = root.GetComponentsInChildren<MeshRenderer>(true).Where(r => r.name.StartsWith("convoy number lights")).ToList();
+			var plates = root.GetComponentsInChildren<MeshRenderer>(true).Where(r => s.PlateNames.Any(p => r.name.StartsWith(p))).ToList();
 			var done = new HashSet<Mesh>();
 			var target = turret.TransformPoint(s.LampFace + s.LampNormal * s.Standoff);
 			foreach (var r in plates)
@@ -29,7 +31,7 @@ namespace T90A.Common
 				{
 					// Not sharedMesh, the number control works on the instance.
 					var mesh = mf.mesh;
-					if (done.Add(mesh)) ScaleDigits(mesh, s.DigitScale);
+					if (done.Add(mesh)) ScaleDigits(mesh, s.DigitScale, s.DigitSpacing, r.transform.lossyScale.x);
 				}
 				var c = mf != null ? r.transform.TransformPoint(mf.mesh.bounds.center) : r.bounds.center;
 				r.transform.position += target - c;
@@ -48,18 +50,24 @@ namespace T90A.Common
 			}
 		}
 
-		static void ScaleDigits(Mesh mesh, float k)
+		static void ScaleDigits(Mesh mesh, float k, float? spacing, float unit)
 		{
 			var v = mesh.vertices;
 			if (v.Length == 0) return;
-			float cx = v.Average(p => p.x);
-			var groups = new[] { Enumerable.Range(0, v.Length).Where(i => v[i].x < cx).ToList(), Enumerable.Range(0, v.Length).Where(i => v[i].x >= cx).ToList() };
-			foreach (var g in groups)
-			{
-				if (g.Count == 0) continue;
-				var c = g.Aggregate(Vector3.zero, (a, i) => a + v[i]) / g.Count;
-				foreach (int i in g) v[i] = c + (v[i] - c) * k;
-			}
+			var size = mesh.bounds.size;
+			int ax = size.x >= size.y && size.x >= size.z ? 0 : size.y >= size.z ? 1 : 2;
+			float cx = v.Average(p => p[ax]);
+			var groups = new[] { Enumerable.Range(0, v.Length).Where(i => v[i][ax] < cx).ToList(), Enumerable.Range(0, v.Length).Where(i => v[i][ax] >= cx).ToList() };
+			if (groups.Any(g => g.Count == 0)) return;
+			var centres = groups.Select(g => g.Aggregate(Vector3.zero, (a, i) => a + v[i]) / g.Count).ToArray();
+			float vanilla = Vector3.Distance(centres[0], centres[1]);
+			var mid = (centres[0] + centres[1]) * 0.5f;
+			var dir = (centres[1] - centres[0]).normalized;
+			float half = (spacing.HasValue ? spacing.Value / unit : vanilla) * 0.5f;
+			vanilla *= unit;
+			var targets = new[] { mid - dir * half, mid + dir * half };
+			for (int g = 0; g < 2; g++)
+				foreach (int i in groups[g]) v[i] = targets[g] + (v[i] - centres[g]) * k;
 			mesh.vertices = v;
 			mesh.RecalculateBounds();
 		}

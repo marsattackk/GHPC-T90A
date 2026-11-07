@@ -1,0 +1,58 @@
+<Project>
+  <!-- Build stamp: the DLL says which version, commit and build it is, in its AssemblyInformationalVersion
+       "<version>+<commit7>[.dirty].<dev|public>", which BuildStamp (BuildInfo.cs) logs on load. The version is the one in
+       the MelonInfo attribute of Mod.cs, its only source. GitCommit / BuildFlavour may be passed (-p:GitCommit=...
+       -p:BuildFlavour=...); without GitCommit the commit is asked of git in the project folder (StampAskGit, default true),
+       else "unknown"; without BuildFlavour it is "dev". Shipped with the public source, whose project file sets "public" and
+       asks no git. (This file is copied into public sources: no local paths or tool names in its comments.) -->
+  <PropertyGroup>
+    <BuildFlavour Condition="'$(BuildFlavour)' == ''">dev</BuildFlavour>
+    <StampAskGit Condition="'$(StampAskGit)' == ''">true</StampAskGit>
+    <StampGit Condition="'$(StampGit)' == '' and Exists('$(DataDir)\tools\git\cmd\git.exe')">$(DataDir)\tools\git\cmd\git.exe</StampGit>
+    <StampGit Condition="'$(StampGit)' == '' and Exists('$(MSBuildThisFileDirectory)..\..\tools\git\cmd\git.exe')">$(MSBuildThisFileDirectory)..\..\tools\git\cmd\git.exe</StampGit>
+    <StampGit Condition="'$(StampGit)' == ''">git</StampGit>
+  </PropertyGroup>
+
+  <Target Name="BuildStamp" BeforeTargets="CoreCompile">
+    <!-- The version: MelonInfo's in Mod.cs (the project folder's, or the one a folder down in the public source). -->
+    <ItemGroup Condition="'$(StampVersionFile)' == ''">
+      <StampModCs Include="$(MSBuildProjectDirectory)\Mod.cs" Condition="Exists('$(MSBuildProjectDirectory)\Mod.cs')" />
+      <StampModCs Include="$(MSBuildProjectDirectory)\*\Mod.cs" Condition="!Exists('$(MSBuildProjectDirectory)\Mod.cs')" />
+    </ItemGroup>
+    <PropertyGroup Condition="'$(StampVersionFile)' == ''">
+      <StampVersionFile>@(StampModCs)</StampVersionFile>
+    </PropertyGroup>
+    <Error Condition="'$(StampVersionFile)' == '' or $(StampVersionFile.Contains(';')) or !Exists('$(StampVersionFile)')" Text="Build stamp: no single Mod.cs found ('$(StampVersionFile)'); set StampVersionFile." />
+    <PropertyGroup>
+      <StampVersion>$([System.Text.RegularExpressions.Regex]::Match($([System.IO.File]::ReadAllText('$(StampVersionFile)')), 'MelonInfo\(typeof\([^)]*\),\s*"[^"]*",\s*"([^"]*)"').Groups[1].Value)</StampVersion>
+    </PropertyGroup>
+    <Error Condition="'$(StampVersion)' == ''" Text="Build stamp: no MelonInfo version in $(StampVersionFile)." />
+
+    <!-- The commit, when not passed: HEAD of the checkout (a worktree's own), ".dirty" with uncommitted changes to tracked files. -->
+    <Exec Condition="'$(GitCommit)' == '' and '$(StampAskGit)' == 'true'" Command="&quot;$(StampGit)&quot; rev-parse --short=7 HEAD" WorkingDirectory="$(MSBuildProjectDirectory)"
+          ConsoleToMSBuild="true" StandardOutputImportance="low" StandardErrorImportance="low" IgnoreExitCode="true" EchoOff="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="StampHead" />
+      <Output TaskParameter="ExitCode" PropertyName="StampHeadCode" />
+    </Exec>
+    <Exec Condition="'$(GitCommit)' == '' and '$(StampHeadCode)' == '0'" Command="&quot;$(StampGit)&quot; status --porcelain --untracked-files=no" WorkingDirectory="$(MSBuildProjectDirectory)"
+          ConsoleToMSBuild="true" StandardOutputImportance="low" StandardErrorImportance="low" IgnoreExitCode="true" EchoOff="true">
+      <Output TaskParameter="ConsoleOutput" PropertyName="StampChanges" />
+    </Exec>
+    <PropertyGroup Condition="'$(GitCommit)' == ''">
+      <GitCommit Condition="'$(StampHeadCode)' == '0'">$(StampHead.Trim())</GitCommit>
+      <GitCommit Condition="'$(StampHeadCode)' == '0' and '$(StampChanges.Trim())' != ''">$(GitCommit).dirty</GitCommit>
+      <GitCommit Condition="'$(GitCommit)' == ''">unknown</GitCommit>
+    </PropertyGroup>
+
+    <PropertyGroup>
+      <StampFile>$(IntermediateOutputPath)BuildStamp.g.cs</StampFile>   <!-- (set only here: the path is not known yet where this file is imported) -->
+      <BuildStampText>$(StampVersion)+$(GitCommit).$(BuildFlavour)</BuildStampText>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(StampFile)" Lines="[assembly: System.Reflection.AssemblyInformationalVersion(&quot;$(BuildStampText)&quot;)]" Overwrite="true" WriteOnlyWhenDifferent="true" />
+    <ItemGroup>
+      <Compile Include="$(StampFile)" />
+      <FileWrites Include="$(StampFile)" />
+    </ItemGroup>
+    <Message Importance="high" Text="Build stamp: $(BuildStampText)" />
+  </Target>
+</Project>

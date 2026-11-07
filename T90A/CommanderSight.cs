@@ -53,7 +53,8 @@ namespace T90A
 				s.IsExterior = false;
 				var so = o == night ? nightReticle : reticle;
 				if (o.reticleMesh != null && so != null) { o.reticleMesh.reticleSO = so; ReticleSmr.SetValue(o.reticleMesh, null); }
-				o.gameObject.AddComponent<RangeLine>().Init(o, fcs, b32.AmmoType);
+				var round = b32.AmmoType;
+				o.gameObject.AddComponent<ReticleRangeLine>().Init(o, fcs, () => round);
 			}
 			day.name = "TKN-4S sight";
 			day.slot.DefaultFov = DayFov;
@@ -151,24 +152,6 @@ namespace T90A
 				yaw = Mathf.Clamp(yaw, _traverse.x, _traverse.y);
 				pitch = Mathf.Clamp(pitch, AutoElevation.x, AutoElevation.y - se);
 				return _turret.TransformDirection(Quaternion.Euler(-pitch, yaw, 0f) * Vector3.forward);
-			}
-		}
-
-		// Has to run after UsableOptic.LateUpdate.
-		[DefaultExecutionOrder(20)]
-		internal class RangeLine : MonoBehaviour
-		{
-			UsableOptic _optic;
-			FireControlSystem _fcs;
-			global::AmmoType _ammo;
-
-			internal void Init(UsableOptic optic, FireControlSystem fcs, global::AmmoType ammo) { _optic = optic; _fcs = fcs; _ammo = ammo; }
-
-			void LateUpdate()
-			{
-				if (_optic?.reticleMesh == null || _fcs == null || _ammo == null) return;
-				float se = _fcs.CurrentRange > 0f ? BallisticComputerRepository.Instance.GetSuperelevation(_ammo, _fcs.CurrentRange) : 0f;
-				_optic.reticleMesh.SetAlignment(ReticleTree.GroupBase.Alignment.Impact, new AngularVector2(0f, se, AngularLength.AngularUnit.DEG));
 			}
 		}
 	}

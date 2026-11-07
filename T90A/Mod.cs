@@ -1,14 +1,11 @@
-using System.Collections;
 using System.IO;
 using System.Linq;
-using GHPC.State;
-using GHPC.Vehicle;
 using MelonLoader;
 using MelonLoader.Utils;
 using T90A.Common;
 using UnityEngine;
 
-[assembly: MelonInfo(typeof(T90A.T90AMod), "T-90A", "0.4.2", "marsattackk")]
+[assembly: MelonInfo(typeof(T90A.T90AMod), "T-90A", "0.4.3", "marsattackk")]
 [assembly: MelonGame("Radian Simulations LLC", "GHPC")]
 
 namespace T90A
@@ -34,6 +31,7 @@ namespace T90A
 		internal static CampaignConfig Campaign;
 		internal static MelonPreferences_Entry<string> NightSightChoice;
 		internal static MelonPreferences_Entry<bool> EssaElectronicZoom;
+		internal static MelonPreferences_Entry<bool> FireWhenLaid;
 		internal static MelonPreferences_Entry<string> Apfsds;
 		internal static MelonPreferences_Entry<bool> WeatheredPaint;
 		internal static MelonPreferences_Entry<bool> ShtoraOn;
@@ -56,6 +54,7 @@ namespace T90A
 
 		public override void OnInitializeMelon()
 		{
+			BuildStamp.Log(Info.Name);
 			UnityErrors.Install(typeof(T90AMod).Namespace);
 			var cfg = MelonPreferences.CreateCategory("T-90A");
 			Enabled = cfg.CreateEntry("Enabled", true, description: "Adds the T-90A as its own unit (Instant Action, campaign roster, ATAC key \"T90A\").");
@@ -63,7 +62,8 @@ namespace T90A
 			Apfsds = cfg.CreateEntry("APFSDS", "3BM60", description: "Default APFSDS where the game does not choose one (the mission customizer's ammo dropdown and the campaign's ammo supply override it): 3BM60 Svinets-2 (default; a 2010s round, for T-90As with the long-round autoloader of 2006) or 3BM42 Mango (the T-90A's stock round at its service entry).");
 			NightSightChoice = cfg.CreateEntry("Gunner night sight", NightSight.Essa, description: "ESSA = thermal sight, T-90A from 2006 (default); Buran-M = 3rd-gen image intensifier of the first T-90As (obr. 2004).");
 			EssaElectronicZoom = cfg.CreateEntry("ESSA electronic zoom", true, description: "ESSA x2 electronic zoom (1.125 deg, half the thermal resolution); not fitted on every tank.");
-			WeatheredPaint = cfg.CreateEntry("Weathered paint", true, description: "Dirt, wear and rust on the paint (default); false = clean factory paint. For T-90As spawned after the change.");
+			FireWhenLaid = cfg.CreateEntry("Fire only when the gun is laid", false, description: "false (default): the gun fires at any time, as the game's own tanks do; a shot while it is still climbing after a lase falls short. true = after a lase the trigger does nothing until the gun has climbed to the elevation the computer set for that range, as the real firing-permission circuit has it (the ready lamp comes on when it is there). For T-90As spawned after the change.");
+			WeatheredPaint = PaintFinish.Create(cfg, "T-90A");
 			ShtoraOn = cfg.CreateEntry("Shtora-1", true, description: "Shtora-1 (default): the IR jammer against wire-guided missiles, the laser warning on the commander's panel and the automatic 3D17 aerosol screens. false = none of it: the smoke launchers fire the game's ordinary smoke salvo. For T-90As spawned after the change.");
 			ShtoraAutomatic = cfg.CreateEntry("Shtora-1 automatic screens", true, description: "true (default): a laser from the front fires an aerosol screen toward it by itself (automatic mode). false = semi-automatic mode: the warning and the panel only, the screen is fired by hand (vehicle menu: Shtora-1, or the smoke key). For T-90As spawned after the change.");
 			ShtoraTone = cfg.CreateEntry("Shtora-1 alarm tone", true, description: "true (default): the laser warning sounds a tone with the panel's lamps. false = the lamps only, no sound. For T-90As spawned after the change.");
@@ -138,16 +138,7 @@ namespace T90A
 					() => VanillaMaterials.Warm(Roles),
 					() => ShtoraScreen.WarmDonors(Conversion.Screens));
 			if (!MenuScenes.Contains(sceneName))
-				StateController.RunOrDefer(GameState.PlayerReady, ConvertAll, GameStatePriority.Low);
-		}
-
-		static IEnumerator ConvertAll(GameState _)
-		{
-			foreach (var v in Object.FindObjectsByType<Vehicle>(FindObjectsSortMode.None))
-			{
-				if (v.UniqueName == UnitKey) Conversion.Convert(v);
-			}
-			yield break;
+				ConvertSweep.AtPlayerReady(UnitKey, v => Conversion.Convert(v));
 		}
 	}
 }

@@ -13,9 +13,13 @@ namespace T90A.Common
 		static readonly FieldInfo Current = Reflect.Field(typeof(HeatSource), "_heat");
 		static readonly FieldInfo Held = Reflect.Field(typeof(HeatSource), "_mpbRenderers");
 
-		internal static IEnumerable<Transform> PortParts(Transform unit, string prefix) =>
-			unit.GetComponentsInChildren<Transform>(true).Where(t => t.name.StartsWith(prefix) && t.GetComponentsInChildren<Renderer>(true).Length > 0 && t.GetComponentsInParent<Transform>(true).Any(p => p.name == "---MESH---")
+		internal static IEnumerable<Transform> PortParts(Transform unit, string prefix)
+		{
+			var rig = RigBones.Hull(unit)?.parent;
+			if (rig == null) return Enumerable.Empty<Transform>();
+			return unit.GetComponentsInChildren<Transform>(true).Where(t => t.name.StartsWith(prefix) && t.GetComponentsInChildren<Renderer>(true).Length > 0 && t.GetComponentsInParent<Transform>(true).Contains(rig)
 				&& (t.parent == null || !t.parent.GetComponentsInParent<Transform>(true).Any(p => p.name.StartsWith(prefix))));
+		}
 
 		internal static void Apply(Transform unit, IEnumerable<Transform> parts, IDictionary<string, float> overrides = null)
 		{

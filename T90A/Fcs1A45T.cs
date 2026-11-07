@@ -25,6 +25,7 @@ namespace T90A
 			RangeStep = 100,
 			DisplayRangeIncrement = 50,
 			FireGateAngle = 0.1f,   // 1V528's isn't published, this is GHPC's 1A33 value
+			FireWhenLaid = () => T90AMod.FireWhenLaid == null || T90AMod.FireWhenLaid.Value,
 		};
 
 		public static void Apply(UsableOptic dayOptic)
@@ -100,12 +101,7 @@ namespace T90A
 				if (letter.text != glyph) letter.text = glyph;
 			}
 
-			// Seven segments can't do Cyrillic: 6 for Б, K for К, 0 for О, Y for У.
-			internal static string Glyph(AmmoType ammo) =>
-				ammo.Guidance != AmmoType.GuidanceType.Unguided ? "Y"
-				: ammo.Category == AmmoType.AmmoCategory.Penetrator ? "6"
-				: ammo.Category == AmmoType.AmmoCategory.ShapedCharge ? "K"
-				: "0";
+			internal static string Glyph(AmmoType ammo) => SightReadout.Glyph7(ammo);
 
 			internal static RectTransform Rect(string name, Transform parent, Vector2 anchorMin, Vector2 anchorMax,
 				Vector2 pos, Vector2 size)

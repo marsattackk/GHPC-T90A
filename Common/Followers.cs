@@ -62,6 +62,20 @@ namespace T90A.Common
 			foreach (var (c, p, r) in kids) c.SetPositionAndRotation(p, r);
 		}
 
-		internal static Transform TurretBone(Vehicle v) => v.transform.Find("---MESH---/HULL/TURRET");
+		internal static Transform ColliderGroup(Transform root, string name, Transform follow, params string[] children)
+		{
+			var g = new GameObject(name) { layer = 8 };
+			g.SetActive(false);
+			g.transform.SetParent(root, false);
+			g.transform.SetPositionAndRotation(follow.position, follow.rotation);
+			var f = g.AddComponent<LateFollow>();
+			f.FollowTarget = follow;
+			f.ForceToRoot = true;
+			foreach (var c in children) { var t = new GameObject(c) { layer = 8 }.transform; t.SetParent(g.transform, false); }
+			g.SetActive(true);
+			return g.transform;
+		}
+
+		internal static Transform TurretBone(Vehicle v) => RigBones.Turret(v.transform);
 	}
 }

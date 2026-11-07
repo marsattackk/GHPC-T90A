@@ -35,10 +35,10 @@ namespace T90A.Common
 		internal static void Apply(GHPC.Vehicle.Vehicle vehicle, Quaternion tilt, string tag = "tilted ring")
 		{
 			var root = vehicle.transform;
-			var hull = root.Find("---MESH---/HULL");
-			var turret = hull != null ? hull.Find("TURRET") : null;
+			var hull = RigBones.Hull(root);
+			var turret = hull != null ? RigBones.Turret(root) : null;
 			var plat = turret == null ? null : root.GetComponentsInChildren<AimablePlatform>(true).FirstOrDefault(p => p.Transform == turret);
-			if (plat == null) { MelonLogger.Warning($"{tag}: no traverse platform on ---MESH---/HULL/TURRET; turret turns about the vertical."); return; }
+			if (plat == null) { MelonLogger.Warning($"{tag}: no traverse platform on {RigBones.TurretName(root)}; turret turns about the vertical."); return; }
 			if (Quaternion.Angle(Orig(plat), Quaternion.identity) > 0.01f)
 			{
 				MelonLogger.Warning($"{tag}: the turret's rest rotation isn't the hull's ({Orig(plat).eulerAngles}); turret turns about the vertical.");

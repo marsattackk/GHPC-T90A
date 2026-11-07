@@ -9,8 +9,12 @@ namespace T90A.Common
 	{
 		public static bool Clean;
 
-		public static void ApplyPaint(GameObject part, Material template, Shader flir, string paintedPrefix)
+		public static void ApplyPaint(GameObject part, Material template, Shader flir, string paintedPrefix) =>
+			ApplyPaint(part, template, flir, new[] { paintedPrefix });
+
+		public static void ApplyPaint(GameObject part, Material template, Shader flir, string[] paintedPrefixes)
 		{
+			bool Painted(string n) { foreach (var p in paintedPrefixes) if (n.StartsWith(p)) return true; return false; }
 			var made = new Dictionary<Material, Material>();
 			foreach (var r in part.GetComponentsInChildren<Renderer>(true))
 			{
@@ -21,7 +25,7 @@ namespace T90A.Common
 					if (src == null) continue;
 					if (!made.TryGetValue(src, out var dst))
 					{
-						if (template != null && src.name.StartsWith(paintedPrefix)) dst = VehicleMaterial(src, template);
+						if (template != null && Painted(src.name)) dst = VehicleMaterial(src, template);
 						else if (flir != null && src.shader.name == "Standard") { dst = new Material(src) { name = src.name }; dst.shader = flir; }
 						else dst = src;
 						made[src] = dst;

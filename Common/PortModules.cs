@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using GHPC.Vehicle;
 using MelonLoader;
@@ -30,18 +32,18 @@ namespace T90A.Common
 				{
 					if (s == null) { MelonLogger.Warning($"{_tag} modules: data missing from the DLL; modules stay the {_base}'s."); return null; }
 					try { using (var r = new System.IO.StreamReader(s)) _spec = ModuleSpec.Parse(r.ReadToEnd(), Resource); }
-					catch (System.Exception e) { _spec = null; MelonLogger.Warning($"{_tag} modules: the module data in the DLL can't be read ({e.GetType().Name}: {e.Message}); modules stay the {_base}'s."); }
+					catch (Exception e) { _spec = null; MelonLogger.Warning($"{_tag} modules: the module data in the DLL can't be read ({e.GetType().Name}: {e.Message}); modules stay the {_base}'s."); }
 				}
 				return _spec;
 			}
 		}
 
-		internal void Build(Vehicle vehicle)
+		internal void Build(Vehicle vehicle, params string[] later)
 		{
 			var spec = Spec;
 			if (spec == null) return;
 			var problems = new List<string>();
-			ModuleBuilder.Build(vehicle, spec, _tag, problems);
+			ModuleBuilder.Build(vehicle, spec, _tag, problems, m => !later.Any(g => string.Equals(g, m.Group, StringComparison.OrdinalIgnoreCase)));
 			if (problems.Count > 0) MelonLogger.Warning($"{_tag} modules: " + string.Join("; ", problems));
 		}
 

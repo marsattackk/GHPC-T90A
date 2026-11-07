@@ -69,6 +69,7 @@ namespace T90A.Common
 			_linked.RemoveWhere(t => t == null);
 			foreach (var dead in _goneBy.Keys.Where(k => k == null).ToList()) _goneBy.Remove(dead);
 			_done.RemoveWhere(a => a == null);
+			_quietMates.RemoveWhere(a => a == null);
 			foreach (var dead in _roundOf.Keys.Where(k => k == null).ToList()) _roundOf.Remove(dead);
 			_ours[armour] = vehicleRoot;
 			Version++;
@@ -86,8 +87,39 @@ namespace T90A.Common
 			{
 				if (a == null || !a.IsDetonated || _done.Contains(a)) continue;
 				_done.Add(a);
+				if (_quietMates.Remove(a)) continue;
 				SetOff(a);
 			}
+		}
+
+		static readonly HashSet<UniformArmor> _quietMates = new HashSet<UniformArmor>();
+		static bool _settingOffMates;
+
+		internal static List<UniformArmor> MatesOf(UniformArmor a)
+		{
+			if (a == null || !_ours.TryGetValue(a, out var root) || !_links.TryGetValue(a.name, out var box)) return new List<UniformArmor>();
+			return Of(root).Where(m => m != a && _links.TryGetValue(m.name, out var mb) && mb == box).ToList();
+		}
+
+		static void DetonatePostfix(UniformArmor __instance)
+		{
+			if (_settingOffMates) return;
+			try
+			{
+				if (__instance == null || !__instance.IsDetonated || !_ours.ContainsKey(__instance)) return;
+				_settingOffMates = true;
+				foreach (var m in MatesOf(__instance))
+				{
+					if (m.IsDetonated) continue;
+					var fx = m.DetonateEffect;
+					m.DetonateEffect = null;
+					try { m.Detonate(); }
+					finally { m.DetonateEffect = fx; }
+					if (m.IsDetonated) _quietMates.Add(m);
+				}
+			}
+			catch (Exception e) { PatchGuard.Failed("ERA bricks: container mates", e); }
+			finally { _settingOffMates = false; }
 		}
 
 		internal static bool Insensitive(LiveRound r, Vector3 brick)
@@ -231,7 +263,7 @@ namespace T90A.Common
 				var det = Reflect.Method(typeof(UniformArmor), nameof(UniformArmor.Detonate), Type.EmptyTypes);
 				if (pen == null || det == null) return;
 				harmony.Patch(pen, prefix: new HarmonyMethod(typeof(EraBricks), nameof(PenPrefix)), finalizer: new HarmonyMethod(typeof(EraBricks), nameof(PenFinalizer)));
-				harmony.Patch(det, prefix: new HarmonyMethod(typeof(EraBricks), nameof(DetonatePrefix)));
+				harmony.Patch(det, prefix: new HarmonyMethod(typeof(EraBricks), nameof(DetonatePrefix)), postfix: new HarmonyMethod(typeof(EraBricks), nameof(DetonatePostfix)));
 			}
 			catch (Exception e) { MelonLogger.Warning($"ERA bricks: patching failed ({e.GetType().Name}: {e.Message}); bricks behave as in GHPC."); }
 		}

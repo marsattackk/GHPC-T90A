@@ -6,6 +6,7 @@ using GHPC.Player;
 using GHPC.Vehicle;
 using GHPC.Weapons;
 using HarmonyLib;
+using MelonLoader;
 using UnityEngine;
 using UnityEngine.Events;
 using DC = GHPC.Equipment.DestructibleComponent;
@@ -154,7 +155,29 @@ namespace T90A.Common
 		{
 			var st = v.gameObject.GetComponent<Station>() ?? v.gameObject.AddComponent<Station>();
 			st.Setup(v, s);
+			CheckList(s);
 			st.FindEmitters();
+		}
+
+		static readonly HashSet<string> Told = new HashSet<string>();
+
+		static List<string> LoadedSaclos() => Resources.FindObjectsOfTypeAll<GHPC.Weaponry.AmmoCodexScriptable>().Select(c => c.AmmoType)
+			.Where(a => a != null && a.Guidance == AmmoType.GuidanceType.SACLOS && a.Name != null).Select(a => a.Name).Distinct().ToList();
+
+		static void CheckList(Settings s)
+		{
+			var loaded = LoadedSaclos();
+			foreach (var name in loaded) Unlisted(name, s, loaded);
+		}
+
+		static void Unlisted(string name, Settings s, List<string> loaded = null)
+		{
+			if (s.Missiles.Any(p => name.StartsWith(p, StringComparison.OrdinalIgnoreCase)) || !Told.Add(s.Tag + "|" + name)) return;
+			loaded = loaded ?? LoadedSaclos();
+			if (!loaded.Contains(name)) loaded.Add(name);
+			var idle = s.Missiles.Where(p => !loaded.Any(n => n.StartsWith(p, StringComparison.OrdinalIgnoreCase))).ToList();
+			MelonLogger.Warning($"{s.Tag} Shtora-1: the SACLOS missile \"{name}\" is not on the jammer's list, so it is not jammed (added by another mod, or renamed by a game update?)."
+				+ (idle.Count > 0 ? $" On the list but matching no missile loaded now: {string.Join(", ", idle)}." : ""));
 		}
 
 		internal sealed class Flight
@@ -168,9 +191,7 @@ namespace T90A.Common
 		}
 
 		static readonly Dictionary<LiveRound, Flight> Flights = new Dictionary<LiveRound, Flight>();
-		// GHPC reseeds UnityEngine.Random from the clock all over the place (RandomUtil.RandomizeUnityRandom).
-		static readonly System.Random Rng = new System.Random();
-		static float Draw() => (float)Rng.NextDouble();
+		static float Draw() => ModRandom.Value;
 
 		static bool Jammable(AmmoType a, Settings s) =>
 			a != null && a.Guidance == AmmoType.GuidanceType.SACLOS && a.Name != null && s.Missiles.Any(p => a.Name.StartsWith(p, StringComparison.OrdinalIgnoreCase));
@@ -237,7 +258,11 @@ namespace T90A.Common
 				f.Picked = true;
 				f.Target = TargetOf(r, f.Launch, r.transform.position);
 				if (f.Target == null) return;
-				if (!Jammable(r.Info, f.Target.S)) { f.Target = null; return; }
+				if (!Jammable(r.Info, f.Target.S))
+				{
+					if (r.Info != null && r.Info.Guidance == AmmoType.GuidanceType.SACLOS && r.Info.Name != null) Unlisted(r.Info.Name, f.Target.S);
+					f.Target = null; return;
+				}
 			}
 			var st = f.Target;
 			if (st == null || st.Vehicle == null) return;

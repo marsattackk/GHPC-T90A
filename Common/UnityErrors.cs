@@ -54,6 +54,7 @@ namespace T90A.Common
 				if (sink == null) return;
 				string key = text ?? "";
 				if (key.Length > 300) key = key.Substring(0, 300);
+				key += "|" + ((stack ?? "").Split('\n').FirstOrDefault(l => l.Contains("T90A.Common")) ?? "").Trim();
 				int n = Counts.TryGetValue(key, out int had) ? had : 0;
 				if (n >= PerMessage) return;
 				Counts[key] = ++n;

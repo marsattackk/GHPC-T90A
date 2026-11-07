@@ -19,6 +19,7 @@ namespace T90A.Common
 			public float? MaxForwardKmh;
 			public float? ReverseCapKmh;
 			public float? CombatMassKg;
+			public float? LinearDrag;
 		}
 
 		internal static void Apply(Vehicle vehicle, Settings s)
@@ -54,6 +55,11 @@ namespace T90A.Common
 			{
 				var rb = vehicle.GetComponent<Rigidbody>();
 				if (rb != null) rb.mass = s.CombatMassKg.Value;
+			}
+			if (s.LinearDrag.HasValue)
+			{
+				var rb = vehicle.GetComponent<Rigidbody>();
+				if (rb != null) rb.drag = s.LinearDrag.Value;
 			}
 		}
 	}

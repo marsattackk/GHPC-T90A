@@ -32,7 +32,8 @@ namespace T90A.Common
 
 		internal static void OnSceneLoaded(string sceneName)
 		{
-			if (sceneName == Scene && Entries.Count > 0) StateController.RunOrDefer(GameState.GameReady, Spawn);
+			bool ours = sceneName == Scene;
+			if (ours && Entries.Count > 0) StateController.RunOrDefer(GameState.GameReady, Spawn);
 		}
 
 		static IEnumerator Spawn(GameState _)

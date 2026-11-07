@@ -65,7 +65,7 @@ namespace T90A.Common
 				+ (TubesLost > 0 ? $"Smoke grenade launchers destroyed: {TubesLost} of {Tubes.Count}\n" : "");
 		}
 
-		internal static void Build(Vehicle vehicle, ModuleSpec spec, string label, List<string> problems)
+		internal static void Build(Vehicle vehicle, ModuleSpec spec, string label, List<string> problems, Func<ModuleSpec.Module, bool> take = null)
 		{
 			var root = vehicle.transform;
 			var set = vehicle.gameObject.GetComponent<ModuleSet>() ?? vehicle.gameObject.AddComponent<ModuleSet>();
@@ -73,7 +73,7 @@ namespace T90A.Common
 			var look = Look(root);
 			foreach (var m in spec.Modules)
 			{
-				if (m.Existing) continue;
+				if (m.Existing || (take != null && !take(m)) || set.Built.Any(x => x.m == m)) continue;
 				try
 				{
 					var (group, bone) = Group(root, m.Group);
@@ -92,7 +92,7 @@ namespace T90A.Common
 						var box = go.AddComponent<BoxCollider>();
 						box.center = toBone.MultiplyPoint3x4(b.Centre);
 						box.size = b.Size;
-						if (look.material != null && m.XrayVerts == null)
+						if (look.material != null && m.XrayVerts == null && !m.NoXray)
 						{
 							var vis = GameObject.CreatePrimitive(PrimitiveType.Cube);
 							UnityEngine.Object.DestroyImmediate(vis.GetComponent<Collider>());
@@ -128,7 +128,7 @@ namespace T90A.Common
 						ua.AngleMatters = m.Armour.AngleMatters;
 						ArmourRicochet.SetValue(ua, m.Armour.Ricochet); ArmourNormalizes.SetValue(ua, m.Armour.Normalizes); ArmourShatter.SetValue(ua, m.Armour.Shatter);
 					}
-					if (look.template != null)
+					if (look.template != null && !m.NoXray)
 					{
 						var av = go.AddComponent<AarVisual>();
 						av.RenderMode = look.template.RenderMode; av.SwitchMaterials = look.template.SwitchMaterials; av.PreserveLayerUntilAar = look.template.PreserveLayerUntilAar;

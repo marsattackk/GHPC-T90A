@@ -10,8 +10,6 @@ namespace T90A
 {
 	internal static class Conversion
 	{
-		class Converted : MonoBehaviour { }
-
 		const string PaintedPrefix = "t90a_t_90a_";
 
 		const float ReverseTrackFactor = 4.52f / 4.17f;   // GHPC's tracks run ~8 % over NWH's gear formula
@@ -20,8 +18,7 @@ namespace T90A
 
 		internal static void Convert(Vehicle vehicle, bool atSpawn = false)
 		{
-			if (vehicle == null || vehicle.GetComponent<Converted>() != null) return;
-			vehicle.gameObject.AddComponent<Converted>();
+			if (!ConvertSweep.Mark(vehicle)) return;
 			try { ApplyVisuals(vehicle); }
 			catch (Exception e) { MelonLogger.Error("T-90A visuals failed: " + e); }
 			try { ArmorSetup.Apply(vehicle); }
@@ -218,7 +215,7 @@ namespace T90A
 			AttachAt(inst.transform.Find("KORD"), turret, Kord.Trunnion - RealAxis.T72Turret);
 			UnityEngine.Object.Destroy(inst);
 
-			VehiclePaint.Clean = !T90AMod.WeatheredPaint.Value;
+			PaintFinish.Apply(T90AMod.WeatheredPaint);
 			foreach (var name in new[] { "HULL", "TURRET", "GUN", "STUB_HATCH", "MANTLET_COVER", "CUPOLA", "KORD" })
 			{
 				var part = name != "HULL" && name != "TURRET" && name != "GUN" ? root.GetComponentsInChildren<Transform>(true).FirstOrDefault(x => x.name == "T90A_" + name)

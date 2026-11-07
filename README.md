@@ -17,7 +17,7 @@ two work fine installed together.
   <img src="docs/images/t90a_firing.jpg" width="49%" alt="The T-90A firing">
 </p>
 
-This README describes **version 0.4.2**. No other mod needed, just MelonLoader.
+This README describes **version 0.4.3**. No other mod needed, just MelonLoader.
 
 ## Installing it
 
@@ -384,6 +384,7 @@ before editing it):
 | `APFSDS` | `"3BM42"` / `"3BM60"` (where the game doesn't pick one itself) | 3BM60 |
 | `Gunner night sight` | `"ESSA"` / `"Buran-M"` | ESSA |
 | `ESSA electronic zoom` | true / false | true |
+| `Fire only when the gun is laid` | false (fires any time, like the game's own tanks, but a shot while it's still climbing after a lase falls short) / true (after a lase the gun won't fire until it has climbed to the elevation the computer set, like the real firing-permission circuit) | false |
 | `Armour preset` | `"game-scale"` / `"source-only"` | game-scale |
 | `Weathered paint` | true (dirt, wear and rust) / false (clean factory paint) | true |
 | `Shtora-1` | true (jammer, laser warning panel, automatic aerosol screens) / false (none of it: the game's ordinary smoke salvo) | true |

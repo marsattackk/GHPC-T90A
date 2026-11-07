@@ -39,6 +39,19 @@ namespace T90A.Common
 			}
 		}
 
+		static AnimatedPart WakeDormant(Transform root, AnimatedPart[] parts, string name)
+		{
+			var part = parts.FirstOrDefault(a => a.Transform == null && a.name == name && a.StartTransform != null && a.EndTransform != null);
+			var hull = RigBones.Hull(root);
+			if (part == null || hull == null) return null;
+			var bone = new GameObject(name).transform;
+			bone.SetParent(hull, false);
+			bone.SetPositionAndRotation(part.StartTransform.position, part.StartTransform.rotation);
+			part.Transform = bone;
+			part.gameObject.SetActive(true);
+			return part;
+		}
+
 		internal static void Apply(Transform root, RigMap map, string prefix, string tag)
 		{
 			if (map == null) return;
@@ -50,6 +63,7 @@ namespace T90A.Common
 				var lid = Find(h.Group);
 				var part = parts.FirstOrDefault(a => a.Transform != null && a.Transform.name == h.BaseBone);
 				if (lid == null) continue;
+				if (part == null) part = WakeDormant(root, parts, h.BaseBone);
 				if (part == null)
 				{
 					MelonLogger.Warning($"{tag}: the {h.Role.ToLowerInvariant()}'s hatch has no opening animation on this vehicle; it stays closed.");

@@ -294,18 +294,7 @@ Prefix = "T90A_", MeshName = "T90A Kord", BeltMaterial = "t90a_mg_6p49_kord_ammo
 			if (d.ElevationDriveZone != null)
 			{
 				// Its own LateFollow group. A collider left under the unit joins its rigidbody.
-				var grp = new GameObject("T90A KORD COLLIDERS");
-				grp.SetActive(false);
-				grp.layer = 8;
-				grp.transform.SetParent(root, false);
-				grp.transform.SetPositionAndRotation(cradle.position, cradle.rotation);
-				var follow = grp.AddComponent<LateFollow>();
-				follow.FollowTarget = cradle;
-				follow.ForceToRoot = true;
-				var aar = new GameObject("AAR").transform;
-				aar.gameObject.layer = 8;
-				aar.SetParent(grp.transform, false);
-				grp.SetActive(true);
+				var aar = Followers.ColliderGroup(root, "T90A KORD COLLIDERS", cradle, "AAR").Find("AAR");
 				var go = Clone(d.ElevationDriveZone, "Kord barrel");
 				go.GetComponent<MeshFilter>().sharedMesh = RemoteMg.BoxMesh("T90A hit zone box");
 				foreach (var v in go.GetComponentsInChildren<AarVisual>(true)) Object.DestroyImmediate(v);

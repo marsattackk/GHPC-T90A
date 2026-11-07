@@ -23,9 +23,10 @@ namespace T90A
 			// Pen and drag set as a pair so each round meets the maker's 2000 m figure at 2000 m.
 			Apfsds = new[]
 			{
+				// A round named like another mod's shares its firing table: whoever spawns first sets the aim for both.
 				new PortAmmo.Round
 				{
-					Id = "3BM42", Name = "3BM42 APFSDS-T", Source = "clip_3BM32", Texture = "round_3bm42_co.png", Atlas = "125mm_co",
+					Id = "3BM42", Name = "3BM42 Mango APFSDS-T", Source = "clip_3BM32", Texture = "round_3bm42_co.png", Atlas = "125mm_co",
 					Set = a =>
 					{
 						a.RhaPenetration = 578f;
@@ -37,7 +38,7 @@ namespace T90A
 				},
 				new PortAmmo.Round
 				{
-					Id = "3BM60", Name = "3BM60 APFSDS-T", Source = "clip_3BM32", Texture = "round_3bm60_co.png", Atlas = "125mm_co", Shape = "3BM60",
+					Id = "3BM60", Name = "3BM60 Svinets-2 APFSDS-T", Source = "clip_3BM32", Texture = "round_3bm60_co.png", Atlas = "125mm_co", Shape = "3BM60",
 					Set = a =>
 					{
 						a.RhaPenetration = 693f;

@@ -6,6 +6,7 @@ using GHPC;
 using GHPC.AI;
 using GHPC.Mission;
 using GHPC.Mission.Data;
+using GHPC.State;
 using GHPC.UI.Menu;
 using GHPC.Vehicle;
 using HarmonyLib;
@@ -26,6 +27,8 @@ namespace T90A.Common
 		public Func<float> CampaignPrevalence = () => 0.5f;
 		public Func<int> CampaignAfterMissions = () => 0;
 		public Action<Vehicle> OnSpawn;
+		public string[] ShieldFrom;
+		public Func<string> ShieldName;
 	}
 
 	internal sealed class CampaignConfig
@@ -222,7 +225,51 @@ namespace T90A.Common
 				UniqueName(vehicle) = u.Key;
 				FriendlyNameRef(vehicle) = u.FriendlyName();
 				u.OnSpawn?.Invoke(vehicle);
+				ArmShield(vehicle, u);
 			}
+		}
+
+		static readonly List<(Vehicle v, UnitDef u)> _shielded = new List<(Vehicle, UnitDef)>();
+		static StateController _shieldArmedFor;
+		static int _shieldCount;
+
+		static string ShieldNameOf(UnitDef u) => u.ShieldName?.Invoke() ?? u.Key;
+
+		static void ArmShield(Vehicle v, UnitDef u)
+		{
+			if (u.ShieldFrom == null) return;
+			if (NameShield.Form(u.FriendlyName(), u.ShieldFrom, ShieldNameOf(u)) == null) return;
+			if (StateController.IsGameStateTriggered(GameState.SkyReady)) return;
+			var sc = StateController.Instance;
+			if (sc == null) return;
+			if (_shieldArmedFor != sc)
+			{
+				_shielded.Clear();
+				if (StateController.RunOrDefer(GameState.SkyReady, ShieldOn, GameStatePriority.High) != GameStateInvocationStatus.Deferred) return;
+				StateController.RunOrDefer(GameState.SkyReady, ShieldOff, GameStatePriority.Low);
+				_shieldArmedFor = sc;
+			}
+			_shielded.Add((v, u));
+		}
+
+		static readonly AccessTools.FieldRef<Unit, string> ShieldNameRef = Reflect.FieldRefAccess<Unit, string>("_friendlyName");
+
+		static IEnumerator ShieldOn(GameState _)
+		{
+			_shieldCount = 0;
+			foreach (var (v, u) in _shielded)
+				if (v != null && v.FriendlyName == u.FriendlyName()) { ShieldNameRef(v) = ShieldNameOf(u); _shieldCount++; }
+			yield break;
+		}
+
+		static IEnumerator ShieldOff(GameState _)
+		{
+			int back = 0;
+			foreach (var (v, u) in _shielded)
+				if (v != null && v.FriendlyName == ShieldNameOf(u)) { ShieldNameRef(v) = u.FriendlyName(); back++; }
+			if (_shielded.Count > 0) MelonLogger.Msg($"Name shield: {_shieldCount} unit(s) named '{ShieldNameOf(_shielded[0].u)}' over SkyReady, {back} given back '{_shielded[0].u.FriendlyName()}'.");
+			_shielded.Clear(); _shieldArmedFor = null;
+			yield break;
 		}
 	}
 }
