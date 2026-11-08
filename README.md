@@ -49,6 +49,54 @@ keep a list of units, so nothing in it points at the T-90A.
 
 AI T-90As use the sights, Shtora-1 and the ammo the same way you do. Only the Kord is yours alone.
 
+## From the T-72M1 to the T-90A
+
+The T-90A (Object 188A1) is what the T-72B turned into, so underneath it's the same family as the game's own T-72M1.
+Same hull layout, running gear, autoloader and gearbox. What changed, and what that means in game:
+
+| | T-72M1 (in the base game) | T-90A (this mod) |
+|---|---|---|
+| Turret | cast, quartz-filled cheeks | welded, 19 packages of reflecting plates in each cheek |
+| Front armour without ERA, vs APFSDS (cheeks / glacis) | 471 / 452 | 690 / 549 |
+| ERA | none | Kontakt-5, about +140 vs APFSDS / +550 vs HEAT |
+| Gunner's sight | TPD-K1, TPN-1-49-23 image intensifier at night | 1G46 stabilised on its own, ESSA thermal, 1A45T fire control |
+| Commander | head view, night vision goggles | TKN-4S day / night sight |
+| Guided missile | none | 9M119M Invar through the gun, out to 5 km |
+| Remote MG | none | Kord on the cupola, fired from under armour |
+| Defensive aids | 12 smoke tubes | Shtora-1: IR jammer, laser warning, 12 tubes of 3D17 aerosol grenades |
+| Engine | 800 hp | V-92S2, 1000 hp |
+
+So it's a lot better protected from the front, it can actually see at night, it has a missile that reaches further
+than any tank round, and the Shtora spoils missiles and lasers aimed at it. What isn't better: from the side and above
+it's still a T-72, and it still has the same 22 rounds in the carousel under the crew.
+
+<details>
+<summary><b>A bit of history</b></summary>
+
+Uralvagonzavod's design bureau started on Object 188 in 1986, basically a T-72B with the T-80U's fire control (the 1A45,
+reworked for the T-72's autoloader as the 1A45T) and the new Shtora. It was accepted as the T-90 in October 1992, but
+only about 120 were built for the Russian army before the money ran out. Export orders from India in 2001 kept the
+factory going, and the Indian T-90S got a new welded turret. In 1999 the tank was named «Владимир» after its chief
+designer Vladimir Potkin, who'd just died.
+
+The T-90A (first called Object 188A1) brought all that home: the welded turret, the 1000 hp V-92S2, the 2A46M-5 gun, a
+faster stabiliser and an autoloader reworked for the longer APFSDS rounds. It was accepted on 15 April 2005. The first
+32 had the Buran-M image intensifier at night, from 2006 they got the ESSA thermal with the French Catherine FC camera,
+and about 337 of those were built up to 2010. A lot of them have since been rebuilt into T-90Ms.
+
+</details>
+
+<details>
+<summary><b>What it shares with my T-90M</b></summary>
+
+I built the T-90A first, and the [T-90M](https://github.com/marsattackk/GHPC-T90M) after it on the same groundwork.
+Everything I worked out here carries over: how the armour's put together, the ERA that doesn't go off for a PKT round,
+the Invar's tandem precursor, the Kord's belt feed and spent cases, the paint, the T-80B's crew voices, and a fix on one
+goes into the other. What's only on the T-90A is what's only on the real one: Kontakt-5, the 1G46 with the ESSA, the
+TKN-4S, the Kord on the cupola and Shtora-1 with its IR jammer. It's still its own mod, neither needs the other.
+
+</details>
+
 ## "It's a War Thunder model, does it even work in GHPC?"
 
 Yes. Only the **looks** come from War Thunder. The armour, the modules inside, the AI and the damage all run on GHPC's
@@ -361,7 +409,8 @@ all, and I can't help with those, so make sure you're on the latest Steam versio
 
 ## More GHPC mods
 
-I've made a few other mods for GHPC too, check out my [other repos](https://github.com/marsattackk?tab=repositories).
+If you like this one, there's also my [T-80UM2](https://github.com/marsattackk/GHPC-T80UM2), a T-80U with the Drozd
+active protection system on the turret front. I've made a few other mods for GHPC too, check out my [other repos](https://github.com/marsattackk?tab=repositories).
 
 ---
 
@@ -419,9 +468,10 @@ main menu if those vehicles would be unloaded again before then.
 | | |
 |---|---|
 | Engine | V-92S2, 1000 hp at 2000 rpm, T-72 gearbox |
+| Mass | 46.5 t |
 | Speed | 60 km/h forward, 4.2 km/h reverse (the real gearbox's reverse) |
 | Turret traverse / gun elevation | 24°/s / 28°/s |
-| Gun limits | -6°13′ / +13°47′ over the front, less depression over the engine deck |
+| Gun | 2A46M-5, -6°13′ / +13°47′ over the front, less depression over the engine deck |
 | Autoloader | 6.5 s, 22 rounds in the carousel |
 | Main gun ammo | 42 rounds: 3BM42 or 3BM60, 3BK18M HEAT, 3OF26 HE-Frag, 9M119M Invar |
 | Coax PKT | 2000 rounds (8 belts of 250) |
@@ -441,7 +491,7 @@ main menu if those vehicles would be unloaded again before then.
 
 | What | In the mod | Why |
 |---|---|---|
-| Base vehicle | Built on the game's T-72M1 (running gear, hull internals, autoloader, diesel) | The T-90 *is* a T-72 development. GHPC has no Soviet T-72, so the army, voices, sight sounds and HUD come from the T-80B. |
+| Base vehicle | Built on the game's T-72M1 (running gear, hull internals, autoloader, diesel) | The T-90 *is* a T-72 development. GHPC has no T-72B, so the army, voices, sight sounds and HUD come from the T-80B. |
 | Armour strength | "game-scale" by default | Keeps the T-90A in the right place next to GHPC's own tanks. "source-only" is one setting away. Only the strength changes, not the layout. |
 | Turret side | 70 / 80 mm | btvt gives 70. Russian Wikipedia's 110 is uncited and probably counts an optional add-on plate the model doesn't have. |
 | TKN-4S "Dubl" mode | not built | The commander can't fire the main gun from the TKN-4S. Its main-gun scales are still drawn where they are on the real reticle. |
