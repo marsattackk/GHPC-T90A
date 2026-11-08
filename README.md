@@ -9,8 +9,9 @@ sight with the ESSA thermal, Shtora-1, the remote Kord on the commander's cupola
 
 I made this mod for myself first, but you're welcome to use it too.
 
-It's a separate mod from my [T-90M](https://github.com/marsattackk/GHPC-T90M). You don't need the T-90M for it, and the
-two work fine installed together.
+It's a separate mod from my [T-90M](https://github.com/marsattackk/GHPC-T90M) and
+[T-80UM2](https://github.com/marsattackk/GHPC-T80UM2). You don't need either for it, and they all work fine installed
+together.
 
 <p align="center">
   <img src="docs/images/t90a_hero.jpg" width="49%" alt="The T-90A in GHPC">
@@ -95,6 +96,9 @@ the Invar's tandem precursor, the Kord's belt feed and spent cases, the paint, t
 goes into the other. What's only on the T-90A is what's only on the real one: Kontakt-5, the 1G46 with the ESSA, the
 TKN-4S, the Kord on the cupola and Shtora-1 with its IR jammer. It's still its own mod, neither needs the other.
 
+My [T-80UM2](https://github.com/marsattackk/GHPC-T80UM2) came after both, on the same groundwork, and it's the T-90A's
+closest relative of the lot: the same Kontakt-5, 1G46, TKN-4S and Invar, on the T-80U it was the rival of.
+
 </details>
 
 ## "It's a War Thunder model, does it even work in GHPC?"
@@ -136,6 +140,7 @@ Line-of-sight protection straight from the front, in mm of steel, **without ERA*
 | | Turret cheeks (vs APFSDS / vs HEAT) | Upper glacis (vs APFSDS / vs HEAT) |
 |---|---|---|
 | **T-90A (this mod)** | **690 / 819** | **549 / 748** |
+| [T-80UM2](https://github.com/marsattackk/GHPC-T80UM2) (my other mod) | 744 / 984 | 473 / 653 |
 | T-80B (vanilla) | 595 / 669 | 485 / 602 |
 | M1IP (vanilla) | 516 / 999 | 348 / 361 |
 
@@ -147,7 +152,7 @@ ERA already gone. Away from those it has the holes every T-72 descendant has.
 <details>
 <summary><b>How it was measured</b></summary>
 
-Median over a grid of straight-on shots. The T-90A measured in game on its cheek block and glacis, the vanilla tanks
+Median over a grid of straight-on shots. The T-90A and the T-80UM2 measured in game on their cheek block and glacis, the vanilla tanks
 from their armour in the game's files over the whole cheek face, so their thin edges pull their median down a bit.
 
 </details>
