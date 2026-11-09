@@ -18,6 +18,10 @@ namespace T90A.Common
 			public string DepressionProfile;
 			public float AutoloaderCycle;
 			public string GunName, CodexName;
+			public float CodexCaliberMm;
+			public string TurretPlatform;
+			public string GunPlatform;
+			public bool TurretUnstabilised;
 		}
 
 		static readonly Dictionary<string, List<KeyValuePair<float, float>>> _profiles = new Dictionary<string, List<KeyValuePair<float, float>>>();
@@ -26,10 +30,17 @@ namespace T90A.Common
 		internal static void Apply(Vehicle vehicle, Settings s)
 		{
 			// GHPC re-parents the script containers under the mesh bones at Start, prefab paths are no use.
-			var traverse = vehicle.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == "---TURRET SCRIPTS---")?.GetComponent<AimablePlatform>();
+			string turretName = s.TurretPlatform ?? "---TURRET SCRIPTS---";
+			var traverse = vehicle.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == turretName)?.GetComponent<AimablePlatform>();
 			if (traverse == null) MelonLogger.Warning($"{s.Tag}: turret traverse platform not found; the base's traverse speed kept.");
-			else if (s.TurretSpeed > 0f) traverse.SpeedPowered = s.TurretSpeed;
-			var elevation = vehicle.GetComponentsInChildren<AimablePlatform>(true).FirstOrDefault(p => p != traverse && p.transform.parent != null && p.transform.parent.name.Contains("MAIN GUN"))
+			else
+			{
+				if (s.TurretSpeed > 0f) traverse.SpeedPowered = s.TurretSpeed;
+				if (s.TurretUnstabilised) traverse.Stabilized = false;
+			}
+			var elevation = s.GunPlatform != null
+				? vehicle.GetComponentsInChildren<AimablePlatform>(true).FirstOrDefault(p => p.name == s.GunPlatform)
+				: vehicle.GetComponentsInChildren<AimablePlatform>(true).FirstOrDefault(p => p != traverse && p.transform.parent != null && p.transform.parent.name.Contains("MAIN GUN"))
 				?? vehicle.GetComponentsInChildren<AimablePlatform>(true).FirstOrDefault(p => p != traverse);
 			if (elevation == null) MelonLogger.Warning($"{s.Tag}: gun elevation platform not found; the base's gun limits kept.");
 			else
@@ -84,6 +95,7 @@ namespace T90A.Common
 				_codex = Object.Instantiate(codex);
 				_codex.name = s.CodexName ?? s.GunName;
 				_codex.FriendlyName = s.GunName;
+				if (s.CodexCaliberMm > 0f) _codex.CaliberMm = s.CodexCaliberMm;
 			}
 			codexField.SetValue(gun, _codex);
 		}

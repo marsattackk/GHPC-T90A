@@ -42,6 +42,8 @@ namespace T90A.Common
 		internal readonly List<string> Problems = new List<string>();
 		readonly Env _globals = new Env(null);
 
+		internal double Num(string name) => ToNum(_globals.Get(name), name);
+
 		internal static ReticleSpec FromResource(System.Reflection.Assembly asm, string resource)
 		{
 			using (var s = asm.GetManifestResourceStream(resource))
@@ -448,6 +450,8 @@ namespace T90A.Common
 				v = null;
 				return false;
 			}
+
+			internal object Get(string k) => TryGet(k, out var v) ? v : throw new FormatException($"unknown name '{k}'");
 		}
 
 		sealed class Fn

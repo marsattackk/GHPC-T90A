@@ -36,7 +36,8 @@ namespace T90A.Common
 			if (smoke != null) smoke.localScale = Vector3.zero;
 		}
 
-		static readonly TrimmedSkin Trim = new TrimmedSkin("skirts / flaps / fenders / gills removed");
+		static TrimmedSkin _trim;
+		static TrimmedSkin Trim => _trim ??= new TrimmedSkin("skirts / flaps / fenders / gills removed");
 
 		public static string TrimFailure => Trim.Failure;
 

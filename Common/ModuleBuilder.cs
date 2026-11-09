@@ -86,8 +86,32 @@ namespace T90A.Common
 					go.tag = "Penetrable";
 					Followers.PlaceOnBone(go.transform, bone, group);
 					var boneInRoot = root.worldToLocalMatrix * bone.localToWorldMatrix;
+					float yaw = m.Boxes.Count > 0 ? m.Boxes[0].Yaw : 0f;
+					if (yaw != 0f)
+					{
+						var turn = Quaternion.Inverse(boneInRoot.rotation) * Quaternion.AngleAxis(yaw, Vector3.up);
+						go.transform.localRotation = go.transform.localRotation * turn;
+						boneInRoot = boneInRoot * Matrix4x4.Rotate(turn);
+					}
 					var toBone = boneInRoot.inverse;
-					foreach (var b in m.Boxes)
+					if (m.Hulls != null)
+						foreach (var (hv, ht) in m.Hulls)
+						{
+							var hm = new Mesh { name = $"{label} {m.Id} hit zone" };
+							hm.vertices = hv.Select(v => toBone.MultiplyPoint3x4(v)).ToArray();
+							hm.triangles = ht;
+							hm.RecalculateNormals(); hm.RecalculateBounds();
+							var mc = go.AddComponent<MeshCollider>();
+							mc.sharedMesh = hm; mc.convex = true;
+							if (look.material != null && m.XrayVerts == null && !m.NoXray)
+							{
+								var vis = new GameObject();
+								vis.AddComponent<MeshFilter>().sharedMesh = hm;
+								vis.AddComponent<MeshRenderer>();
+								XrayLook(vis, go.transform, look);
+							}
+						}
+					foreach (var b in m.Hulls != null ? new List<ModuleSpec.Box>() : m.Boxes)
 					{
 						var box = go.AddComponent<BoxCollider>();
 						box.center = toBone.MultiplyPoint3x4(b.Centre);
@@ -132,7 +156,7 @@ namespace T90A.Common
 					{
 						var av = go.AddComponent<AarVisual>();
 						av.RenderMode = look.template.RenderMode; av.SwitchMaterials = look.template.SwitchMaterials; av.PreserveLayerUntilAar = look.template.PreserveLayerUntilAar;
-						av.HideUntilAar = look.template.HideUntilAar; av.AarMaterial = look.template.AarMaterial;
+						av.HideUntilAar = look.template.HideUntilAar; av.AarMaterial = AarLook(m, look.template.AarMaterial);
 					}
 					go.SetActive(true);
 					RaycastColliderGroup.AddNewColliderSetToParentGroup(go.transform);
@@ -144,9 +168,29 @@ namespace T90A.Common
 
 		static (Transform group, Transform bone) Group(Transform root, string name)
 		{
-			var f = root.GetComponentsInChildren<LateFollow>(true).FirstOrDefault(x => x.name.IndexOf(name + " COLLIDERS", StringComparison.OrdinalIgnoreCase) >= 0 && x.FollowTarget != null);
+			var f = root.GetComponentsInChildren<LateFollow>(true).FirstOrDefault(x => RigBones.IsColliderGroup(x.name, name) && x.FollowTarget != null);
 			if (f == null) return (null, null);
 			return (f.transform.Find("AAR") ?? f.transform, f.FollowTarget);
+		}
+
+		static readonly Dictionary<string, Material> AarLooks = new Dictionary<string, Material>();
+		static Material AarLook(ModuleSpec.Module m, Material unitLook)
+		{
+			if (m.XrayMaterial == null && m.XrayColour == null) return unitLook;
+			string key = m.XrayMaterial + "|" + (m.XrayColour == null ? "" : string.Join(",", m.XrayColour));
+			if (AarLooks.TryGetValue(key, out var had) && had != null) return had;
+			Material found = null;
+			if (m.XrayMaterial != null)
+				foreach (var mat in Resources.FindObjectsOfTypeAll<Material>()) if (mat != null && mat.name == m.XrayMaterial) { found = mat; break; }
+			if (found == null && m.XrayColour != null && unitLook != null)
+			{
+				found = new Material(unitLook) { name = $"module x-ray {m.Id}" };
+				var c = m.XrayColour;
+				found.color = new Color(c[0], c[1], c[2], c.Length > 3 ? c[3] : unitLook.color.a);
+			}
+			if (found == null) found = unitLook;
+			AarLooks[key] = found;
+			return found;
 		}
 
 		static void XrayLook(GameObject vis, Transform zone, (AarVisual template, Material material, int layer, bool enabled) look)
@@ -319,7 +363,7 @@ namespace T90A.Common
 		{
 			string want = m.Fuel != null && m.Fuel.TryGetValue("compartment", out var cn) ? cn as string : "fighting compartment";
 			var comps = all.SelectMany(t => t.GetComponentsInChildren<Compartment>(true)).Distinct().Where(c => c.Name == want).ToList();
-			var comp = comps.FirstOrDefault(c => c.GetComponentsInParent<LateFollow>(true).Any(f => f.name.IndexOf(m.Group + " COLLIDERS", StringComparison.OrdinalIgnoreCase) >= 0)) ?? comps.FirstOrDefault();
+			var comp = comps.FirstOrDefault(c => c.GetComponentsInParent<LateFollow>(true).Any(f => RigBones.IsColliderGroup(f.name, m.Group))) ?? comps.FirstOrDefault();
 			if (comp == null) return;
 			var go = dc.gameObject;
 			go.SetActive(false);

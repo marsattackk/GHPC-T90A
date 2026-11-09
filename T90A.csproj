@@ -38,6 +38,9 @@
     <EmbeddedResource Include="Resources\tkn4s_day.jsonc" LogicalName="tkn4s_day.jsonc" />
     <EmbeddedResource Include="Resources\tkn4s_night.jsonc" LogicalName="tkn4s_night.jsonc" />
     <EmbeddedResource Include="Resources\essa_monitor.jsonc" LogicalName="essa_monitor.jsonc" />
+    <EmbeddedResource Include="Resources\essa_wide.jsonc" LogicalName="essa_wide.jsonc" />
+    <EmbeddedResource Include="Resources\essa_narrow.jsonc" LogicalName="essa_narrow.jsonc" />
+    <EmbeddedResource Include="Resources\essa_row.jsonc" LogicalName="essa_row.jsonc" />
     <EmbeddedResource Include="Resources\modules_built.json" LogicalName="modules_built.json" />
     <EmbeddedResource Include="Resources\interior_map.txt" LogicalName="interior_map.txt" />
     <EmbeddedResource Include="Resources\gun_depression.txt" LogicalName="gun_depression.txt" />

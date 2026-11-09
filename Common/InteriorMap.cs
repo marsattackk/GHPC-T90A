@@ -3,7 +3,6 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using GHPC;
-using GHPC.Utility;
 using MelonLoader;
 using UnityEngine;
 
@@ -43,6 +42,14 @@ namespace T90A.Common
 
 		internal readonly List<Move> Moves = new List<Move>();
 		internal readonly List<Copy> Copies = new List<Copy>();
+		internal sealed class ChargeSlot
+		{
+			public string Slot, Name;
+			public Vector3 Local;
+			public Quaternion Rot;
+		}
+
+		internal readonly List<ChargeSlot> ChargeSlots = new List<ChargeSlot>();
 		internal readonly List<Shape> Shapes = new List<Shape>();
 		internal readonly List<NewShape> News = new List<NewShape>();
 		static readonly FieldInfo ArmourName = Reflect.Field(typeof(UniformArmor), "_name");
@@ -99,6 +106,12 @@ namespace T90A.Common
 					map.Copies.Add(new Copy { Template = f[1], Name = f[2], ChargeTemplate = f[3] == "-" ? null : f[3], ChargeName = f[4] == "-" ? null : f[4], RackIndex = int.Parse(f[5], CI) });
 					continue;
 				}
+				if (f[0] == "chargeslot" && f.Length >= 5)
+				{
+					map.ChargeSlots.Add(new ChargeSlot { Slot = f[1], Name = f[2], Local = V3(f[3]), Rot = Q(f[4]) });
+					continue;
+				}
+				if (f[0] == "crewcopy" && f.Length >= 4) continue;
 				if (f[0] == "mesh" && f.Length >= 4)
 				{
 					map.Shapes.Add(new Shape { Path = f[1], Vertices = Verts(f[2]), Triangles = f[3].Split(',').Select(x => int.Parse(x, CI)).ToArray() });
@@ -198,6 +211,18 @@ namespace T90A.Common
 				if (m.Rot.HasValue) t.localRotation = m.Rot.Value;
 				if (m.Scale.HasValue) t.localScale = m.Scale.Value;
 			}
+			foreach (var c in ChargeSlots)
+			{
+				var t = Find(root, c.Slot);
+				var ph = t != null ? t.GetComponent<GHPC.Weapons.AmmoVisualPlaceholder>() : null;
+				if (ph == null) { problems?.Add($"'{c.Slot}' (slot for charge slot '{c.Name}') not found"); continue; }
+				if (t.parent.Find(c.Name) != null) continue;
+				var go = new GameObject(c.Name);
+				go.layer = t.gameObject.layer;
+				go.transform.SetParent(t.parent, false);
+				go.transform.localPosition = c.Local; go.transform.localRotation = c.Rot;
+				ph.PairedChargeSlot = go.transform;
+			}
 			foreach (var s in Shapes)
 			{
 				var t = Find(root, s.Path);
@@ -234,18 +259,6 @@ namespace T90A.Common
 			}
 		}
 
-		internal static Transform Find(Transform root, string path)
-		{
-			var t = root.Find(path);
-			if (t != null) return t;
-			int i = path.IndexOf('/');
-			string top = i < 0 ? path : path.Substring(0, i), rest = i < 0 ? null : path.Substring(i + 1);
-			var groups = new HashSet<LateFollow>(root.GetComponentsInChildren<LateFollow>(true));
-			foreach (var lt in root.GetComponentsInChildren<LateFollowTarget>(true))
-				foreach (var f in lt.LateFollowers) if (f != null) groups.Add(f);
-			foreach (var g in groups)
-				if (g.name == top) { var hit = rest == null ? g.transform : g.transform.Find(rest); if (hit != null) return hit; }
-			return null;
-		}
+		internal static Transform Find(Transform root, string path) => LivePath.Find(root, path);
 	}
 }

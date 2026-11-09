@@ -35,14 +35,13 @@ namespace T90A.Common
 
 		static string Bare(string name) => name.EndsWith(" (Instance)") ? name.Substring(0, name.Length - 11) : name;
 
-		internal static void Apply(Transform root, System.Func<Renderer, bool> filter, MaterialRoles roles)
+		internal static void Apply(Transform root, MaterialRoles roles)
 		{
 			var done = new Dictionary<string, int>();
 			var byName = new Dictionary<string, (MaterialRoles.Entry rule, Material mat)>();
 			foreach (var e in roles?.Applied ?? Enumerable.Empty<MaterialRoles.Entry>()) byName[e.Material] = (e, Get(e.Vanilla, e.Units));
 			foreach (var r in root.GetComponentsInChildren<Renderer>(true))
 			{
-				if (!filter(r)) continue;
 				var mats = r.sharedMaterials;
 				bool changed = false;
 				for (int i = 0; i < mats.Length; i++)

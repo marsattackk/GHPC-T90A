@@ -99,36 +99,6 @@ namespace T90A
 			return so;
 		}
 
-		// Nothing describes the ESSA's mark, so it's the 1G46 chevron and leads, lit.
-		public static ReticleSO BuildEssa()
-		{
-			ReticleSO so = ScriptableObject.CreateInstance<ReticleSO>();
-			so.name = "ESSA";
-			so.lights = new List<ReticleTree.Light> { new ReticleTree.Light { type = ReticleTree.Light.Type.Powered, color = new RGB(2f, 2f, 2f) } };
-
-			var plane = new ReticleTree.FocalPlane(ReticleTree.FocalPlane.Type.First);
-			plane.elements = new List<ReticleTree.TransformElement>();
-			so.planes.Add(plane);
-
-			var bore = Group(null, "Boresight", 0f, 0f, ReticleTree.GroupBase.Alignment.Boresight);
-			var moving = Group(null, "VerticalRange", 0f, 0f, ReticleTree.GroupBase.Alignment.VerticalRange);
-			plane.elements.Add(bore);
-			plane.elements.Add(moving);
-
-			var chevron = Group(bore, "Chevron", 0f, 0f);
-			chevron.elements.Add(Line(chevron, 0.75f, -1.55f, 294.97f, 3.6652f));
-			chevron.elements.Add(Line(chevron, -0.7461f, -1.5504f, 65.03f, 3.6652f));
-			bore.elements.Add(chevron);
-			moving.elements.Add(LeadMarks(moving));
-
-			foreach (var line in AllOf<ReticleTree.Line>(so))
-			{
-				line.visualType = ReticleTree.VisualElement.Type.ReflectedAdditive;
-				line.illumination = ReticleTree.Light.Type.Powered;
-			}
-			return so;
-		}
-
 		public static AmmoCodexScriptable FindAmmo(string name, ReticleSO host, string fallbackToken)
 		{
 			AmmoCodexScriptable found = Resources.FindObjectsOfTypeAll<AmmoCodexScriptable>().FirstOrDefault(a => a.name == name);

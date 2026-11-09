@@ -18,11 +18,12 @@ namespace T90A.Common
 			public Transform Swing;
 			public Vector3 Axis, Lift;
 			public float Angle;
+			public bool Shut;
 			float _last = -1f;
 
 			void LateUpdate()
 			{
-				float o = Part != null ? Part.Openness : 0f;
+				float o = Shut || Part == null ? 0f : Part.Openness;
 				if (o == _last) return;
 				_last = o;
 				Pose(o);
@@ -83,7 +84,8 @@ namespace T90A.Common
 				var aar = part.OtherAarTransforms ?? new Transform[0];
 				if (!aar.Contains(swing)) part.OtherAarTransforms = aar.Concat(new[] { swing }).ToArray();
 			}
-			if (map.RunningGear == "port")
+			if (map.RunningGear == "follow") GearFollow.Apply(root, map, prefix, Find);
+			else if (map.RunningGear == "port")
 			{
 				foreach (var g in map.GearParts)
 				{
@@ -191,7 +193,8 @@ namespace T90A.Common
 		internal static float FlapWeight(float s, float depth, float half, float taper, float ramp)
 		{
 			float S(float t) { t = Mathf.Clamp01(t); return t * t * (3f - 2f * t); }
-			return S((half - Mathf.Abs(s)) / Mathf.Max(taper, 1e-4f)) * S(depth / Mathf.Max(ramp, 1e-4f));
+			float ends = taper > 0f ? S((half - Mathf.Abs(s)) / taper) : 1f;
+			return ends * S(depth / Mathf.Max(ramp, 1e-4f));
 		}
 
 		static void Flap(Transform root, Transform vis, RigMap.Flap f, string prefix, out Jiggle jiggle)
@@ -238,7 +241,7 @@ namespace T90A.Common
 			var j = hinge.gameObject.AddComponent<Jiggle>();
 			j.UseCenterOfMass = true;
 			j.CenterOfMass = new Vector3(0f, -SkirtCom, 0f);
-			j.CenterOfMassInertia = SkirtInertia;
+			j.CenterOfMassInertia = f.Lag > 0f ? f.Lag : SkirtInertia;
 			// Not the skirt's 1: that holds the bone's world turn and the nets trail a slewing turret, twisted.
 			j.RotationInertia = 0f;
 			j.SpringStrength = SkirtSpring;

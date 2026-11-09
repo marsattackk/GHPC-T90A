@@ -33,6 +33,7 @@ namespace T90A.Common
 			public string Texture;
 			public string Atlas;
 			public string Shape;
+			public ChargeSplit Charge;
 		}
 
 		internal sealed class Rack
@@ -65,6 +66,7 @@ namespace T90A.Common
 			public bool BeamOnBaseUnit;
 			public string CoaxFeed = "PKT";
 			public int CoaxRounds, CoaxBelt = 250;
+			public bool SingleRound;
 		}
 
 		internal static Settings S;
@@ -88,7 +90,7 @@ namespace T90A.Common
 			AmmoType SourceOf(Round r) => clips.FirstOrDefault(c => c.name == r.Source)?.ClipType.MinimalPattern[0].AmmoType;
 			Heat = clips.FirstOrDefault(c => c.name == S.FixedHeat);
 			var missing = S.Apfsds.Concat(S.Missile != null ? new[] { S.Missile } : new Round[0]).Concat(S.Extra).Where(r => SourceOf(r) == null).Select(r => r.Source).ToList();
-			if (Heat == null) missing.Add(S.FixedHeat);
+			if (Heat == null && !S.SingleRound) missing.Add(S.FixedHeat);
 			if (missing.Count > 0 || S.Apfsds.Length == 0)
 			{
 				MelonLogger.Warning($"{S.Tag} ammo: vanilla {string.Join(", ", missing)} not loaded yet; keeping base ammo.");
@@ -173,6 +175,7 @@ namespace T90A.Common
 
 		static List<AmmoClipCodexScriptable> PortList(IEnumerable<AmmoClipCodexScriptable> baseClips, AmmoClipCodexScriptable ap)
 		{
+			if (S.SingleRound) return new List<AmmoClipCodexScriptable> { ap };
 			var list = baseClips.Take(3).ToList();
 			list[0] = ap;
 			list[1] = Heat;
@@ -188,7 +191,7 @@ namespace T90A.Common
 			preferred = null;
 			if (!Build()) return null;
 			var list = baseList?.Asset as VehicleAmmoListScriptable ?? OwnLoad(baseList);
-			if (list?.AmmoClips == null || list.AmmoClips.Length < 3) return null;
+			if (list?.AmmoClips == null || list.AmmoClips.Length < (S.SingleRound ? 1 : 3)) return null;
 			var clips = PortList(list.AmmoClips, DefaultApfsds(warn: false));
 			clips.Remove(Heat);
 			var sets = new List<AmmoLogisticsScriptable>();
@@ -246,6 +249,7 @@ namespace T90A.Common
 				if (stored != null) { stored.AmmoType = ammo; stored.AmmoScriptable = codex; }
 				ApplyLook(visual, r);
 				ApplyShape(visual, r);
+				ApplyCharge(visual, r);
 				ammo.VisualModel = visual;
 			}
 			return clipCodex;
@@ -280,8 +284,48 @@ namespace T90A.Common
 			}
 		}
 
+		internal sealed class ChargeSplit
+		{
+			public string[] Parts;
+			public string Projectile;
+		}
+
+		static void ApplyCharge(GameObject model, Round r)
+		{
+			if (r.Charge == null) return;
+			var stored = model.GetComponent<AmmoStoredVisual>();
+			var all = model.GetComponentsInChildren<Transform>(true);
+			var parts = r.Charge.Parts.Select(p => all.FirstOrDefault(t => t != model.transform && ShapePartIs(model, t, p))).ToArray();
+			if (stored == null || parts.Any(p => p == null)) { MelonLogger.Warning($"{S.Tag}: the {r.Id} model has no such charge parts; it stays one piece."); return; }
+			var keep = r.Charge.Projectile != null ? all.FirstOrDefault(t => ShapePartIs(model, t, r.Charge.Projectile)) : null;
+			if (keep != null)
+			{
+				var from = keep.parent.GetComponent<AarVisual>();
+				keep.SetParent(model.transform, true);
+				if (from != null && keep.GetComponent<AarVisual>() == null)
+				{
+					var aar = keep.gameObject.AddComponent<AarVisual>();
+					aar.RenderMode = from.RenderMode; aar.SwitchMaterials = from.SwitchMaterials; aar.PreserveLayerUntilAar = from.PreserveLayerUntilAar;
+					aar.HideUntilAar = from.HideUntilAar; aar.AarMaterial = from.AarMaterial;
+				}
+			}
+			var charge = new GameObject(r.Id + " charge");
+			charge.layer = model.layer;
+			charge.transform.SetParent(model.transform, false);
+			foreach (var p in parts) p.SetParent(charge.transform, true);
+			stored.ChargeVisual = charge.transform;
+		}
+
 		static readonly Dictionary<string, Mesh> _shapeMeshes = new Dictionary<string, Mesh>();
 		static string[] _shapeIndex;
+
+		static bool ShapePartIs(GameObject model, Transform t, string part)
+		{
+			if (!part.StartsWith("/")) return t.name == part;
+			var path = "";
+			for (var p = t; p != null && p != model.transform; p = p.parent) path = "/" + p.name + path;
+			return path == part;
+		}
 
 		static void ApplyShape(GameObject model, Round r)
 		{
@@ -303,7 +347,7 @@ namespace T90A.Common
 					{
 						var mesh = ShapeMesh(f[3], f.Length >= 7 ? f : null);
 						if (mesh == null) { missing++; continue; }
-						foreach (var mf in model.GetComponentsInChildren<MeshFilter>(true).Where(x => x.name == f[2])) { mf.sharedMesh = mesh; meshes++; }
+						foreach (var mf in model.GetComponentsInChildren<MeshFilter>(true).Where(x => ShapePartIs(model, x.transform, f[2]))) { mf.sharedMesh = mesh; meshes++; }
 					}
 					else if (f[0] == "capsule")
 					{
@@ -466,10 +510,10 @@ namespace T90A.Common
 			var lm = vehicle.GetComponent<LoadoutManager>();
 			var clips = lm?.LoadedAmmoList?.AmmoClips;
 			if (lm == null || clips == null) { Report(vehicle, problems.Concat(new[] { "no loadout" })); return; }
-			int expected = 3 + (Missile != null ? 1 : 0) + Extras.Count;
+			int expected = S.SingleRound ? 1 : 3 + (Missile != null ? 1 : 0) + Extras.Count;
 			if (clips.Length != expected) problems.Add($"ammo list has {clips.Length} entries, expected {expected}");
 			if (clips.Length > 0 && !Apfsds.Values.Any(a => ReferenceEquals(a, clips[0]))) problems.Add($"APFSDS slot holds '{clips[0]?.ClipType?.Name}'");
-			if (clips.Length > 1 && !ReferenceEquals(clips[1], Heat)) problems.Add($"HEAT slot holds '{clips[1]?.ClipType?.Name}'");
+			if (!S.SingleRound && clips.Length > 1 && !ReferenceEquals(clips[1], Heat)) problems.Add($"HEAT slot holds '{clips[1]?.ClipType?.Name}'");
 			bool xray = AarController.ShowXray || AarController.InAar;
 			var cm = ConstantsAndInfoManager.Instance;
 			int aarLayer = cm != null ? cm.AarLayer : 15, xrayLayer = cm != null ? cm.XrayOnlyLayer : 21;

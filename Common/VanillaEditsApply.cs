@@ -104,7 +104,7 @@ namespace T90A.Common
 			var set = new HashSet<LateFollow>(root.GetComponentsInChildren<LateFollow>(true));
 			foreach (var t in root.GetComponentsInChildren<LateFollowTarget>(true))
 				foreach (var f in t.LateFollowers) if (f != null) set.Add(f);
-			return set.Where(f => f.name.Contains("COLLIDERS")).Select(f => f.transform).ToList();
+			return set.Where(f => RigBones.IsColliderGroup(f.name)).Select(f => f.transform).ToList();
 		}
 
 		static LateFollow Follower(Transform t) => t.GetComponentsInParent<LateFollow>(true).FirstOrDefault(f => f.FollowTarget != null);

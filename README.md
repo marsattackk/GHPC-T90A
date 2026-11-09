@@ -18,7 +18,7 @@ together.
   <img src="docs/images/t90a_firing.jpg" width="49%" alt="The T-90A firing">
 </p>
 
-This README describes **version 0.4.3**. No other mod needed, just MelonLoader.
+This README describes **version 0.4.4**. No other mod needed, just MelonLoader.
 
 ## Installing it
 
@@ -234,14 +234,19 @@ cheeks).
 
 <p align="center">
   <img src="docs/images/sight_1g46.jpg" width="49%" alt="1G46 gunner's sight, day">
-  <img src="docs/images/sight_essa_monitor.jpg" width="36.75%" alt="ESSA thermal sight on its 4:3 monitor">
+  <img src="docs/images/sight_essa_narrow.webp" width="49%" alt="ESSA thermal sight, narrow field, cross and readout boxes">
+</p>
+<p align="center">
+  <img src="docs/images/sight_essa_wide.webp" width="49%" alt="ESSA thermal sight, wide field">
+  <img src="docs/images/sight_essa_zoom.webp" width="49%" alt="ESSA thermal sight, narrow field with the x2 electronic zoom">
 </p>
 <p align="center">
   <img src="docs/images/sight_tkn4s_day.jpg" width="49%" alt="TKN-4S commander's sight, day channel">
   <img src="docs/images/tkn4s_night.webp" width="49%" alt="TKN-4S commander's sight, night channel">
 </p>
 
-*Top: the gunner's 1G46 by day and the ESSA thermal. Bottom: the commander's TKN-4S, day and night channels.*
+*Top: the gunner's 1G46 by day and the ESSA thermal's narrow field. Middle: the ESSA's wide field, and the narrow field
+with the x2 zoom. Bottom: the commander's TKN-4S, day and night channels.*
 
 - **1G46 + 1A45T fire control** for the gunner: 2.7-12x, stabilised on its own like the real one, laser rangefinder.
 - **ESSA** thermal on its 4:3 CRT monitor, the way the gunner actually sees it, or the **Buran-M** as a setting.
@@ -254,7 +259,10 @@ cheeks).
   sideways, the real head's travel, and the turret catches up. Its head is the low hooded box on the roof in front of
   the gunner's hatch.
 - **ESSA** (default, most T-90As from 2006): the camera's 754 x 576 on a 4:3 CRT monitor, scan lines and black bars
-  either side. 9 × 6.75° / 3 × 2.25°, electronic x2 zoom, up to 7.5° ahead of the turret. **Buran-M** (2004, the image intensifier of the first 32
+  either side. 9 × 6.75° / 3 × 2.25°, electronic x2 zoom, up to 7.5° ahead of the turret. The narrow field has the
+  thin cross from the sight's manual and four black boxes under it: ready, round, range, mode. The wide field isn't for
+  firing, so no cross, just corner marks and a status box. The camera scans with a row of detectors, so the picture has
+  faint streaks that drift about. **Buran-M** (2004, the image intensifier of the first 32
   tanks): on its own stabilised head, -10° / +20°. The night sight's head is the tall box behind the 1G46's.
 - **TKN-4S:** reticles drawn from a photo of the real one and the PNK-4S manual. Aiming chevron, lead marks, stadiametric rangefinder, the Kord's ballistic scale and the ammo / ready
   indicator at the bottom. Select the Kord and you're straight in it ("Cycle View" goes to the PZU-7 and back).
@@ -501,6 +509,9 @@ main menu if those vehicles would be unloaded again before then.
 | Turret side | 70 / 80 mm | btvt gives 70. Russian Wikipedia's 110 is uncited and probably counts an optional add-on plate the model doesn't have. |
 | TKN-4S "Dubl" mode | not built | The commander can't fire the main gun from the TKN-4S. Its main-gun scales are still drawn where they are on the real reticle. |
 | TKN-4S night field of view, Kord drive speeds | best guesses | Nothing published. |
+| ESSA wide field marks | corner marks and a status box, laid out like the T-90M's Sosna-U | I couldn't get hold of the manual's picture of that field. |
+| ESSA mode box | always reads "ОСН" | The other fire-control modes aren't modelled. |
+| ESSA scan streaks | how strong they are and how fast they drift | Set by eye, nothing published. |
 | Kord for the AI | AI T-90As don't use it | Kept simple, your commander does. |
 | Shtora-1 jammer | breaks a missile's guidance 6 times in 10 | 0.6 is the published figure for MILAN and HOT. The same chance is used for TOW and the Soviet missiles. |
 | Shtora-1 panel lamps | top row = the front heads, bottom row = the rear heads, left / right | The real panel has four lamps in a square, but no source I found says which lamp means what, so that's inferred from the four heads. The mode knob is drawing only. |

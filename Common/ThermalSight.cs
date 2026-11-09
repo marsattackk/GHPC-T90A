@@ -13,6 +13,7 @@ using HarmonyLib;
 using MelonLoader;
 using UnityEngine;
 using UnityEngine.Rendering.PostProcessing;
+using UnityEngine.UI;
 
 namespace T90A.Common
 {
@@ -31,12 +32,16 @@ namespace T90A.Common
 			public Action<UsableOptic> Readout;
 			public bool Monitor;
 			public bool Crt = true;
+			public float ScanStreaks;
+			public int ScanRows;
+			public float ScanDriftSeconds;
 		}
 
-		static readonly FieldInfo UnitNightVision = Reflect.Field(typeof(GHPC.Unit), "_nightVisionType");
+		static FieldInfo _unitNightVision;
 
 		// AI night spotting (VisibilityManager) reads the unit's type, not the slot's.
-		internal static void SetUnitNightVision(Vehicle vehicle, CameraSlot slot) => UnitNightVision?.SetValue(vehicle, slot.VisionType);
+		internal static void SetUnitNightVision(Vehicle vehicle, CameraSlot slot)
+			=> (_unitNightVision ??= Reflect.Field(typeof(GHPC.Unit), "_nightVisionType"))?.SetValue(vehicle, slot.VisionType);
 
 		internal static bool Apply(UsableOptic day, UsableOptic night, Settings s)
 		{
@@ -108,6 +113,7 @@ namespace T90A.Common
 			}
 
 			night.gameObject.AddComponent<Resolution>().Init(slot, s.ElectronicFov, s.Width, s.Height);
+			if (s.ScanStreaks > 0f && s.ScanRows > 0) ScanStreaks.Add(night, s.ScanStreaks, s.ScanRows, s.ElectronicFov, s.ScanDriftSeconds);
 
 			// The gate's on the day sight's GPS, which freezes once it isn't the view: from the thermal the gun read off after a reload.
 			if (day.FCS != null) night.gameObject.AddComponent<GateFollowsSight>().Init(day.FCS, slot);
@@ -130,6 +136,78 @@ namespace T90A.Common
 			v.weight = 1f;
 			v.enabled = false;
 			return v;
+		}
+
+		internal class ScanStreaks : MonoBehaviour
+		{
+			CameraSlot _slot;
+			float _electronicFov;
+			RawImage _image;
+			Texture2D _tex;
+			Color32[] _pixels;
+			float[] _gain;
+			float _drift, _nextPaint;
+
+			internal static void Add(UsableOptic optic, float strength, int rows, float electronicFov, float driftSeconds)
+			{
+				var root = new GameObject("Thermal scan streaks", typeof(RectTransform));
+				root.transform.SetParent(optic.transform, false);
+				var canvas = root.AddComponent<Canvas>();
+				canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+				canvas.sortingOrder = -2;
+				var picture = new GameObject("streaks", typeof(RectTransform));
+				picture.transform.SetParent(root.transform, false);
+				var rt = (RectTransform)picture.transform;
+				rt.anchorMin = Vector2.zero;
+				rt.anchorMax = Vector2.one;
+				rt.sizeDelta = Vector2.zero;
+				var s = root.AddComponent<ScanStreaks>();
+				s._slot = optic.slot;
+				s._electronicFov = electronicFov;
+				s._image = picture.AddComponent<RawImage>();
+				s._drift = driftSeconds;
+				s._tex = new Texture2D(1, rows, TextureFormat.RGBA32, false) { name = "scan streaks", filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+				s._pixels = new Color32[rows];
+				s._gain = new float[rows];
+				var rnd = new System.Random(rows);
+				for (int y = 0; y < rows; y++) s._gain[y] = strength * (rnd.Next(24) == 0 ? 1.6f : 1f);
+				s.Paint();
+				s._image.texture = s._tex;
+				s._image.raycastTarget = false;
+				optic.slot.ZoomChanged += s.Refresh;
+				s.Refresh();
+			}
+
+			void Paint()
+			{
+				float t = (_drift > 0f ? Time.time / _drift : 0f) + 0.37f;
+				for (int y = 0; y < _pixels.Length; y++)
+				{
+					float v = Mathf.Clamp01((Mathf.PerlinNoise(y * 13.37f + 0.5f, t) - 0.25f) * 2f);
+					_pixels[y] = new Color32(0, 0, 0, (byte)(Mathf.Clamp01(v * _gain[y]) * 255f));
+				}
+				_tex.SetPixels32(_pixels);
+				_tex.Apply(false, false);
+			}
+
+			void Update()
+			{
+				if (_drift <= 0f || !_slot.IsActive || Time.time < _nextPaint) return;
+				_nextPaint = Time.time + 0.25f;
+				Paint();
+			}
+
+			void OnDestroy()
+			{
+				if (_slot != null) _slot.ZoomChanged -= Refresh;
+				if (_tex != null) Destroy(_tex);
+			}
+
+			void Refresh()
+			{
+				bool electronic = _electronicFov > 0f && _slot.FovIndex > 0 && Mathf.Approximately(_slot.OtherFovs[_slot.FovIndex - 1], _electronicFov);
+				_image.uvRect = electronic ? new Rect(0f, 0.25f, 1f, 0.5f) : new Rect(0f, 0f, 1f, 1f);
+			}
 		}
 
 		internal class Resolution : MonoBehaviour

@@ -44,6 +44,13 @@ namespace T90A.Common
 
 		internal static float Diameter(float sectionalArea) => sectionalArea > 0f ? 2f * (float)Math.Sqrt(sectionalArea / Math.PI) : 0f;
 
+		internal static V3 FrameVelocity(bool hasPrev, V3 move, float dt, bool hasLast, V3 last, V3 fallback)
+		{
+			if (!hasPrev || dt <= 1e-5f) return hasLast ? last : fallback;
+			if (move.Length < 1e-4f) return hasLast ? last : fallback;
+			return move * (1f / dt);
+		}
+
 		internal static string Window(Geometry g, float speed, float diameter, bool spall)
 		{
 			if (spall) return "spall";

@@ -11,6 +11,7 @@ using MelonLoader;
 using UnityEngine;
 using UnityEngine.Events;
 using DC = GHPC.Equipment.DestructibleComponent;
+using System.Reflection;
 
 namespace T90A.Common
 {
@@ -21,7 +22,6 @@ namespace T90A.Common
 			public string Name;
 			public Vector3[] Mouths;
 			public float AxisAz, AxisEl;
-			public float CapAz, CapEl;
 			public float AzMin, AzMax;
 			public int Side;
 			public string Module;
@@ -37,6 +37,7 @@ namespace T90A.Common
 			public BlockSpec[] Blocks = new BlockSpec[0];
 			public int RoundsPerBlock = 2;
 			public string[] SensorModules = new string[0];
+			public string ComputerModule;
 			public float ElMin = -6f, ElMax = 20f, SearchRange = 330f, TrackRange = 130f, MinRange = 11f;
 			public float SpeedMin = 70f, SpeedMax = 700f, SizeMin = 0.036f, ReactionTime = 0.02f;
 			public float RoundSpeed = 190f, InterceptRange = 6.7f, BurstMin = 6f, BurstMax = 8f, FragReach = 1.5f, ConeReach = 3f, Cooldown = 0.35f, OtherSide = 0.035f;
@@ -46,14 +47,14 @@ namespace T90A.Common
 			public string[] BoxLeaveOut = { };
 			public float PAtgm = 1f, PGrenade = 0.7f, PHeat = 0.78f, PHe = 0.78f;
 			public float PBrokenUp = 0f;
+			public float WarheadFragShare = 1f;
 			public string[] GrenadePrefixes = { "PG-", "RPG", "M72", "S-5", "S-8", "Hydra" };
 			public int FragCount = 60;
 			public float FragConeHalf = 15f, FragSpeed = 1600f;
 			public float FragMass = 0.003f, FragArea = 4.86e-5f, FragCoeff = 0.6f, FragPen = 6f, FragPenSpeed = 1200f;
 			public float ReloadPerRound = 60f, ReloadMaxSpeed = 0.5f;
 			public string LaunchEvent = "event:/Weapons/launcher_9M14";
-			public Color CapColour = new Color(0.55f, 0.06f, 0.05f);
-			public float CapDiameter = 0.107f, CapThickness = 0.012f;
+			public string CapPrefix = "aps_cap_";
 		}
 
 		internal sealed class Watched
@@ -61,8 +62,10 @@ namespace T90A.Common
 public int Id;
 			public ApsMath.Track T = new ApsMath.Track();
 			public Vector3 Prev; public int PrevFrame = -10;
+			public V3 Vel; public bool HasVel;
 			public Vector3 Mean; public bool HasMean;
 			public bool WindowLogged;
+			public Vector3 Mouth; public bool Launched; public int Tube;
 			public int LastFrame;
 		}
 
@@ -79,6 +82,7 @@ public int Id;
 			internal float ReloadLeft;
 			internal Transform Turret;
 			internal DC[] BlockDc, SensorDc;
+			internal DC ComputerDc;
 			internal Renderer[][] Caps;
 			internal Bounds Box;
 			readonly Dictionary<LiveRound, Watched> _tracks = new Dictionary<LiveRound, Watched>();
@@ -113,12 +117,12 @@ public int Id;
 				St = new ApsMath.State(G);
 				BlockDc = new DC[G.Blocks.Length]; SensorDc = new DC[2];
 				Box = OwnBox(v, s);
-				Caps = MakeCaps(s);
+				Caps = BindCaps(s, out var capNote);
 				if (s.OnAtSpawn) { On = true; ReadyAt = 0f; }
 				Stations.Add(this);
 				EnsurePatched();
 				return $"{G.Blocks.Length} blocks ({string.Join("; ", G.Blocks.Select((b, i) => $"{b.Name} {b.AzMin:+0;-0}..{b.AzMax:+0;-0} deg, axis {b.AxisAz:+0;-0}, mouth {b.Mouth} turret frame, burst {b.Burst(G.InterceptRange)}, {St.Rounds[i]} rounds"))}), "
-					+ $"radar origin {G.Origin}, protected box {Box.center:F2} size {Box.size:F2} (vehicle frame; {_boxParts}), {(On ? "on at spawn" : "off at spawn")}, covers {Caps.Sum(c => c.Length)}";
+					+ $"radar origin {G.Origin}, protected box {Box.center:F2} size {Box.size:F2} (vehicle frame; {_boxParts}), {(On ? "on at spawn" : "off at spawn")}, {capNote}";
 			}
 
 			static Bounds OwnBox(Vehicle v, Settings s)
@@ -174,32 +178,27 @@ public int Id;
 				return false;
 			}
 
-			Renderer[][] MakeCaps(Settings s)
+			Renderer[][] BindCaps(Settings s, out string note)
 			{
 				var root = Vehicle.transform;
-				var flir = Shader.Find("Standard (FLIR)") ?? Shader.Find("Standard");
-				Material mat = flir != null ? new Material(flir) { name = "aps cover", color = s.CapColour } : null;
+				var free = Vehicle.GetComponentsInChildren<MeshRenderer>(true).Where(r => r.name.StartsWith(s.CapPrefix)).ToList();
+				int found = free.Count, bound = 0; float worst = 0f;
 				var all = new Renderer[s.Blocks.Length][];
 				for (int i = 0; i < s.Blocks.Length; i++)
 				{
 					var b = s.Blocks[i];
 					all[i] = new Renderer[b.Mouths.Length];
-					var axisPrefab = Quaternion.Euler(-b.CapEl, b.CapAz, 0f) * Vector3.forward;
 					for (int k = 0; k < b.Mouths.Length; k++)
 					{
-						var go = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-						go.name = $"{s.VisualPrefix ?? ""}aps_cover_{i + 1}_{k + 1}";
-						var col = go.GetComponent<Collider>(); if (col != null) UnityEngine.Object.Destroy(col);
-						go.transform.SetParent(Turret, false);
-						var worldAxis = root.TransformDirection(axisPrefab);
-						go.transform.position = root.TransformPoint(b.Mouths[k]) + worldAxis * (s.CapThickness * 0.5f);
-						go.transform.rotation = Quaternion.FromToRotation(Vector3.up, worldAxis);
-						go.transform.localScale = new Vector3(s.CapDiameter, s.CapThickness * 0.5f, s.CapDiameter);
-						var r = go.GetComponent<Renderer>();
-						if (mat != null) r.sharedMaterial = mat;
-						all[i][k] = r;
+						var at = root.TransformPoint(b.Mouths[k]);
+						var best = free.OrderBy(r => (r.transform.position - at).sqrMagnitude).FirstOrDefault();
+						if (best == null || (best.transform.position - at).magnitude > 0.15f) continue;
+						worst = Mathf.Max(worst, (best.transform.position - at).magnitude);
+						free.Remove(best); all[i][k] = best; bound++;
 					}
 				}
+				note = found == 0 ? $"no {s.CapPrefix}* covers in the bundle (tubes shown open)" : $"{bound} of {found} covers bound to their tubes (at most {worst * 100f:0.0} cm off a mouth)";
+				if (found > 0 && bound < s.Blocks.Sum(x => x.Mouths.Length)) DonorParts.WarnOnce("aps covers", $"{s.Tag}: only {bound} tube covers found for {s.Blocks.Sum(x => x.Mouths.Length)} tubes.");
 				return all;
 			}
 
@@ -222,6 +221,7 @@ public int Id;
 				{
 					for (int i = 0; i < S.Blocks.Length; i++) if (S.Blocks[i].Module != null && m.Id == S.Blocks[i].Module) BlockDc[i] = dc;
 					for (int k = 0; k < S.SensorModules.Length && k < 2; k++) if (S.SensorModules[k] != null && m.Id == S.SensorModules[k]) SensorDc[k] = dc;
+					if (S.ComputerModule != null && m.Id == S.ComputerModule) ComputerDc = dc;
 				}
 			}
 
@@ -229,6 +229,7 @@ public int Id;
 			{
 				if (Vehicle == null || Vehicle.Neutralized) return "unit knocked out";
 				if (!On) return "switched off";
+				if (ComputerDc != null && ComputerDc.IsDestroyed) return "computer destroyed";
 				if (Time.time < ReadyAt) return $"warming up, {ReadyAt - Time.time:0} s left";
 				if (Reloading) return "reloading";
 				if (S.HatchInterlock && HatchOpen() is string h
@@ -322,7 +323,11 @@ public int Id;
 					_tracks[r] = w;
 				}
 				int f = Time.frameCount;
-				Vector3 vel = w.PrevFrame == f - 1 && dt > 1e-5f ? (pos - w.Prev) / dt : r.transform.forward * (r.CurrentSpeed > 1f ? r.CurrentSpeed : (r.Info != null ? r.Info.MuzzleVelocity : 0f));
+				var fb = r.transform.forward * (r.CurrentSpeed > 1f ? r.CurrentSpeed : (r.Info != null ? r.Info.MuzzleVelocity : 0f));
+				var mv = pos - w.Prev;
+				var v3 = ApsMath.FrameVelocity(w.PrevFrame == f - 1, new V3(mv.x, mv.y, mv.z), dt, w.HasVel, w.Vel, new V3(fb.x, fb.y, fb.z));
+				Vector3 vel = new Vector3(v3.x, v3.y, v3.z);
+				w.Vel = v3; w.HasVel = true;
 				w.Prev = pos; w.PrevFrame = f; w.LastFrame = f;
 				if (w.T.Done) return;
 				var pT = Turret.InverseTransformPoint(pos);
@@ -365,6 +370,7 @@ public int Id;
 				var spec = S.Blocks[bi];
 				int tube = Mathf.Clamp(St.Rounds[bi], 0, spec.Mouths.Length - 1);
 				var mouth = Vehicle.transform.TransformPoint(spec.Mouths[tube]);
+				w.Mouth = spec.Mouths[tube]; w.Launched = true; w.Tube = tube + 1;
 				if (Caps != null && Caps[bi][tube] != null) Caps[bi][tube].enabled = false;
 				Blast.Play(mouth, Blast.Size.ApsLaunch, false);
 				try { GHPC.Audio.FmodGenericAudioManager.PlayOneShot(S.LaunchEvent, mouth); } catch (Exception e) { DonorParts.WarnOnce("aps launch sound", $"{S.Tag}: launch sound '{S.LaunchEvent}' failed: {e.Message}"); }
@@ -386,6 +392,8 @@ public int Id;
 					w.T.Why = $"{w.T.Why}; burst, but {block.collider.name} between the threat and the burst point: no effect";
 					Blast.Play(burstWorld, Blast.Size.ApsBurst);
 					Fragments(burstWorld, axisWorld);
+					r.Story?.TryAddStoryEvent($"{Engaged(blk.Name, w)}: {block.collider.name} in the way, no effect");
+					RecapLines(r, w, burstWorld, axisWorld, null);
 					Report(w);
 					return;
 				}
@@ -393,6 +401,8 @@ public int Id;
 				int frags = Fragments(burstWorld, axisWorld);
 				if (!res.InField)
 				{
+					r.Story?.TryAddStoryEvent($"{Engaged(blk.Name, w)}: missed by {res.Miss:0.0} m, outside the fragments, not destroyed");
+					RecapLines(r, w, burstWorld, axisWorld, null);
 					w.T.Why = $"{w.T.Why}, burst {w.T.BurstRange:0.0} m out, the threat {res.Miss:0.0} m from it, outside the fragment field: no effect; frags {frags}";
 					Report(w);
 					return;
@@ -402,6 +412,8 @@ public int Id;
 				float draw = ModRandom.Value;
 				bool kill = ApsMath.Kills(pk, draw);
 				string fate;
+				r.Story?.TryAddStoryEvent($"{Engaged(blk.Name, w)}: fragments hit it {res.Miss:0.0} m from the burst");
+				RecapLines(r, w, burstWorld, axisWorld, hitWorld);
 				if (kill)
 				{
 					r.transform.position = hitWorld;
@@ -418,11 +430,25 @@ public int Id;
 					{
 						Armed(r) = true;
 						r.Story?.TryAddStoryEvent($"Intercepted by {S.Name} ({blk.Name} block)");
+						var info = r.Info;
+						if (Explode != null && info != null)
+						{
+							int orig = info.DetonateSpallCount;
+							int n = Mathf.Max(1, Mathf.RoundToInt((orig > 0 ? orig : 50) * S.WarheadFragShare));
+							try { info.DetonateSpallCount = n; Explode.Invoke(r, new object[] { false, 0f, Vector3.zero, 0.03f, n }); }
+							catch (Exception e) { PatchGuard.Failed($"{S.Tag} warhead fragments", e); }
+							finally { info.DetonateSpallCount = orig; }
+						}
 						r.Detonate();
 						fate = "destroyed (warhead set off)";
 					}
+					InRecap(r, hitWorld);
 				}
-				else fate = $"not destroyed (roll {draw:0.00} >= {pk:0.00}), flies on";
+				else
+				{
+					r.Story?.TryAddStoryEvent($"Not destroyed by {S.Name}, flies on");
+					fate = $"not destroyed (roll {draw:0.00} >= {pk:0.00}), flies on";
+				}
 				var shooter = r.Shooter;
 				if (shooter != null && shooter.Allegiance != Vehicle.Allegiance)
 					try { Vehicle.NotifyStruck(shooter, r.Info, hitWorld); } catch (Exception e) { PatchGuard.Failed($"{S.Tag} AI notice", e); }
@@ -431,6 +457,80 @@ public int Id;
 				if (IsPlayer)
 					MelonLogger.Msg($"{S.Name}: {(kill ? "intercepted" : "engaged")} {r.Info?.Name ?? "a round"} ({blk.Name} block){(kill ? "" : ", not destroyed")}; {St.SideRounds(G, blk.Side)} round(s) left on the {(blk.Side == 0 ? "left" : "right")} side.");
 			}
+
+			void InRecap(LiveRound r, Vector3 at)
+			{
+				try
+				{
+					var si = r.ShotInfo;
+					if (si == null) return;
+					si = si.ParentShot ?? si;
+					si.IsHit = true;
+					si.DetonationPosition = at;
+					if (!si.HitUnits.Contains(Vehicle))
+					{
+						si.HitUnits.Add(Vehicle);
+						if (IsPlayer)
+						{
+							si.HitPlayerUnit = true;
+							if (si.HitUnits[0] == (IUnit)Vehicle) si.HitPlayerUnitFirst = true;
+						}
+					}
+					if (si.Distance < 0f) si.Distance = Vector3.Distance(si.StartPosition, at);
+					var own = r.ShotInfo;
+					var dir = at - own.StartPosition;
+					own.AllShotFrames.Add(new GHPC.Weapons.ShotInfo.ShotSubHitInfo
+					{
+						WorldPosition = at, LocalPosition = at, ParentTransform = null,
+						InstantVector = dir.sqrMagnitude > 1e-6f ? dir.normalized : r.transform.forward,
+					});
+					if (r.Story != null)
+					{
+						r.Story.ImpactPosition = at;
+						if (r.Story.ImpactTime <= 0f) r.Story.ImpactTime = SceneController.MissionTime;
+					}
+				}
+				catch (Exception e) { PatchGuard.Failed($"{S.Tag} recap entry", e); }
+			}
+
+			const int RecapFan = 10;
+			void RecapLines(LiveRound r, Watched w, Vector3 burst, Vector3 axis, Vector3? caught)
+			{
+				try
+				{
+					var aar = AarController.Instance;
+					var si = r.ShotInfo;
+					if (aar == null || si == null || !w.Launched) return;
+					var parent = si.ParentShot ?? si;
+					Line(aar, parent, Vehicle.transform.TransformPoint(w.Mouth), burst, 20f);
+					if (caught.HasValue) Line(aar, parent, burst, caught.Value, 12f);
+					var right = Vector3.Cross(Vector3.up, axis);
+					right = right.sqrMagnitude > 1e-6f ? right.normalized : Turret.right;
+					var up = Vector3.Cross(axis, right);
+					float tan = Mathf.Tan(S.FragConeHalf * Mathf.Deg2Rad);
+					for (int i = 0; i < RecapFan; i++)
+					{
+						float rr = tan * Mathf.Sqrt((i + 0.5f) / RecapFan), phi = i * 2.39996323f;
+						var d = (axis + rr * (Mathf.Cos(phi) * right + Mathf.Sin(phi) * up)).normalized;
+						Line(aar, parent, burst, burst + d * S.ConeReach, 3f);
+					}
+				}
+				catch (Exception e) { PatchGuard.Failed($"{S.Tag} recap lines", e); }
+			}
+
+			void Line(AarController aar, GHPC.Weapons.ShotInfo parent, Vector3 from, Vector3 to, float pen)
+			{
+				var dir = to - from;
+				if (dir.sqrMagnitude < 1e-4f) return;
+				if (_frag == null) _frag = FragmentCone.Type($"{S.Name} fragment", S.FragMass, S.FragArea, S.FragCoeff, 0f, S.FragPen, S.FragPenSpeed);
+				var shot = new GHPC.Weapons.ShotInfo(from, dir.normalized, _frag, Vehicle, parent, pen);
+				shot.IsHit = true;
+				shot.Distance = dir.magnitude;
+				shot.AllShotFrames.Add(new GHPC.Weapons.ShotInfo.ShotSubHitInfo { WorldPosition = to, LocalPosition = to, ParentTransform = null, InstantVector = dir.normalized });
+				aar.AddShot(shot);
+			}
+
+			string Engaged(string block, Watched w) => $"{S.Name} {block} block, tube {w.Tube}: burst {w.T.BurstRange:0.0} m out";
 
 			bool OwnCollider(Collider c) => c.GetComponentInParent<Unit>() == Vehicle || (c.TryGetComponent<IArmor>(out var a) && a.Unit == (IUnit)Vehicle);
 
@@ -565,7 +665,8 @@ public int Id;
 			}
 		}
 
-		static readonly System.Reflection.MethodInfo AddButton = Reflect.Method(typeof(PlayerInput), "AddMenuButton", new[] { typeof(string), typeof(UnityAction) });
+		static readonly MethodInfo Explode = Reflect.Method(typeof(LiveRound), "createExplosion", new[] { typeof(bool), typeof(float), typeof(Vector3), typeof(float), typeof(int) });
+		static readonly MethodInfo AddButton = Reflect.Method(typeof(PlayerInput), "AddMenuButton", new[] { typeof(string), typeof(UnityAction) });
 
 		static void MenuPostfix(PlayerInput __instance)
 		{

@@ -9,7 +9,12 @@ namespace T90A.Common
 	{
 		public sealed class Hook { public string Name, Target; }
 
-		public sealed class Box { public Vector3 Centre, Size; }
+		public sealed class Box
+		{
+			public Vector3 Centre, Size; public float Yaw;
+			public Quaternion Turn => Quaternion.AngleAxis(Yaw, Vector3.up);
+			public Vector3 Corner(int i) { var h = Size / 2f; return Centre + Turn * new Vector3((i & 1) != 0 ? h.x : -h.x, (i & 2) != 0 ? h.y : -h.y, (i & 4) != 0 ? h.z : -h.z); }
+		}
 
 		public sealed class Armour { public float Ke, Ce; public bool AngleMatters, Ricochet, Normalizes, Shatter; }
 
@@ -27,13 +32,16 @@ namespace T90A.Common
 			public Vector3[] XrayVerts;
 			public int[] XrayTris;
 			public bool NoXray;
+			public List<(Vector3[] V, int[] T)> Hulls;
+			public string XrayMaterial;
+			public float[] XrayColour;
 			public Bounds Bounds
 			{
 				get
 				{
 					if (Boxes == null || Boxes.Count == 0) return new Bounds();
-					var b = new Bounds(Boxes[0].Centre, Boxes[0].Size);
-					foreach (var x in Boxes.Skip(1)) b.Encapsulate(new Bounds(x.Centre, x.Size));
+					var b = new Bounds(Boxes[0].Corner(0), Vector3.zero);
+					foreach (var x in Boxes) for (int i = 0; i < 8; i++) b.Encapsulate(x.Corner(i));
 					return b;
 				}
 			}
@@ -67,12 +75,14 @@ namespace T90A.Common
 				foreach (var b in (List<object>)m["boxes"])
 				{
 					var bo = (MiniJson.Obj)b;
-					mod.Boxes.Add(new Box { Centre = Vec(bo, "c"), Size = Vec(bo, "s") });
+					mod.Boxes.Add(new Box { Centre = Vec(bo, "c"), Size = Vec(bo, "s"), Yaw = Num(m, "yaw", 0f) });
 				}
 				if (m.TryGetValue("armour", out var ao) && ao is MiniJson.Obj a)
 					mod.Armour = new Armour { Ke = Num(a, "ke", 0f), Ce = Num(a, "ce", 0f), AngleMatters = Flag(a, "angle_matters"), Ricochet = Flag(a, "ricochet"), Normalizes = Flag(a, "normalizes"), Shatter = Flag(a, "shatter") };
 				if (m.TryGetValue("replaces", out var r) && r is List<object> rl) mod.Replaces.AddRange(rl.OfType<string>());
 				mod.Tube = (int)Num(m, "tube", 0f);
+				if (m.TryGetValue("xray_material", out var xmo) && xmo is string xms) mod.XrayMaterial = xms;
+				if (m.TryGetValue("xray_colour", out var xco) && xco is List<object> xcl && xcl.Count >= 3) mod.XrayColour = xcl.Select(x => (float)(double)x).ToArray();
 				if (m.TryGetValue("xray", out var xo) && xo is bool drawn && !drawn) mod.NoXray = true;
 				else if (xo is MiniJson.Obj xm)
 				{
@@ -82,6 +92,20 @@ namespace T90A.Common
 					mod.XrayTris = Floats(Str(xm, "t", "")).Select(t => (int)t).ToArray();
 					if (mod.XrayTris.Length % 3 != 0 || mod.XrayTris.Any(t => t < 0 || t >= mod.XrayVerts.Length))
 						throw new FormatException($"{source}: module '{mod.Id}' has a broken x-ray mesh");
+				}
+				if (m.TryGetValue("hulls", out var hlo) && hlo is List<object> hl)
+				{
+					mod.Hulls = new List<(Vector3[], int[])>();
+					foreach (var ho in hl.OfType<MiniJson.Obj>())
+					{
+						var v = Floats(Str(ho, "v", ""));
+						var hv = new Vector3[v.Length / 3];
+						for (int i = 0; i < hv.Length; i++) hv[i] = new Vector3(v[3 * i], v[3 * i + 1], v[3 * i + 2]);
+						var ht = Floats(Str(ho, "t", "")).Select(t => (int)t).ToArray();
+						if (hv.Length < 4 || ht.Length % 3 != 0 || ht.Any(t => t < 0 || t >= hv.Length))
+							throw new FormatException($"{source}: module '{mod.Id}' has a broken hit-zone mesh");
+						mod.Hulls.Add((hv, ht));
+					}
 				}
 				s.Modules.Add(mod);
 			}

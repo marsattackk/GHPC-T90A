@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using GHPC;
 using GHPC.AI;
 using GHPC.Mission;
@@ -196,7 +197,7 @@ namespace T90A.Common
 		{
 			static readonly AccessTools.FieldRef<MissionConfigMenuPanel, UnitPrefabLookupScriptable> AllUnits =
 				Reflect.FieldRefAccess<MissionConfigMenuPanel, UnitPrefabLookupScriptable>("_allUnitsScriptable");
-			static readonly System.Reflection.FieldInfo Cache = Reflect.Field(typeof(MissionConfigMenuPanel), "_unitKeysByClassCached");
+			static readonly FieldInfo Cache = Reflect.Field(typeof(MissionConfigMenuPanel), "_unitKeysByClassCached");
 
 			internal static void ClearCache() => (Cache?.GetValue(null) as IDictionary)?.Clear();
 
@@ -206,6 +207,30 @@ namespace T90A.Common
 				if (lookup?.AllUnits == null) return;
 				if (Units.Any(u => u.Enabled() && !lookup.AllUnits.Any(m => m != null && m.Name == u.Key)))
 					EnsureRegistered(lookup);
+			}
+		}
+
+		// Re-added at the spawner, not only at the menu: a mission's spawner can hold a list without our units.
+
+		[HarmonyPatch(typeof(UnitSpawner), "GetMetadataByUniqueName")]
+		internal static class LookupPatch
+		{
+			static readonly FieldInfo CacheField = Reflect.Field(typeof(UnitSpawner), "_prefabLookupCached");
+			static readonly HashSet<int> _told = new HashSet<int>();
+
+			static void Prefix(UnitSpawner __instance, string __0)
+			{
+				var u = Units.FirstOrDefault(x => string.Equals(__0, x.Key, StringComparison.OrdinalIgnoreCase));
+				if (u == null || !u.Enabled() || __instance == null) return;
+				var lookup = __instance.PrefabLookup;
+				if (lookup?.AllUnits == null) return;
+				bool listed = FindIn(lookup, u.Key) != null;
+				if (!listed) EnsureRegistered(lookup);
+				var cache = CacheField?.GetValue(__instance) as IDictionary;
+				bool stale = cache != null && !cache.Contains(u.Key);
+				if (stale || !listed) CacheField?.SetValue(__instance, null);
+				if ((stale || !listed) && _told.Add(__instance.GetInstanceID()))
+					MelonLogger.Msg($"{u.Key}: the unit spawner's list {(listed ? "had it but its name cache did not" : $"'{lookup.name}' lacked it")}; added again before the spawn.");
 			}
 		}
 

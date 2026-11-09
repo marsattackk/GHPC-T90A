@@ -35,6 +35,7 @@ namespace T90A.Common
 			internal abstract IEnumerable<CameraSlot> Sights { get; }
 
 			internal virtual IEnumerable<CameraSlot> WeaponSights => Sights;
+			internal virtual bool FromHeadView => false;
 			internal bool IsWeaponSight(CameraSlot s) => s != null && WeaponSights.Any(w => w != null && (w == s || (s.IsLinkedNightSight && s.LinkedDaySight == w)));
 		}
 
@@ -90,7 +91,7 @@ namespace T90A.Common
 				var w = __instance.ActiveWeapon;
 				if (w == null || w.Role != weaponSystemRole) return true;
 				var st = Of(w.Weapon);
-				return st == null || st.IsWeaponSight(slot);
+				return st == null || st.FromHeadView || st.IsWeaponSight(slot);
 			}
 		}
 

@@ -261,7 +261,7 @@ namespace T90A
 
 		static void CoatGlass(Transform root)
 		{
-			VanillaMaterials.Apply(root, r => r.name.StartsWith("T90A_"), T90AMod.Roles);
+			VanillaMaterials.Apply(root, T90AMod.Roles);
 		}
 
 		internal static Transform FindDeep(Transform root, string name) =>

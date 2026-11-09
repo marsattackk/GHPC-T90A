@@ -61,19 +61,41 @@ namespace T90A
 				Width = EssaWidth,
 				Height = EssaHeight,
 				ElevationLimits = EssaElevationLimits,
-				Reticle = o =>
-				{
-					if (o.reticleMesh == null) return;
-					o.reticleMesh.reticleSO = _essaReticle ?? (_essaReticle = Sight1G46.BuildEssa());
-					o.reticleMesh.nightBrightness = 1f;
-					ReticleSmr.SetValue(o.reticleMesh, null);
-					o.reticleMesh.Load();
-					ReticleWidth.Attach(o);
-				},
-				Readout = o => { Fcs1A45T.Readout.Build(o); MonitorEdges(o); },
+				Reticle = EssaMarks,
+				Readout = MonitorEdges,
 				Monitor = true,
 				Crt = true,
+				ScanStreaks = EssaScanStreaks,
+				ScanRows = EssaHeight / 2,
+				ScanDriftSeconds = 12f,
 			});
+
+		const float EssaScanStreaks = 0.27f;
+
+		// GHPC won't draw a dark reticle over a thermal picture, so the cross is a screen item.
+		static void EssaMarks(UsableOptic o)
+		{
+			var narrowSpec = Reticles.Spec("essa_narrow.jsonc");
+			if (o.transform.Find(narrowSpec.ScreenName) != null) return;
+			if (o.reticleMesh != null) o.reticleMesh.gameObject.SetActive(false);
+			var problems = new List<string>();
+			var wideSpec = Reticles.Spec("essa_wide.jsonc");
+			var rowSpec = Reticles.Spec("essa_row.jsonc");
+			var wide = ReticleBuild.BuildOverlay(wideSpec, o.transform, (float)wideSpec.Fov, problems);
+			var narrow = ReticleBuild.BuildOverlay(narrowSpec, o.transform, (float)narrowSpec.Fov, problems);
+			var row = ReticleBuild.BuildOverlay(rowSpec, o.transform, (float)rowSpec.Fov, problems);
+			string mono = rowSpec.Num("Mono").ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+			SightReadout.Attach(o, row, new SightReadout.Settings
+			{
+				Range = "range", RangePrefix = $"<mspace={mono}em>", RangeSuffix = "</mspace>", RangeQuantize = 5,
+				Ready = "ready",
+				Ammo = "ammo", AmmoText = SightReadout.Cyrillic,
+			}, problems);
+			string lacks = ReticleBuild.Missing(row.Readouts.TryGetValue("ammo", out var t) ? t.font : null, "БОКУП");
+			if (lacks.Length > 0) problems.Add($"readout font lacks '{lacks}'");
+			ZoomReticles.Attach(o, null, new[] { new[] { wide.Root }, new[] { narrow.Root, row.Root }, new[] { narrow.Root, row.Root } });
+			foreach (var p in problems) MelonLogger.Warning($"T-90A ESSA marks: {p}");
+		}
 
 		static void MonitorEdges(UsableOptic o)
 		{
@@ -83,8 +105,6 @@ namespace T90A
 			ReticleBuild.BuildOverlay(spec, o.transform, (float)spec.Fov, problems);
 			foreach (var p in problems) MelonLogger.Warning($"T-90A ESSA monitor: {p}");
 		}
-
-		static ReticleSO _essaReticle;
 
 		static bool ApplyBuranM(Vehicle vehicle, UsableOptic day, UsableOptic night)
 		{

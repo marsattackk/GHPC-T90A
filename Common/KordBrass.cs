@@ -109,6 +109,8 @@ namespace T90A.Common
 			internal KordBelt.Belt Belt;
 			internal string MeshName = "Kord", Prefix = "", BeltObject;
 			internal int MaxCases = 300;
+			internal Bounds? Catcher;
+			internal float Speed, Spread;
 
 			internal static CaseSource FromBelt(KordBelt.Belt belt) => new CaseSource
 			{
@@ -188,7 +190,7 @@ namespace T90A.Common
 			float h = dt / steps;
 			foreach (var c in _cases)
 			{
-				if (c == null || c.State == 0 || c.State == 3) continue;
+				if (c == null || c.State == 0 || c.State == 3 || c.State == 4) continue;
 				if (c.State == 2)
 				{
 					var f = _grids[c.On].Frame;
@@ -216,9 +218,10 @@ namespace T90A.Common
 			var c = _cases[_next] ?? (_cases[_next] = NewCase(_next));
 			_next = (_next + 1) % _cases.Length;
 			c.P = _cradle.TransformPoint(_chute);
-			var dir = Quaternion.AngleAxis(Random.Range(-DirSpread, DirSpread), _cradle.up)
-				* Quaternion.AngleAxis(Random.Range(-DirSpread, DirSpread), _cradle.right) * _cradle.TransformDirection(_dir);
-			c.V = dir * EjectSpeed * Random.Range(1f - SpeedSpread, 1f + SpeedSpread) + (_body != null ? _body.GetPointVelocity(c.P) : Vector3.zero);
+			float spread = _src.Spread > 0f ? _src.Spread : DirSpread, speed = _src.Speed > 0f ? _src.Speed : EjectSpeed;
+			var dir = Quaternion.AngleAxis(Random.Range(-spread, spread), _cradle.up)
+				* Quaternion.AngleAxis(Random.Range(-spread, spread), _cradle.right) * _cradle.TransformDirection(_dir);
+			c.V = dir * speed * Random.Range(1f - SpeedSpread, 1f + SpeedSpread) + (_body != null ? _body.GetPointVelocity(c.P) : Vector3.zero);
 			c.Q = Quaternion.LookRotation(_cradle.forward, _cradle.up);
 			c.W = Vector3.Cross(dir, Random.onUnitSphere).normalized * Random.Range(4f, 12f);
 			c.State = 1; c.Slow = 0f; c.Born = Time.time; c.StartY = c.P.y; c.AnchorT = Time.time; c.AnchorP = new Vector3(1e6f, 0f, 0f);
@@ -247,6 +250,11 @@ namespace T90A.Common
 			c.V *= 1f - Drag * h;
 			var prev = c.P;
 			c.P += c.V * h;
+			if (_src.Catcher.HasValue && _src.Catcher.Value.Contains(_cradle.InverseTransformPoint(c.P)))
+			{
+				c.State = 4; c.R.enabled = false; c.V = Vector3.zero; c.W = Vector3.zero;
+				return;
+			}
 			if (c.W.sqrMagnitude > 1e-6f) c.Q = Quaternion.AngleAxis(c.W.magnitude * h * Mathf.Rad2Deg, c.W.normalized) * c.Q;
 
 			int on = -2; float best = float.NegativeInfinity; Vector3 n = Vector3.up, top = Vector3.zero;
