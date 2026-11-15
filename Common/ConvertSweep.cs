@@ -6,6 +6,7 @@ using UnityEngine;
 
 namespace T90A.Common
 {
+	// Catches T-72M1s the spawn patch missed, at PlayerReady.
 	internal static class ConvertSweep
 	{
 		// One marker per conversion: the spawn patch and the PlayerReady sweep may both see the same unit.
@@ -23,10 +24,10 @@ namespace T90A.Common
 
 		static IEnumerator Sweep(string unitKey, Action<Vehicle> convert, Action<Vehicle> other)
 		{
-			foreach (var v in UnityEngine.Object.FindObjectsByType<Vehicle>(FindObjectsSortMode.None))
+			foreach (var vehicle in UnityEngine.Object.FindObjectsByType<Vehicle>(FindObjectsSortMode.None))
 			{
-				if (v.UniqueName == unitKey) convert(v);
-				else other?.Invoke(v);
+				if (vehicle.UniqueName == unitKey) convert(vehicle);
+				else other?.Invoke(vehicle);
 			}
 			yield break;
 		}

@@ -6,8 +6,8 @@ using MelonLoader;
 
 namespace T90A.Common
 {
-	// After a game update renames a member, AccessTools warns untagged on every call and FieldRefAccess throws, which
-	// kills its whole class from a static initializer.
+	// Every private GHPC member goes through here. After a rename AccessTools warns untagged on every call and
+	// FieldRefAccess throws, which kills its whole class from a static initializer.
 	internal static class Reflect
 	{
 		static readonly Dictionary<string, MemberInfo> Cache = new Dictionary<string, MemberInfo>();
@@ -36,7 +36,10 @@ namespace T90A.Common
 				if (field != null)
 				{
 					try { made = AccessTools.FieldRefAccess<T, F>(field); }
-					catch (Exception e) { Warn("field", typeof(T), name, $"can't be read as {typeof(F).Name} ({e.GetBaseException().Message})"); }
+					catch (Exception exception)
+					{
+						Warn("field", typeof(T), name, $"can't be read as {typeof(F).Name} ({exception.GetBaseException().Message})");
+					}
 				}
 				Refs[key] = made;
 				return made;
@@ -50,8 +53,12 @@ namespace T90A.Common
 			{
 				if (Cache.TryGetValue(key, out var known)) return known;
 				MemberInfo found = null;
-				try { found = look(); if (found == null) Warn(kind, type, name, "not found"); }
-				catch (Exception e) { Warn(kind, type, name, $"can't be looked up ({e.GetBaseException().Message})"); }
+				try
+				{
+					found = look();
+					if (found == null) Warn(kind, type, name, "not found");
+				}
+				catch (Exception exception) { Warn(kind, type, name, $"can't be looked up ({exception.GetBaseException().Message})"); }
 				Cache[key] = found;
 				return found;
 			}

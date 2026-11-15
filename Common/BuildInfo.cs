@@ -6,11 +6,13 @@ using UnityEngine;
 
 namespace T90A.Common
 {
-	// Not BuildInfo, MelonLoader already has one.
+	// Logs the version stamp with the game version and Steam build. Not called BuildInfo because MelonLoader already has one.
 	internal static class BuildStamp
 	{
-		internal static string Text => typeof(BuildStamp).Assembly.GetCustomAttributes(typeof(AssemblyInformationalVersionAttribute), false) is object[] a && a.Length > 0
-			? ((AssemblyInformationalVersionAttribute)a[0]).InformationalVersion : "unstamped";
+		internal static string Text
+			=> typeof(BuildStamp).Assembly.GetCustomAttributes(typeof(AssemblyInformationalVersionAttribute), false) is object[] attributes
+				&& attributes.Length > 0
+				? ((AssemblyInformationalVersionAttribute)attributes[0]).InformationalVersion : "unstamped";
 
 		internal static void Log(string name) => MelonLogger.Msg($"{name} {Text}, game {GameVersion()}, {SteamBuild()}");
 
@@ -28,8 +30,8 @@ namespace T90A.Common
 				{
 					string manifest = Path.Combine(dir.FullName, "appmanifest_1705180.acf");
 					if (!File.Exists(manifest)) continue;
-					Match m = Regex.Match(File.ReadAllText(manifest), "\"buildid\"\\s+\"(\\d+)\"");
-					return m.Success ? "Steam build " + m.Groups[1].Value : "Steam build unknown";
+					Match match = Regex.Match(File.ReadAllText(manifest), "\"buildid\"\\s+\"(\\d+)\"");
+					return match.Success ? "Steam build " + match.Groups[1].Value : "Steam build unknown";
 				}
 				return "no Steam manifest";
 			}

@@ -8,11 +8,11 @@ namespace T90A.Common
 		{
 			if (string.IsNullOrEmpty(name) || from == null || string.IsNullOrEmpty(shieldName)) return null;
 			bool hit = false;
-			foreach (var f in from)
+			foreach (var fragment in from)
 			{
-				if (string.IsNullOrEmpty(f)) continue;
-				if (shieldName.IndexOf(f, StringComparison.Ordinal) >= 0) return null;
-				hit |= name.IndexOf(f, StringComparison.Ordinal) >= 0;
+				if (string.IsNullOrEmpty(fragment)) continue;
+				if (shieldName.IndexOf(fragment, StringComparison.Ordinal) >= 0) return null;
+				hit |= name.IndexOf(fragment, StringComparison.Ordinal) >= 0;
 			}
 			return hit ? shieldName : null;
 		}

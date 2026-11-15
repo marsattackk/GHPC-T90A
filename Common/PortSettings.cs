@@ -8,6 +8,7 @@ using MelonLoader.Utils;
 
 namespace T90A.Common
 {
+	// Rescues numbers saved as text, stamps the mod version and moves settings still at an old default.
 	internal static class PortSettings
 	{
 		internal const string VersionEntry = "ConfigVersion";
@@ -18,17 +19,26 @@ namespace T90A.Common
 		internal static void Finish(MelonPreferences_Category cfg, string modVersion, params SettingsMigration[] migrations)
 		{
 			try { Rescue(cfg); }
-			catch (Exception e) { MelonLogger.Warning($"{cfg.DisplayName} settings: could not read the settings file for numbers saved as text ({e.GetType().Name}: {e.Message})."); }
-			var version = cfg.CreateEntry(VersionEntry, "", description: "The mod version that last wrote these settings (a newer version uses it to move settings still at an old default to the new one). Leave it as it is.", is_hidden: true);
-			var last = Parse(version.Value) ?? new Version(0, 0, 0, 0);
-			foreach (var m in migrations)
+			catch (Exception exception)
 			{
-				var changed = Parse(m.ChangedIn);
-				var e = cfg.GetEntry(m.Entry);
-				if (changed == null || e == null || last >= changed || !m.AtOld(e)) continue;
-				string old = e.GetValueAsString();
-				m.ToNew(e);
-				Say($"{cfg.DisplayName} settings: \"{m.Entry}\" was still {old}, the default before {m.ChangedIn}; now {e.GetValueAsString()}, the new default.", false);
+				MelonLogger.Warning($"{cfg.DisplayName} settings: could not read the settings file for numbers saved as text ({exception.GetType().Name}: {exception.Message}).");
+			}
+			var version = cfg.CreateEntry(
+				VersionEntry,
+				"",
+				description: "The mod version that last wrote these settings (a newer version uses it to move settings still at an old default to the new one). Leave it as it is.",
+				is_hidden: true);
+			var last = Parse(version.Value) ?? new Version(0, 0, 0, 0);
+			foreach (var migration in migrations)
+			{
+				var changed = Parse(migration.ChangedIn);
+				var entry = cfg.GetEntry(migration.Entry);
+				if (changed == null || entry == null || last >= changed || !migration.AtOld(entry)) continue;
+				string old = entry.GetValueAsString();
+				migration.ToNew(entry);
+				Say(
+					$"{cfg.DisplayName} settings: \"{migration.Entry}\" was still {old}, the default before {migration.ChangedIn}; now {entry.GetValueAsString()}, the new default.",
+					false);
 			}
 			if (version.Value != modVersion) version.Value = modVersion;
 		}
@@ -39,36 +49,44 @@ namespace T90A.Common
 		{
 			if (!File.Exists(_file)) return;
 			var text = QuotedValues(File.ReadAllLines(_file), cfg.Identifier);
-			foreach (var e in cfg.Entries)
+			foreach (var entry in cfg.Entries)
 			{
-				var type = e.GetReflectedType();
-				if (!Numbers.Contains(type) || !text.TryGetValue(e.Identifier, out string s)) continue;
-				object value = Number(s, type);
+				var type = entry.GetReflectedType();
+				if (!Numbers.Contains(type) || !text.TryGetValue(entry.Identifier, out string rawValue)) continue;
+				object value = Number(rawValue, type);
 				if (value == null)
 				{
-					Say($"{cfg.DisplayName} settings: \"{e.Identifier}\" is saved as \"{s}\", which is not a number; using the default {e.GetDefaultValueAsString()}.", true);
+					Say(
+						$"{cfg.DisplayName} settings: \"{entry.Identifier}\" is saved as \"{rawValue}\", which is not a number; using the default {entry.GetDefaultValueAsString()}.",
+						true);
 					continue;
 				}
-				e.BoxedValue = value;
-				Say($"{cfg.DisplayName} settings: \"{e.Identifier}\" was saved as text \"{s}\"; read as {e.GetValueAsString()} (it is saved back as a number when the game closes).", false);
+				entry.BoxedValue = value;
+				Say(
+					$"{cfg.DisplayName} settings: \"{entry.Identifier}\" was saved as text \"{rawValue}\"; read as {entry.GetValueAsString()} (it is saved back as a number when the game closes).",
+					false);
 			}
 		}
 
 		static void Say(string s, bool warn)
 		{
-			if (warn) MelonLogger.Warning(s); else MelonLogger.Msg(s);
+			if (warn) MelonLogger.Warning(s);
+			else MelonLogger.Msg(s);
 		}
 
 		internal static object Number(string s, Type type)
 		{
 			s = s.Trim();
 			if (s.Count(c => c == ',' || c == '.') > 1) return null;
-			if (!double.TryParse(s.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out double d) || double.IsNaN(d) || double.IsInfinity(d)) return null;
-			if (type == typeof(float)) return Math.Abs(d) <= float.MaxValue ? (object)(float)d : null;
-			if (type == typeof(double)) return d;
-			if (d != Math.Floor(d)) return null;
-			if (type == typeof(int)) return d >= int.MinValue && d <= int.MaxValue ? (object)(int)d : null;
-			return d >= long.MinValue && d <= long.MaxValue ? (object)(long)d : null;
+			if (!double.TryParse(s.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out double parsed)
+				|| double.IsNaN(parsed)
+				|| double.IsInfinity(parsed))
+				return null;
+			if (type == typeof(float)) return Math.Abs(parsed) <= float.MaxValue ? (object)(float)parsed : null;
+			if (type == typeof(double)) return parsed;
+			if (parsed != Math.Floor(parsed)) return null;
+			if (type == typeof(int)) return parsed >= int.MinValue && parsed <= int.MaxValue ? (object)(int)parsed : null;
+			return parsed >= long.MinValue && parsed <= long.MaxValue ? (object)(long)parsed : null;
 		}
 
 		internal static Dictionary<string, string> QuotedValues(string[] lines, string category)
@@ -96,10 +114,10 @@ namespace T90A.Common
 				}
 				else
 				{
-					int eq = line.IndexOf('=');
-					if (eq < 0) continue;
-					key = line.Substring(0, eq).Trim();
-					rest = line.Substring(eq);
+					int equalsIndex = line.IndexOf('=');
+					if (equalsIndex < 0) continue;
+					key = line.Substring(0, equalsIndex).Trim();
+					rest = line.Substring(equalsIndex);
 				}
 				if (rest.Length == 0 || rest[0] != '=') continue;
 				rest = rest.Substring(1).TrimStart();
@@ -111,7 +129,8 @@ namespace T90A.Common
 			return found;
 		}
 
-		static string Unquote(string s) => s.Length >= 2 && (s[0] == '"' || s[0] == '\'') && s[s.Length - 1] == s[0] ? s.Substring(1, s.Length - 2) : s;
+		static string Unquote(string s)
+			=> s.Length >= 2 && (s[0] == '"' || s[0] == '\'') && s[s.Length - 1] == s[0] ? s.Substring(1, s.Length - 2) : s;
 
 		internal static Version Parse(string s)
 		{
@@ -120,12 +139,50 @@ namespace T90A.Common
 			int cut = s.IndexOfAny(new[] { '-', '+', ' ' });
 			if (cut >= 0) s = s.Substring(0, cut);
 			if (s.IndexOf('.') < 0) s += ".0";
-			if (!Version.TryParse(s, out var v)) return null;
-			return new Version(v.Major, v.Minor, Math.Max(v.Build, 0), Math.Max(v.Revision, 0));
+			if (!Version.TryParse(s, out var version)) return null;
+			return new Version(version.Major, version.Minor, Math.Max(version.Build, 0), Math.Max(version.Revision, 0));
+		}
+
+		internal static bool IsNewer(string latest, string installed)
+		{
+			var latestVersion = Parse(latest);
+			var installedVersion = Parse(installed);
+			if (latestVersion == null || installedVersion == null) return false;
+			if (latestVersion != installedVersion) return latestVersion > installedVersion;
+			return ComparePreRelease(PreRelease(latest), PreRelease(installed)) > 0;
+		}
+
+		static string PreRelease(string s)
+		{
+			s = s.Trim();
+			int plus = s.IndexOf('+');
+			if (plus >= 0) s = s.Substring(0, plus);
+			int dash = s.IndexOf('-');
+			return dash < 0 || dash == s.Length - 1 ? null : s.Substring(dash + 1);
+		}
+
+		static int ComparePreRelease(string a, string b)
+		{
+			if (a == b) return 0;
+			if (a == null) return 1;
+			if (b == null) return -1;
+			var partsA = a.Split('.');
+			var partsB = b.Split('.');
+			for (int i = 0; i < Math.Min(partsA.Length, partsB.Length); i++)
+			{
+				bool numberA = int.TryParse(partsA[i], NumberStyles.None, CultureInfo.InvariantCulture, out int valueA);
+				bool numberB = int.TryParse(partsB[i], NumberStyles.None, CultureInfo.InvariantCulture, out int valueB);
+				int order = numberA && numberB ? valueA.CompareTo(valueB)
+					: numberA ? -1
+					: numberB ? 1
+					: string.CompareOrdinal(partsA[i], partsB[i]);
+				if (order != 0) return order;
+			}
+			return partsA.Length.CompareTo(partsB.Length);
 		}
 	}
 
-	// The file keeps every value, a new default in code never reaches an existing install.
+	// A new default in code never reaches an existing install, because the file keeps every value.
 	internal sealed class SettingsMigration
 	{
 		internal string Entry, ChangedIn;
@@ -134,14 +191,19 @@ namespace T90A.Common
 
 		internal static SettingsMigration Default<T>(string entry, string changedIn, T oldDefault) => new SettingsMigration
 		{
-			Entry = entry, ChangedIn = changedIn,
-			AtOld = e => e is MelonPreferences_Entry<T> t && Same(t.Value, oldDefault),
-			ToNew = e => { var t = (MelonPreferences_Entry<T>)e; t.Value = t.DefaultValue; },
+			Entry = entry,
+			ChangedIn = changedIn,
+			AtOld = s => s is MelonPreferences_Entry<T> typed && Same(typed.Value, oldDefault),
+			ToNew = setting =>
+			{
+				var typed = (MelonPreferences_Entry<T>)setting;
+				typed.Value = typed.DefaultValue;
+			},
 		};
 
 		static bool Same(object a, object b) =>
-			a is float fa && b is float fb ? Math.Abs(fa - fb) < 1e-6f
-			: a is double da && b is double db ? Math.Abs(da - db) < 1e-6
+			a is float floatA && b is float floatB ? Math.Abs(floatA - floatB) < 1e-6f
+			: a is double doubleA && b is double doubleB ? Math.Abs(doubleA - doubleB) < 1e-6
 			: Equals(a, b);
 	}
 }

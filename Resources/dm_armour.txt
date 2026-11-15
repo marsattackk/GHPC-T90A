@@ -1,0 +1,348 @@
+turret_06_back_dm	nominal	3	3	0	0	1	mild_steel		fender		0
+body_side_dm	nominal	80	80	0	0	1	armour_steel		hull side		0
+body_bottom_dm	nominal	20	20	0	0	1	armour_steel		hull floor		0
+turret_09_top_dm	nominal	3	3	0	0	1	mild_steel		fender		0
+turret_09_front_dm	nominal	3	3	0	0	1	mild_steel		fender		0
+nbc_liner_03_dm	geometry	0.1	0.1	0	0	0	liner	1.00,0.62,0.85,0.25	T-90A anti-radiation lining		0
+nbc_liner_02_dm	geometry	0.1	0.1	0	0	0	liner	1.00,0.62,0.85,0.25	T-90A anti-radiation lining		0
+body_top_dm	nominal	30	30	0	0	1	armour_steel		hull roof		0
+superstructure_top_dm	nominal	20	20	0	0	1	armour_steel		engine deck		0
+turret_03_side_dm	nominal	80	80	0	0	1	armour_steel		hull side, upper		0
+superstructure_front_dm	geometry	1.05	1	0	0	0	armour_steel		Glacis outer plate (BTK-1Sh 60)		0
+turret_05_bottom_dm	geometry	1.05	1	0	0	0	armour_steel	0.05,0.55,0.10,0.55	Glacis back plate (BTK-1Sh 50)		0
+turret_04_top_dm	geometry	1.3315	2.5141	0	0	0	filling_steel	0.05,0.55,0.10,0.55	Glacis middle plate (BTK-1Sh 60)		0
+turret_05_front_dm	geometry	0.1331	0.2514	0	0	0	filling	0.45,1.00,0.55,0.55	Glacis polypropylene, 10 mm		0
+composite_armor_hull_01_dm	geometry	0.2663	0.5028	0	0	0	filling	0.85,0.08,0.08,0.35	Glacis rubber + steel layers		0
+turret_01_top_dm	geometry	1.05	1	0	0	0	armour_steel		nose casting		0
+body_back_dm	nominal	40	40	0	0	1	armour_steel		hull rear plate		0
+body_front_dm	nominal	85	85	0	0	1	armour_steel		lower front plate		0
+superstructure_back_dm	nominal	3	3	0	0	1	mild_steel		engine bulkhead		0
+nbc_liner_09_dm	geometry	0.1	0.1	0	0	0	liner	1.00,0.62,0.85,0.25	T-90A anti-radiation lining		0
+ex_armor_01_dm	nominal	20	20	0	0	1	mild_steel		dozer blade		0
+ex_armor_02_dm	nominal	3	3	0	0	1	mild_steel		engine deck box		0
+turret_03_back_dm	geometry	1.05	1	0	0	0	armour_steel		engine deck, rear		0
+nbc_liner_10_dm	geometry	0.1	0.1	0	0	0	liner	1.00,0.62,0.85,0.25	T-90A anti-radiation lining		0
+turret_01_back_dm	nominal	20	20	0	0	1	armour_steel		hull floor, rear		0
+turret_04_side_dm	nominal	20	20	0	0	1	armour_steel		hull roof		0
+turret_02_top_dm	geometry	0.1	0.1	0	0	0	liner	1.00,0.62,0.85,0.25	T-90A anti-radiation lining		0
+ex_armor_body_r_05_dm	nominal	0.8	0.8	0	0	0	plain		rubber-fabric side screen		0
+ex_armor_body_l_05_dm	nominal	0.8	0.8	0	0	0	plain		rubber-fabric side screen		0
+ex_armor_l_03_dm	nominal	1	1	0	0	1	mild_steel		fender box		0
+ex_armor_body_l_04_dm	nominal	0.8	0.8	0	0	0	plain		rubber-fabric side screen		0
+ex_armor_body_r_04_dm	nominal	0.8	0.8	0	0	0	plain		rubber-fabric side screen		0
+ex_decor_04_dm	nominal	3	3	0	0	1	mild_steel		turret stowage box		0
+turret_commander_dm	nominal	47.25	45	0	0	1	armour_steel		commander's cupola base		0
+ex_armor_body_r_02_dm	nominal	0.8	0.8	0	0	0	plain		rubber-fabric side screen		0
+ex_armor_body_l_02_dm	nominal	0.8	0.8	0	0	0	plain		rubber-fabric side screen		0
+ex_armor_body_r_03_dm	nominal	0.8	0.8	0	0	0	plain		rubber-fabric side screen		0
+ex_armor_body_l_03_dm	nominal	0.8	0.8	0	0	0	plain		rubber-fabric side screen		0
+nbc_liner_04_dm	geometry	0.1	0.1	0	0	0	liner	1.00,0.62,0.85,0.25	T-90A anti-radiation lining		0
+ex_armor_r_02_dm	nominal	1	1	0	0	1	mild_steel		fender box		0
+nbc_liner_06_dm	geometry	0.1	0.1	0	0	0	liner	1.00,0.62,0.85,0.25	T-90A anti-radiation lining		0
+ex_armor_l_02_dm	nominal	1	1	0	0	1	mild_steel		fender box		0
+ex_decor_06_dm	nominal	3	3	0	0	1	mild_steel		turret stowage box		0
+nbc_liner_12_dm	geometry	0.1	0.1	0	0	0	liner	1.00,0.62,0.85,0.25	T-90A anti-radiation lining		0
+ex_armor_body_r_01_dm	nominal	0.8	0.8	0	0	0	plain		rubber-fabric side screen		0
+ex_armor_body_l_01_dm	nominal	0.8	0.8	0	0	0	plain		rubber-fabric side screen		0
+ex_armor_r_03_dm	nominal	1	1	0	0	1	mild_steel		fender box		0
+nbc_liner_08_dm	geometry	0.1	0.1	0	0	0	liner	1.00,0.62,0.85,0.25	T-90A anti-radiation lining		0
+nbc_liner_07_dm	geometry	0.1	0.1	0	0	0	liner	1.00,0.62,0.85,0.25	T-90A anti-radiation lining		0
+ex_armor_r_05_dm	nominal	1	1	0	0	1	mild_steel		fender box		0
+ex_armor_r_01_dm	nominal	1	1	0	0	1	mild_steel		fender box		0
+ex_armor_r_04_dm	nominal	1	1	0	0	1	mild_steel		fender box		0
+turret_front_dm	geometry	1.4023	1.8431	0	0	0	plain		gun mantlet		0
+ex_armor_l_01_dm	nominal	1	1	0	0	1	mild_steel		fender box		0
+ex_armor_l_04_dm	nominal	1	1	0	0	1	mild_steel		fender box		0
+ex_decor_03_dm	nominal	3	3	0	0	1	mild_steel		turret stowage box		0
+turret_07_front_dm	nominal	10	10	0	0	1	armour_steel		gunner's sight head		0
+ex_decor_l_20_dm	nominal	1	1	0	0	1	mild_steel		fender box		0
+ex_era_turret_09_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+nbc_liner_01_dm	geometry	0.1	0.1	0	0	0	liner	1.00,0.62,0.85,0.25	T-90A anti-radiation lining		0
+nbc_liner_05_dm	geometry	0.1	0.1	0	0	0	liner	1.00,0.62,0.85,0.25	T-90A anti-radiation lining		0
+gun_mask_dm	geometry	1.4023	1.8431	0	0	0	plain		gun mask		0
+ex_armor_body_r_06_dm	nominal	0.8	0.8	0	0	0	plain		rubber-fabric side screen		0
+ex_armor_body_l_06_dm	nominal	0.8	0.8	0	0	0	plain		rubber-fabric side screen		0
+body_front_hatch_dm	geometry	1.05	1	0	0	0	armour_steel		driver's hatch		0
+ex_era_hull_03_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_hull_04_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_hull_01_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_hull_02_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_hull_06_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_hull_05_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+turret_02_front_dm	geometry	1.05	1	0	0	0	armour_steel		glacis driver's section		0
+ex_era_hull_08_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_hull_07_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_hull_10_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_hull_09_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_hull_14_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_hull_13_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_decor_07_dm	nominal	3	3	0	0	1	mild_steel		turret stowage box		0
+ex_decor_02_dm	nominal	3	3	0	0	1	mild_steel		turret stowage box		0
+ex_era_hull_12_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_hull_11_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+turret_02_bottom_dm	geometry	1.05	1	0	0	0	armour_steel		turret front lower plate		0
+turret_03_bottom_dm	geometry	1.05	1	0	0	0	armour_steel		embrasure top strip		0
+turret_07_side_dm	nominal	3	3	0	0	1	mild_steel		fender box		0
+ex_era_turret_02_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_turret_01_dm	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+turret_side_dm~base	geometry	1.05	1	0	0	0	armour_steel		turret bottom plate		0
+turret_side_dm~inner	nominal	157.5	150	0	0	1	armour_steel		turret cheek inner wall		0
+turret_side_dm~front	nominal	68.25	65	0	0	1	armour_steel		turret front plate (cheek outer wall)		0
+turret_side_dm~roof	nominal	47.25	45	0	0	1	armour_steel		turret roof		0
+turret_side_dm~roofcav	nominal	63	60	0	0	1	armour_steel		turret roof over the cavity		0
+turret_side_dm~sidefwd	nominal	84	80	0	0	1	armour_steel		turret side, forward part		0
+turret_side_dm~side	nominal	73.5	70	0	0	1	armour_steel		turret side		0
+turret_side_dm~rear	nominal	79.8	76	0	0	1	armour_steel		turret rear / bustle		0
+turret_side_dm~under	nominal	47.25	45	0	0	1	armour_steel		turret bustle floor		0
+turret_side_dm~gunnerhatch	nominal	47.25	45	0	0	1	armour_steel		gunner's hatch		0
+turret_03_top_dm~ring	nominal	100	100	0	0	1	armour_steel		commander's cupola		0
+turret_03_top_dm~hatch	nominal	40	40	0	0	1	armour_steel		commander's hatch		0
+ex_era_turret_10_dm_c1	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_turret_10_dm_c2	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_turret_10_dm_c3	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_turret_03_dm_c1	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_turret_03_dm_c2	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_turret_07_dm_c1	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_turret_07_dm_c2	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_turret_05_dm_c1	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_turret_05_dm_c2	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_turret_06_dm_c1	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_turret_06_dm_c2	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_turret_08_dm_c1	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_turret_08_dm_c2	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_turret_04_dm_c1	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_turret_04_dm_c2	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_turret_11_dm_c1	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_turret_11_dm_c2	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_turret_12_dm_c1	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_turret_12_dm_c2	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_turret_13_dm_c1	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_turret_13_dm_c2	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_turret_14_dm_c1	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+ex_era_turret_14_dm_c2	era	140	550	0	0	0	plain	0.90,0.15,0.70,0.5	Kontakt-5 ERA		0
+L_pkg01_plate	geometry	1.0929	1.5293	0	0	0	filling_steel	0.00,0.62,0.85,0.55	cheek pack: SK-2Sh 50 mm		0
+L_pkg01_layer	geometry	0.3133	0.4384	0	0	0	filling		cheek pack: rubber + 2x4 mm		0
+L_pkg01_layer_rubber1	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+L_pkg01_layer_thin1	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+L_pkg01_layer_rubber2	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+L_pkg01_layer_thin2	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+L_pkg01_layer_gap	drawn	0	0	0	0	0		0.00,1.00,0.00,0.35	package gap fill (x-ray only)		0
+L_pkg02_plate	geometry	1.0929	1.5293	0	0	0	filling_steel	0.00,0.62,0.85,0.55	cheek pack: SK-2Sh 50 mm		0
+L_pkg02_layer	geometry	0.3133	0.4384	0	0	0	filling		cheek pack: rubber + 2x4 mm		0
+L_pkg02_layer_rubber1	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+L_pkg02_layer_thin1	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+L_pkg02_layer_rubber2	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+L_pkg02_layer_thin2	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+L_pkg02_layer_gap	drawn	0	0	0	0	0		0.00,1.00,0.00,0.35	package gap fill (x-ray only)		0
+L_pkg03_plate	geometry	1.0929	1.5293	0	0	0	filling_steel	0.00,0.62,0.85,0.55	cheek pack: SK-2Sh 50 mm		0
+L_pkg03_layer	geometry	0.3133	0.4384	0	0	0	filling		cheek pack: rubber + 2x4 mm		0
+L_pkg03_layer_rubber1	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+L_pkg03_layer_thin1	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+L_pkg03_layer_rubber2	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+L_pkg03_layer_thin2	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+L_pkg03_layer_gap	drawn	0	0	0	0	0		0.00,1.00,0.00,0.35	package gap fill (x-ray only)		0
+L_pkg04_plate	geometry	1.0929	1.5293	0	0	0	filling_steel	0.00,0.62,0.85,0.55	cheek pack: SK-2Sh 50 mm		0
+L_pkg04_layer	geometry	0.3133	0.4384	0	0	0	filling		cheek pack: rubber + 2x4 mm		0
+L_pkg04_layer_rubber1	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+L_pkg04_layer_thin1	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+L_pkg04_layer_rubber2	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+L_pkg04_layer_thin2	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+L_pkg04_layer_gap	drawn	0	0	0	0	0		0.00,1.00,0.00,0.35	package gap fill (x-ray only)		0
+L_pkg05_plate	geometry	1.0929	1.5293	0	0	0	filling_steel	0.00,0.62,0.85,0.55	cheek pack: SK-2Sh 50 mm		0
+L_pkg05_layer	geometry	0.3133	0.4384	0	0	0	filling		cheek pack: rubber + 2x4 mm		0
+L_pkg05_layer_rubber1	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+L_pkg05_layer_thin1	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+L_pkg05_layer_rubber2	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+L_pkg05_layer_thin2	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+L_pkg05_layer_gap	drawn	0	0	0	0	0		0.00,1.00,0.00,0.35	package gap fill (x-ray only)		0
+L_pkg06_plate	geometry	1.0929	1.5293	0	0	0	filling_steel	0.00,0.62,0.85,0.55	cheek pack: SK-2Sh 50 mm		0
+L_pkg06_layer	geometry	0.3133	0.4384	0	0	0	filling		cheek pack: rubber + 2x4 mm		0
+L_pkg06_layer_rubber1	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+L_pkg06_layer_thin1	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+L_pkg06_layer_rubber2	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+L_pkg06_layer_thin2	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+L_pkg06_layer_gap	drawn	0	0	0	0	0		0.00,1.00,0.00,0.35	package gap fill (x-ray only)		0
+L_pkg07_plate	geometry	1.0929	1.5293	0	0	0	filling_steel	0.00,0.62,0.85,0.55	cheek pack: SK-2Sh 50 mm		0
+L_pkg07_layer	geometry	0.3133	0.4384	0	0	0	filling		cheek pack: rubber + 2x4 mm		0
+L_pkg07_layer_rubber1	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+L_pkg07_layer_thin1	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+L_pkg07_layer_rubber2	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+L_pkg07_layer_thin2	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+L_pkg07_layer_gap	drawn	0	0	0	0	0		0.00,1.00,0.00,0.35	package gap fill (x-ray only)		0
+L_pkg08_plate	geometry	1.0929	1.5293	0	0	0	filling_steel	0.00,0.62,0.85,0.55	cheek pack: SK-2Sh 50 mm		0
+L_pkg08_layer	geometry	0.3133	0.4384	0	0	0	filling		cheek pack: rubber + 2x4 mm		0
+L_pkg08_layer_rubber1	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+L_pkg08_layer_thin1	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+L_pkg08_layer_rubber2	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+L_pkg08_layer_thin2	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+L_pkg08_layer_gap	drawn	0	0	0	0	0		0.00,1.00,0.00,0.35	package gap fill (x-ray only)		0
+L_pkg09_plate	geometry	1.0929	1.5293	0	0	0	filling_steel	0.00,0.62,0.85,0.55	cheek pack: SK-2Sh 50 mm		0
+L_pkg09_layer	geometry	0.3133	0.4384	0	0	0	filling		cheek pack: rubber + 2x4 mm		0
+L_pkg09_layer_rubber1	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+L_pkg09_layer_thin1	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+L_pkg09_layer_rubber2	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+L_pkg09_layer_thin2	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+L_pkg09_layer_gap	drawn	0	0	0	0	0		0.00,1.00,0.00,0.35	package gap fill (x-ray only)		0
+L_pkg10_plate	geometry	1.0929	1.5293	0	0	0	filling_steel	0.00,0.62,0.85,0.55	cheek pack: SK-2Sh 50 mm		0
+L_pkg10_layer	geometry	0.3133	0.4384	0	0	0	filling		cheek pack: rubber + 2x4 mm		0
+L_pkg10_layer_rubber1	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+L_pkg10_layer_thin1	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+L_pkg10_layer_rubber2	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+L_pkg10_layer_thin2	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+L_pkg10_layer_gap	drawn	0	0	0	0	0		0.00,1.00,0.00,0.35	package gap fill (x-ray only)		0
+L_pkg11_plate	geometry	1.0929	1.5293	0	0	0	filling_steel	0.00,0.62,0.85,0.55	cheek pack: SK-2Sh 50 mm		0
+L_pkg11_layer	geometry	0.3133	0.4384	0	0	0	filling		cheek pack: rubber + 2x4 mm		0
+L_pkg11_layer_rubber1	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+L_pkg11_layer_thin1	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+L_pkg11_layer_rubber2	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+L_pkg11_layer_thin2	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+L_pkg11_layer_gap	drawn	0	0	0	0	0		0.00,1.00,0.00,0.35	package gap fill (x-ray only)		0
+L_pkg12_plate	geometry	1.0929	1.5293	0	0	0	filling_steel	0.00,0.62,0.85,0.55	cheek pack: SK-2Sh 50 mm		0
+L_pkg12_layer	geometry	0.3133	0.4384	0	0	0	filling		cheek pack: rubber + 2x4 mm		0
+L_pkg12_layer_rubber1	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+L_pkg12_layer_thin1	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+L_pkg12_layer_rubber2	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+L_pkg12_layer_thin2	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+L_pkg12_layer_gap	drawn	0	0	0	0	0		0.00,1.00,0.00,0.35	package gap fill (x-ray only)		0
+L_pkg13_plate	geometry	1.0929	1.5293	0	0	0	filling_steel	0.00,0.62,0.85,0.55	cheek pack: SK-2Sh 50 mm		0
+L_pkg13_layer	geometry	0.3133	0.4384	0	0	0	filling		cheek pack: rubber + 2x4 mm		0
+L_pkg13_layer_rubber1	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+L_pkg13_layer_thin1	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+L_pkg13_layer_rubber2	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+L_pkg13_layer_thin2	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+L_pkg13_layer_gap	drawn	0	0	0	0	0		0.00,1.00,0.00,0.35	package gap fill (x-ray only)		0
+L_pkg14_plate	geometry	1.0929	1.5293	0	0	0	filling_steel	0.00,0.62,0.85,0.55	cheek pack: SK-2Sh 50 mm		0
+L_pkg14_layer	geometry	0.3133	0.4384	0	0	0	filling		cheek pack: rubber + 2x4 mm		0
+L_pkg14_layer_rubber1	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+L_pkg14_layer_thin1	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+L_pkg14_layer_rubber2	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+L_pkg14_layer_thin2	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+L_pkg14_layer_gap	drawn	0	0	0	0	0		0.00,1.00,0.00,0.35	package gap fill (x-ray only)		0
+L_pkg15_plate	geometry	1.0929	1.5293	0	0	0	filling_steel	0.00,0.62,0.85,0.55	cheek pack: SK-2Sh 50 mm		0
+L_pkg15_layer	geometry	0.3133	0.4384	0	0	0	filling		cheek pack: rubber + 2x4 mm		0
+L_pkg15_layer_rubber1	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+L_pkg15_layer_thin1	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+L_pkg15_layer_rubber2	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+L_pkg15_layer_thin2	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+L_pkg15_layer_gap	drawn	0	0	0	0	0		0.00,1.00,0.00,0.35	package gap fill (x-ray only)		0
+L_pkg16_plate	geometry	1.0929	1.5293	0	0	0	filling_steel	0.00,0.62,0.85,0.55	cheek pack: SK-2Sh 50 mm		0
+L_pkg16_layer	geometry	0.3133	0.4384	0	0	0	filling		cheek pack: rubber + 2x4 mm		0
+L_pkg16_layer_rubber1	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+L_pkg16_layer_thin1	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+L_pkg16_layer_rubber2	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+L_pkg16_layer_thin2	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+L_pkg16_layer_gap	drawn	0	0	0	0	0		0.00,1.00,0.00,0.35	package gap fill (x-ray only)		0
+L_pkg17_plate	geometry	1.0929	1.5293	0	0	0	filling_steel	0.00,0.62,0.85,0.55	cheek pack: SK-2Sh 50 mm		0
+R_pkg01_plate	geometry	1.0929	1.5293	0	0	0	filling_steel	0.00,0.62,0.85,0.55	cheek pack: SK-2Sh 50 mm		0
+R_pkg01_layer	geometry	0.3133	0.4384	0	0	0	filling		cheek pack: rubber + 2x4 mm		0
+R_pkg01_layer_rubber1	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+R_pkg01_layer_thin1	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+R_pkg01_layer_rubber2	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+R_pkg01_layer_thin2	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+R_pkg01_layer_gap	drawn	0	0	0	0	0		0.00,1.00,0.00,0.35	package gap fill (x-ray only)		0
+R_pkg02_plate	geometry	1.0929	1.5293	0	0	0	filling_steel	0.00,0.62,0.85,0.55	cheek pack: SK-2Sh 50 mm		0
+R_pkg02_layer	geometry	0.3133	0.4384	0	0	0	filling		cheek pack: rubber + 2x4 mm		0
+R_pkg02_layer_rubber1	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+R_pkg02_layer_thin1	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+R_pkg02_layer_rubber2	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+R_pkg02_layer_thin2	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+R_pkg02_layer_gap	drawn	0	0	0	0	0		0.00,1.00,0.00,0.35	package gap fill (x-ray only)		0
+R_pkg03_plate	geometry	1.0929	1.5293	0	0	0	filling_steel	0.00,0.62,0.85,0.55	cheek pack: SK-2Sh 50 mm		0
+R_pkg03_layer	geometry	0.3133	0.4384	0	0	0	filling		cheek pack: rubber + 2x4 mm		0
+R_pkg03_layer_rubber1	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+R_pkg03_layer_thin1	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+R_pkg03_layer_rubber2	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+R_pkg03_layer_thin2	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+R_pkg03_layer_gap	drawn	0	0	0	0	0		0.00,1.00,0.00,0.35	package gap fill (x-ray only)		0
+R_pkg04_plate	geometry	1.0929	1.5293	0	0	0	filling_steel	0.00,0.62,0.85,0.55	cheek pack: SK-2Sh 50 mm		0
+R_pkg04_layer	geometry	0.3133	0.4384	0	0	0	filling		cheek pack: rubber + 2x4 mm		0
+R_pkg04_layer_rubber1	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+R_pkg04_layer_thin1	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+R_pkg04_layer_rubber2	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+R_pkg04_layer_thin2	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+R_pkg04_layer_gap	drawn	0	0	0	0	0		0.00,1.00,0.00,0.35	package gap fill (x-ray only)		0
+R_pkg05_plate	geometry	1.0929	1.5293	0	0	0	filling_steel	0.00,0.62,0.85,0.55	cheek pack: SK-2Sh 50 mm		0
+R_pkg05_layer	geometry	0.3133	0.4384	0	0	0	filling		cheek pack: rubber + 2x4 mm		0
+R_pkg05_layer_rubber1	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+R_pkg05_layer_thin1	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+R_pkg05_layer_rubber2	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+R_pkg05_layer_thin2	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+R_pkg05_layer_gap	drawn	0	0	0	0	0		0.00,1.00,0.00,0.35	package gap fill (x-ray only)		0
+R_pkg06_plate	geometry	1.0929	1.5293	0	0	0	filling_steel	0.00,0.62,0.85,0.55	cheek pack: SK-2Sh 50 mm		0
+R_pkg06_layer	geometry	0.3133	0.4384	0	0	0	filling		cheek pack: rubber + 2x4 mm		0
+R_pkg06_layer_rubber1	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+R_pkg06_layer_thin1	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+R_pkg06_layer_rubber2	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+R_pkg06_layer_thin2	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+R_pkg06_layer_gap	drawn	0	0	0	0	0		0.00,1.00,0.00,0.35	package gap fill (x-ray only)		0
+R_pkg07_plate	geometry	1.0929	1.5293	0	0	0	filling_steel	0.00,0.62,0.85,0.55	cheek pack: SK-2Sh 50 mm		0
+R_pkg07_layer	geometry	0.3133	0.4384	0	0	0	filling		cheek pack: rubber + 2x4 mm		0
+R_pkg07_layer_rubber1	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+R_pkg07_layer_thin1	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+R_pkg07_layer_rubber2	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+R_pkg07_layer_thin2	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+R_pkg07_layer_gap	drawn	0	0	0	0	0		0.00,1.00,0.00,0.35	package gap fill (x-ray only)		0
+R_pkg08_plate	geometry	1.0929	1.5293	0	0	0	filling_steel	0.00,0.62,0.85,0.55	cheek pack: SK-2Sh 50 mm		0
+R_pkg08_layer	geometry	0.3133	0.4384	0	0	0	filling		cheek pack: rubber + 2x4 mm		0
+R_pkg08_layer_rubber1	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+R_pkg08_layer_thin1	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+R_pkg08_layer_rubber2	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+R_pkg08_layer_thin2	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+R_pkg08_layer_gap	drawn	0	0	0	0	0		0.00,1.00,0.00,0.35	package gap fill (x-ray only)		0
+R_pkg09_plate	geometry	1.0929	1.5293	0	0	0	filling_steel	0.00,0.62,0.85,0.55	cheek pack: SK-2Sh 50 mm		0
+R_pkg09_layer	geometry	0.3133	0.4384	0	0	0	filling		cheek pack: rubber + 2x4 mm		0
+R_pkg09_layer_rubber1	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+R_pkg09_layer_thin1	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+R_pkg09_layer_rubber2	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+R_pkg09_layer_thin2	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+R_pkg09_layer_gap	drawn	0	0	0	0	0		0.00,1.00,0.00,0.35	package gap fill (x-ray only)		0
+R_pkg10_plate	geometry	1.0929	1.5293	0	0	0	filling_steel	0.00,0.62,0.85,0.55	cheek pack: SK-2Sh 50 mm		0
+R_pkg10_layer	geometry	0.3133	0.4384	0	0	0	filling		cheek pack: rubber + 2x4 mm		0
+R_pkg10_layer_rubber1	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+R_pkg10_layer_thin1	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+R_pkg10_layer_rubber2	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+R_pkg10_layer_thin2	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+R_pkg10_layer_gap	drawn	0	0	0	0	0		0.00,1.00,0.00,0.35	package gap fill (x-ray only)		0
+R_pkg11_plate	geometry	1.0929	1.5293	0	0	0	filling_steel	0.00,0.62,0.85,0.55	cheek pack: SK-2Sh 50 mm		0
+R_pkg11_layer	geometry	0.3133	0.4384	0	0	0	filling		cheek pack: rubber + 2x4 mm		0
+R_pkg11_layer_rubber1	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+R_pkg11_layer_thin1	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+R_pkg11_layer_rubber2	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+R_pkg11_layer_thin2	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+R_pkg11_layer_gap	drawn	0	0	0	0	0		0.00,1.00,0.00,0.35	package gap fill (x-ray only)		0
+R_pkg12_plate	geometry	1.0929	1.5293	0	0	0	filling_steel	0.00,0.62,0.85,0.55	cheek pack: SK-2Sh 50 mm		0
+R_pkg12_layer	geometry	0.3133	0.4384	0	0	0	filling		cheek pack: rubber + 2x4 mm		0
+R_pkg12_layer_rubber1	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+R_pkg12_layer_thin1	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+R_pkg12_layer_rubber2	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+R_pkg12_layer_thin2	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+R_pkg12_layer_gap	drawn	0	0	0	0	0		0.00,1.00,0.00,0.35	package gap fill (x-ray only)		0
+R_pkg13_plate	geometry	1.0929	1.5293	0	0	0	filling_steel	0.00,0.62,0.85,0.55	cheek pack: SK-2Sh 50 mm		0
+R_pkg13_layer	geometry	0.3133	0.4384	0	0	0	filling		cheek pack: rubber + 2x4 mm		0
+R_pkg13_layer_rubber1	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+R_pkg13_layer_thin1	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+R_pkg13_layer_rubber2	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+R_pkg13_layer_thin2	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+R_pkg13_layer_gap	drawn	0	0	0	0	0		0.00,1.00,0.00,0.35	package gap fill (x-ray only)		0
+R_pkg14_plate	geometry	1.0929	1.5293	0	0	0	filling_steel	0.00,0.62,0.85,0.55	cheek pack: SK-2Sh 50 mm		0
+R_pkg14_layer	geometry	0.3133	0.4384	0	0	0	filling		cheek pack: rubber + 2x4 mm		0
+R_pkg14_layer_rubber1	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+R_pkg14_layer_thin1	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+R_pkg14_layer_rubber2	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+R_pkg14_layer_thin2	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+R_pkg14_layer_gap	drawn	0	0	0	0	0		0.00,1.00,0.00,0.35	package gap fill (x-ray only)		0
+R_pkg15_plate	geometry	1.0929	1.5293	0	0	0	filling_steel	0.00,0.62,0.85,0.55	cheek pack: SK-2Sh 50 mm		0
+R_pkg15_layer	geometry	0.3133	0.4384	0	0	0	filling		cheek pack: rubber + 2x4 mm		0
+R_pkg15_layer_rubber1	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+R_pkg15_layer_thin1	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+R_pkg15_layer_rubber2	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+R_pkg15_layer_thin2	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+R_pkg15_layer_gap	drawn	0	0	0	0	0		0.00,1.00,0.00,0.35	package gap fill (x-ray only)		0
+R_pkg16_plate	geometry	1.0929	1.5293	0	0	0	filling_steel	0.00,0.62,0.85,0.55	cheek pack: SK-2Sh 50 mm		0
+R_pkg16_layer	geometry	0.3133	0.4384	0	0	0	filling		cheek pack: rubber + 2x4 mm		0
+R_pkg16_layer_rubber1	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+R_pkg16_layer_thin1	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+R_pkg16_layer_rubber2	drawn	0	0	0	0	0		0.85,0.08,0.08,0.35	rubber (x-ray only)		0
+R_pkg16_layer_thin2	drawn	0	0	0	0	0		0.55,0.10,0.95,0.35	thin steel plate (x-ray only)		0
+R_pkg16_layer_gap	drawn	0	0	0	0	0		0.00,1.00,0.00,0.35	package gap fill (x-ray only)		0
+R_pkg17_plate	geometry	1.0929	1.5293	0	0	0	filling_steel	0.00,0.62,0.85,0.55	cheek pack: SK-2Sh 50 mm		0

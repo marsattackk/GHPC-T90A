@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -6,7 +7,8 @@ using UnityEngine;
 
 namespace T90A.Common
 {
-	// HeatSource collects its renderers once, in OnEnable. Anything parented later draws black in white-hot.
+	// HeatSource collects its renderers once, in OnEnable, and anything parented later draws black in white-hot. This
+	// gives the parts I add the vehicle's heat.
 	internal static class ThermalHeat
 	{
 		static readonly FieldInfo Serialized = Reflect.Field(typeof(HeatSource), "heat");
@@ -17,46 +19,68 @@ namespace T90A.Common
 		{
 			var rig = RigBones.Hull(unit)?.parent;
 			if (rig == null) return Enumerable.Empty<Transform>();
-			return unit.GetComponentsInChildren<Transform>(true).Where(t => t.name.StartsWith(prefix) && t.GetComponentsInChildren<Renderer>(true).Length > 0 && t.GetComponentsInParent<Transform>(true).Contains(rig)
-				&& (t.parent == null || !t.parent.GetComponentsInParent<Transform>(true).Any(p => p.name.StartsWith(prefix))));
+			return unit.GetComponentsInChildren<Transform>(true).Where(child =>
+				child.name.StartsWith(prefix) && child.GetComponentsInChildren<Renderer>(true).Length > 0 && child
+					.GetComponentsInParent<Transform>(true)
+					.Contains(rig)
+					&& (child.parent == null
+						|| !child.parent.GetComponentsInParent<Transform>(true).Any(a => a.name.StartsWith(prefix))));
 		}
 
-		internal static void Apply(Transform unit, IEnumerable<Transform> parts, IDictionary<string, float> overrides = null)
+		internal static HeatSource AddSource(GameObject go, float heat)
+		{
+			var heatSource = go.GetComponent<HeatSource>() ?? go.AddComponent<HeatSource>();
+			Serialized.SetValue(heatSource, heat);
+			return heatSource;
+		}
+
+		internal static void Apply(Transform unit, IEnumerable<Transform> parts, string tag, IDictionary<string, float> overrides = null)
 		{
 			var ownParts = parts.Where(p => p != null).ToList();
 			float baseHeat = BaseHeat(unit, ownParts);
-			foreach (var p in ownParts)
+			foreach (var part in ownParts)
 			{
-				float h = overrides != null && overrides.TryGetValue(p.name, out var o) ? o : baseHeat;
-				var hs = p.GetComponent<HeatSource>() ?? p.gameObject.AddComponent<HeatSource>();
-				Serialized.SetValue(hs, h);
+				float heat = overrides != null && overrides.TryGetValue(part.name, out var overrideHeat) ? overrideHeat : baseHeat;
+				var heatSource = part.GetComponent<HeatSource>() ?? part.gameObject.AddComponent<HeatSource>();
+				Serialized.SetValue(heatSource, heat);
 			}
+			int sources = 0, materials = 0;
 			// Heat's setter skips an unchanged value and only collects into an empty list, hence the clear and the NaN.
 			// Outer first, so a part's own value wins.
-			foreach (var hs in unit.GetComponentsInChildren<HeatSource>(true).OrderBy(Depth))
+			foreach (var heatSource in unit.GetComponentsInChildren<HeatSource>(true).OrderBy(Depth))
 			{
-				(Held.GetValue(hs) as System.Collections.IList)?.Clear();
-				Current.SetValue(hs, float.NaN);
-				hs.Heat = (float)Serialized.GetValue(hs);
+				(Held.GetValue(heatSource) as IList)?.Clear();
+				Current.SetValue(heatSource, float.NaN);
+				heatSource.Heat = (float)Serialized.GetValue(heatSource);
+				materials += (Held.GetValue(heatSource) as IList)?.Count ?? 0;
+				sources++;
 			}
 			var flir = Shader.PropertyToID("_FLIR_Emission");
-			unit.GetComponentsInChildren<Renderer>(true).Where(r => r.GetComponentInParent<HeatSource>(true) == null)
-				.Sum(r => r.sharedMaterials.Count(m => m != null && m.HasProperty(flir)));
+			int orphans =
+				unit.GetComponentsInChildren<Renderer>(true).Where(r => r.GetComponentInParent<HeatSource>(true) == null)
+					.Sum(r => r.sharedMaterials.Count(m => m != null && m.HasProperty(flir)));
 		}
 
 		static float BaseHeat(Transform unit, List<Transform> ownParts)
 		{
-			foreach (var p in ownParts)
-				for (var x = p.parent; x != null; x = x.parent)
+			foreach (var part in ownParts)
+				for (var ancestor = part.parent; ancestor != null; ancestor = ancestor.parent)
 				{
-					var hs = x.GetComponent<HeatSource>();
-					if (hs != null) return (float)Serialized.GetValue(hs);
-					if (x == unit) break;
+					var heatSource = ancestor.GetComponent<HeatSource>();
+					if (heatSource != null) return (float)Serialized.GetValue(heatSource);
+					if (ancestor == unit) break;
 				}
-			var any = unit.GetComponentsInChildren<HeatSource>(true).FirstOrDefault(h => h.transform.parent == unit || h.transform == unit);
+			var any = unit
+				.GetComponentsInChildren<HeatSource>(true)
+				.FirstOrDefault(s => s.transform.parent == unit || s.transform == unit);
 			return any != null ? (float)Serialized.GetValue(any) : 0.8f;
 		}
 
-		static int Depth(Component c) { int d = 0; for (var x = c.transform; x != null; x = x.parent) d++; return d; }
+		static int Depth(Component c)
+		{
+			int depth = 0;
+			for (var ancestor = c.transform; ancestor != null; ancestor = ancestor.parent) depth++;
+			return depth;
+		}
 	}
 }

@@ -1,0 +1,4 @@
+ESSA monitor (T-90A)|6.7500|first|False
+screen|ESSA monitor edges
+S|rect|monitor edge|centre|-196.3495|0.0000|235.6194|120.1659|0.0000|0.0000|0|||center|0.0000,0.0000,0.0000,1.0000
+S|rect|monitor edge|centre|196.3495|0.0000|235.6194|120.1659|0.0000|0.0000|0|||center|0.0000,0.0000,0.0000,1.0000

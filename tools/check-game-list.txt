@@ -1,0 +1,40 @@
+# Game hooks that tools\check-game.ps1 can't read from the DLL, because the name comes from a variable or a string
+# lookup and not from the call itself. One line per member:
+#
+#   field | method | property | setter | patch   <class>   <member>[(<parameter types>)]   # where it comes from
+#   covers <Class.Method>                      # a Reflect call in that method has a name the IL doesn't spell out
+#
+# Class names are full ("GHPC.Rendering.Instancing.InstancedMeshRenderer") or short ("FireControlSystem") when only one
+# class has that name. A nested class is written with a slash ("AmmoFeed/ReloadStage"). "patch" looks the method up
+# the way Harmony does, on that class only and not on the ones it extends. The other kinds look on the class and what it
+# extends, the way Reflect does. Parameter types are full names ("System.Boolean", "UnityEngine.Vector3").
+# When the code gains such a call, add its members here and a "covers" line, or the script says it isn't covered.
+
+# SetPrivate(fcs, "<name>", value) in GunnerFcs.cs passes the field name to Reflect.Field as a variable. These are every name it's called with.
+covers  GunnerFcs.SetPrivate
+field   FireControlSystem   PointStabAffectsLead           # GunnerFcs.cs, SetPrivate in Apply
+field   FireControlSystem   InertiaLeadIncludesVertical    # GunnerFcs.cs, SetPrivate in Apply
+field   FireControlSystem   _counterMotionLeadAlwaysOn     # GunnerFcs.cs, SetPrivate in Apply
+field   FireControlSystem   _autoDumpViaPalmSwitches       # GunnerFcs.cs, SetPrivate in Apply
+field   FireControlSystem   _horizontalLeadOnly            # GunnerFcs.cs, SetPrivate in Apply
+field   FireControlSystem   _useSeparateLead               # GunnerFcs.cs, SetPrivate in Apply
+field   FireControlSystem   _fixParallaxForVectorMode      # GunnerFcs.cs, SetPrivate in Apply
+field   FireControlSystem   _manualModeOnRangeSet          # GunnerFcs.cs, SetPrivate in Resync
+field   FireControlSystem   _autoModeOnLase                # GunnerFcs.cs, SetPrivate in Resync
+field   FireControlSystem   _originalSuperelevationMode    # GunnerFcs.cs, SetPrivate in Resync
+field   FireControlSystem   _originalSuperleadMode         # GunnerFcs.cs, SetPrivate in Resync
+field   FireControlSystem   _originalRangeLimits           # GunnerFcs.cs, SetPrivate in Resync
+field   FireControlSystem   _originalRangeStep             # GunnerFcs.cs, SetPrivate in Resync
+field   FireControlSystem   _recordedOriginalRangeValues   # GunnerFcs.cs, SetPrivate in Resync
+field   FireControlSystem   _originalMainOpticAlign        # GunnerFcs.cs, SetPrivate in Resync
+
+# SmokeLaunchers.cs RefreshCrew loops over two (cache, flag) pairs of names and looks each up through Reflect.Field.
+covers  SmokeLaunchers.RefreshCrew
+field   VehicleSmokeManager   _smokeGrenadeCrewBrains                # SmokeLaunchers.cs, RefreshCrew
+field   VehicleSmokeManager   _smokeScreenCrewBrains                 # SmokeLaunchers.cs, RefreshCrew
+field   VehicleSmokeManager   _smokeGrenadeRequiredCrewPositions     # SmokeLaunchers.cs, RefreshCrew
+field   VehicleSmokeManager   _smokeScreenRequiredCrewPositions      # SmokeLaunchers.cs, RefreshCrew
+
+# ModuleBuilder.cs sets whichever FlammableItem fields the module list's "fuel" entry names. The T-90A's list has no
+# fuel entries, so there are no names to check yet. Add a "field FlammableItem <name>" line for each one a port uses.
+covers  ModuleBuilder.Fuel

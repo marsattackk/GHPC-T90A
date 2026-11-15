@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Tests for the parts of Common\ that don't need the game: the reticle language, MiniJson, dm_armour, the bundle
+       text numbers, the settings versions and the fire control and Shtora maths. The files are compiled in from
+       ..\Common, with Stubs\MelonLoader.cs in place of MelonLoader, so no game DLL is referenced and the T90A.dll build
+       is untouched. -->
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>T90A.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Common\MiniJson.cs" Link="Common\MiniJson.cs" />
+    <Compile Include="..\Common\BundleText.cs" Link="Common\BundleText.cs" />
+    <Compile Include="..\Common\DmArmour.cs" Link="Common\DmArmour.cs" />
+    <Compile Include="..\Common\PortSettings.cs" Link="Common\PortSettings.cs" />
+    <Compile Include="..\Common\ReticleSpec*.cs" Link="Common\%(Filename)%(Extension)" />
+    <Compile Include="..\Common\FcsMath.cs" Link="Common\FcsMath.cs" />
+    <Compile Include="..\Common\ShtoraMath.cs" Link="Common\ShtoraMath.cs" />
+    <Compile Include="..\Common\V3.cs" Link="Common\V3.cs" />
+  </ItemGroup>
+
+</Project>

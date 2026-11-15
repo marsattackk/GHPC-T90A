@@ -1,0 +1,26 @@
+# What CI covers: the unit tests in tests/, which compile only the parts of Common\ that don't need the game (the files
+# listed in tests/T90A.Tests.csproj). The mod itself (T90A.csproj) is not built here: it references the game's and
+# MelonLoader's DLLs, which can't be put in a public repo. Before a pull request, build it against your own game with
+# dotnet build -c Release -p:GameDir="<the game's Bin folder>" and run tools/check-game.ps1.
+name: tests
+
+on:
+  push:
+    paths-ignore: ['**.md', 'docs/**', '.github/ISSUE_TEMPLATE/**']
+  pull_request:
+    paths-ignore: ['**.md', 'docs/**', '.github/ISSUE_TEMPLATE/**']
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - run: dotnet test tests -c Release --logger "console;verbosity=normal"
+      - name: What this run did not check
+        shell: bash
+        run: |
+          echo "Unit tests only: T90A.csproj needs the game's DLLs and is not built in CI." >> "$GITHUB_STEP_SUMMARY"
+          echo "Build it locally with -p:GameDir and run tools/check-game.ps1 before merging." >> "$GITHUB_STEP_SUMMARY"

@@ -13,15 +13,26 @@ namespace T90A.Common
 		UsableOptic _optic;
 		FireControlSystem _fcs;
 		Func<AmmoType> _ammo;
+		internal float Mrad { get; private set; }
 
-		internal void Init(UsableOptic optic, FireControlSystem fcs, Func<AmmoType> ammo) { _optic = optic; _fcs = fcs; _ammo = ammo; }
+		internal void Init(UsableOptic optic, FireControlSystem fcs, Func<AmmoType> ammo)
+		{
+			_optic = optic;
+			_fcs = fcs;
+			_ammo = ammo;
+		}
 
 		void LateUpdate()
 		{
 			if (_optic?.reticleMesh == null || _fcs == null || _ammo == null) return;
-			var a = _ammo();
-			float se = a != null && _fcs.CurrentRange > 0f ? BallisticComputerRepository.Instance.GetSuperelevation(a, _fcs.CurrentRange) : 0f;
-			_optic.reticleMesh.SetAlignment(ReticleTree.GroupBase.Alignment.Impact, new AngularVector2(0f, se, AngularLength.AngularUnit.DEG));
+			var ammo = _ammo();
+			float superelevation = ammo != null && _fcs.CurrentRange > 0f
+				? BallisticComputerRepository.Instance.GetSuperelevation(ammo, _fcs.CurrentRange)
+				: 0f;
+			Mrad = superelevation * Mathf.Deg2Rad * 1000f;
+			_optic.reticleMesh.SetAlignment(
+				ReticleTree.GroupBase.Alignment.Impact,
+				new AngularVector2(0f, superelevation, AngularLength.AngularUnit.DEG));
 		}
 	}
 }

@@ -7,28 +7,37 @@ namespace T90A.Common
 	internal static class SmokeCaps
 	{
 		// Needs the launch points already moved onto the tubes (SmokeLaunchers.Seat).
-		internal static void Apply(Transform unit, float maxOffAxis = 0.04f, float maxBehind = 0.6f)
+		internal static string Apply(Transform unit, float maxOffAxis = 0.04f, float maxBehind = 0.6f)
 		{
 			var mgr = unit.GetComponentInChildren<VehicleSmokeManager>(true);
-			if (mgr == null) return;
+			if (mgr == null) return "no smoke manager";
 			var slots = (VehicleSmokeManager.SmokeSlot[])Reflect.Field(typeof(VehicleSmokeManager), "_smokeSlots").GetValue(mgr);
 			var caps = unit.GetComponentsInChildren<MeshRenderer>(true).Where(r => r.name.StartsWith("smoke_cap_")).ToList();
-			if (slots == null || caps.Count == 0) return;
+			if (slots == null || caps.Count == 0) return $"{caps.Count} caps, {slots?.Length ?? 0} slots: nothing wired";
 			var free = caps.ToList();
-			float OffAxis(MeshRenderer c, Vector3 p) => Vector3.ProjectOnPlane(p - c.transform.position, c.transform.forward).magnitude;
-			float Behind(MeshRenderer c, Vector3 p) => -Vector3.Dot(p - c.transform.position, c.transform.forward);
-			foreach (var s in slots.Where(s => s.SpawnLocation != null))
+			int wired = 0;
+			float worst = 0f;
+			float OffAxis(MeshRenderer cap, Vector3 point)
+				=> Vector3.ProjectOnPlane(point - cap.transform.position, cap.transform.forward).magnitude;
+			float Behind(MeshRenderer cap, Vector3 point) => -Vector3.Dot(point - cap.transform.position, cap.transform.forward);
+			foreach (var slot in slots.Where(c => c.SpawnLocation != null))
 			{
-				var p = s.SpawnLocation.position;
-				var best = free.Where(c => Behind(c, p) > -0.02f && Behind(c, p) < maxBehind).OrderBy(c => OffAxis(c, p)).FirstOrDefault();
+				var spawnPoint = slot.SpawnLocation.position;
+				var best = free
+					.Where(c => Behind(c, spawnPoint) > -0.02f && Behind(c, spawnPoint) < maxBehind)
+					.OrderBy(c => OffAxis(c, spawnPoint))
+					.FirstOrDefault();
 				if (best == null) continue;
-				float d = OffAxis(best, p);
-				if (d > maxOffAxis) continue;
+				float offset = OffAxis(best, spawnPoint);
+				if (offset > maxOffAxis) continue;
 				free.Remove(best);
-				s.DisplayMesh = best;
-				s.DisableVisualOnUse = true;
-				best.enabled = s.Rounds > 0;
+				slot.DisplayMesh = best;
+				slot.DisableVisualOnUse = true;
+				best.enabled = slot.Rounds > 0;
+				wired++;
+				worst = Mathf.Max(worst, offset);
 			}
+			return $"{wired} of {slots.Length} slots given a cap (of {caps.Count}; launch points at most {worst * 100f:0.0} cm off their cap's axis)";
 		}
 	}
 }

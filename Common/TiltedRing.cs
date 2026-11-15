@@ -7,16 +7,18 @@ using UnityEngine;
 
 namespace T90A.Common
 {
-	// AimablePlatform turns about the parent's up and wipes other tilt, the tilted turret rode up to 4 cm off its seat.
-	// A tilted parent would break every HULL/TURRET path, hence the drive.
-	// AzimuthLock measures off the drive, so the gun loads up to Tilt low. Left as is.
+	// For a ring that isn't level (a tilted seat). AimablePlatform turns about the parent's up and wipes other
+	// tilt, so the tilted turret rode up to 4 cm off its seat. A tilted parent would break every HULL/TURRET path,
+	// which is why there's a drive. Side effect: AzimuthLock measures off the drive and the gun loads up to Tilt low.
 	internal static class TiltedRing
 	{
 		internal sealed class Link : MonoBehaviour
 		{
+			public AimablePlatform Platform;
 			public Unit Unit;
-			public Transform Hull, Turret, Drive;
+			public Transform Hull, Turret, Seat, Drive;
 			public Quaternion Tilt;
+			public string Tag;
 
 			internal void Sync()
 			{
@@ -29,31 +31,47 @@ namespace T90A.Common
 		}
 
 		static readonly Dictionary<AimablePlatform, Link> Links = new Dictionary<AimablePlatform, Link>();
-		static readonly AccessTools.FieldRef<AimablePlatform, Quaternion> Orig = Reflect.FieldRefAccess<AimablePlatform, Quaternion>("_originalLocalRotation");
-		static readonly AccessTools.FieldRef<AimablePlatform, Vector3> Stowed = Reflect.FieldRefAccess<AimablePlatform, Vector3>("_stowedVectorInParentSpace");
+		static readonly AccessTools.FieldRef<AimablePlatform, Quaternion> Orig =
+			Reflect.FieldRefAccess<AimablePlatform, Quaternion>("_originalLocalRotation");
+		static readonly AccessTools.FieldRef<AimablePlatform, Vector3> Stowed =
+			Reflect.FieldRefAccess<AimablePlatform, Vector3>("_stowedVectorInParentSpace");
 
-		internal static void Apply(GHPC.Vehicle.Vehicle vehicle, Quaternion tilt, string tag = "tilted ring")
+		internal static bool Apply(GHPC.Vehicle.Vehicle vehicle, Quaternion tilt, string tag = "tilted ring")
 		{
 			var root = vehicle.transform;
 			var hull = RigBones.Hull(root);
 			var turret = hull != null ? RigBones.Turret(root) : null;
-			var plat = turret == null ? null : root.GetComponentsInChildren<AimablePlatform>(true).FirstOrDefault(p => p.Transform == turret);
-			if (plat == null) { MelonLogger.Warning($"{tag}: no traverse platform on {RigBones.TurretName(root)}; turret turns about the vertical."); return; }
+			var plat = turret == null
+				? null
+				: root.GetComponentsInChildren<AimablePlatform>(true).FirstOrDefault(p => p.Transform == turret);
+			if (plat == null)
+			{
+				MelonLogger.Warning($"{tag}: no traverse platform on {RigBones.TurretName(root)}; turret turns about the vertical.");
+				return false;
+			}
 			if (Quaternion.Angle(Orig(plat), Quaternion.identity) > 0.01f)
 			{
 				MelonLogger.Warning($"{tag}: the turret's rest rotation isn't the hull's ({Orig(plat).eulerAngles}); turret turns about the vertical.");
-				return;
+				return false;
 			}
-			foreach (var k in Links.Keys.Where(k => k == null).ToList()) Links.Remove(k);
+			UnityKeys.Prune(Links);
 
 			var seat = new GameObject("TURRET SEAT (tilted ring)").transform;
 			seat.SetParent(hull, false);
-			seat.localPosition = turret.localPosition; seat.localRotation = tilt;
+			seat.localPosition = turret.localPosition;
+			seat.localRotation = tilt;
 			var drive = new GameObject("TURRET DRIVE (tilted ring)").transform;
 			drive.SetParent(seat, false);
 			drive.localRotation = Quaternion.Euler(0f, turret.localEulerAngles.y, 0f);
 			var link = drive.gameObject.AddComponent<Link>();
-			link.Unit = vehicle; link.Hull = hull; link.Turret = turret; link.Drive = drive; link.Tilt = tilt;
+			link.Platform = plat;
+			link.Unit = vehicle;
+			link.Hull = hull;
+			link.Turret = turret;
+			link.Seat = seat;
+			link.Drive = drive;
+			link.Tilt = tilt;
+			link.Tag = tag;
 
 			var stowed = Stowed(plat);
 			// Rest and stowed vector are in the bone's parent space, the seat from here on.
@@ -63,6 +81,13 @@ namespace T90A.Common
 			plat.LocalRotation = drive.localRotation;
 			Links[plat] = link;
 			link.Sync();
+
+			return true;
+		}
+
+		internal static void SyncNow(Transform root)
+		{
+			foreach (var link in Links.Values) if (link != null && link.Turret != null && link.Turret.IsChildOf(root)) link.Sync();
 		}
 
 		[HarmonyPatch(typeof(AimablePlatform), "MoveTransformToMatchVirtualRotation")]
@@ -70,7 +95,7 @@ namespace T90A.Common
 		{
 			static void Postfix(AimablePlatform __instance)
 			{
-				if (Links.Count > 0 && Links.TryGetValue(__instance, out var l) && l != null) l.Sync();
+				if (Links.Count > 0 && Links.TryGetValue(__instance, out var link) && link != null) link.Sync();
 			}
 		}
 
@@ -84,9 +109,15 @@ namespace T90A.Common
 				foreach (var pose in __instance.UnitPoses)
 				{
 					if (pose.PosedTransforms == null) continue;
-					foreach (var l in Links.Values)
-						if (l != null && l.Turret != null && (object)l.Unit == pose.Unit)
-							pose.PosedTransforms.Add(new GHPC.Weapons.ShotInfo.PosRot { Trans = l.Turret, Pos = l.Turret.localPosition, Rot = l.Turret.localRotation, Parent = l.Turret.parent });
+					foreach (var link in Links.Values)
+						if (link != null && link.Turret != null && (object)link.Unit == pose.Unit)
+							pose.PosedTransforms.Add(new GHPC.Weapons.ShotInfo.PosRot
+							{
+								Trans = link.Turret,
+								Pos = link.Turret.localPosition,
+								Rot = link.Turret.localRotation,
+								Parent = link.Turret.parent
+							});
 				}
 			}
 		}

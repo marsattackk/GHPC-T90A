@@ -1,0 +1,16 @@
+name: settings
+
+# No path filter on purpose: the tests workflow skips Markdown-only changes, and the README and MAINTAINING.md
+# tables are exactly what this checks.
+on:
+  push:
+  pull_request:
+
+jobs:
+  settings:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Settings tables match the code
+        shell: powershell
+        run: powershell -ExecutionPolicy Bypass -File tools\check-settings.ps1

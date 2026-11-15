@@ -11,9 +11,23 @@ namespace T90A.Common
 		sealed class V3 : IEqualityComparer<Vector3Int>
 		{
 			public bool Equals(Vector3Int a, Vector3Int b) => a.x == b.x && a.y == b.y && a.z == b.z;
-			public int GetHashCode(Vector3Int v) { unchecked { return Mix((uint)v.x * 73856093u ^ (uint)v.y * 19349663u ^ (uint)v.z * 83492791u); } }
+			public int GetHashCode(Vector3Int v)
+			{
+				unchecked { return Mix((uint)v.x * 73856093u ^ (uint)v.y * 19349663u ^ (uint)v.z * 83492791u); }
+			}
 		}
 
-		static int Mix(uint h) { unchecked { h ^= h >> 16; h *= 0x7feb352du; h ^= h >> 15; h *= 0x846ca68bu; h ^= h >> 16; return (int)h; } }
+		static int Mix(uint h)
+		{
+			unchecked
+			{
+				h ^= h >> 16;
+				h *= 0x7feb352du;
+				h ^= h >> 15;
+				h *= 0x846ca68bu;
+				h ^= h >> 16;
+				return (int)h;
+			}
+		}
 	}
 }

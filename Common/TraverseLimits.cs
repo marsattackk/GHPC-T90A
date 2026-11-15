@@ -7,15 +7,19 @@ using UnityEngine;
 
 namespace T90A.Common
 {
+	// Gun depression by turret bearing, from a profile.
 	internal sealed class TraverseLimits : MonoBehaviour
 	{
 		public AimablePlatform Gun, Traverse;
 		public float Min;
 		float[] _angles = new float[0], _limits = new float[0];
 
-		static readonly AccessTools.FieldRef<AimablePlatform, Quaternion> Orig = Reflect.FieldRefAccess<AimablePlatform, Quaternion>("_originalLocalRotation");
+		static readonly AccessTools.FieldRef<AimablePlatform, Quaternion> Orig =
+			Reflect.FieldRefAccess<AimablePlatform, Quaternion>("_originalLocalRotation");
 		static readonly AccessTools.FieldRef<AimablePlatform, bool> Destroyed = Reflect.FieldRefAccess<AimablePlatform, bool>("_destroyed");
-		static readonly Action<AimablePlatform> Enforce = AccessTools.MethodDelegate<Action<AimablePlatform>>(Reflect.Method(typeof(AimablePlatform), "enforceEulerLimits"));
+		static readonly Action<AimablePlatform> Enforce = AccessTools.MethodDelegate<Action<AimablePlatform>>(Reflect.Method(
+			typeof(AimablePlatform),
+			"enforceEulerLimits"));
 
 		internal static List<KeyValuePair<float, float>> Parse(string text)
 		{
@@ -25,45 +29,74 @@ namespace T90A.Common
 				int hash = raw.IndexOf('#');
 				var line = (hash >= 0 ? raw.Substring(0, hash) : raw).Trim();
 				if (line.Length == 0 || line.StartsWith("outside")) continue;
-				var p = line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
-				if (p.Length != 2) throw new FormatException("traverse limit profile: bad line '" + line + "'");
-				knots.Add(new KeyValuePair<float, float>(float.Parse(p[0], CultureInfo.InvariantCulture), float.Parse(p[1], CultureInfo.InvariantCulture)));
+				var parts = line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
+				if (parts.Length != 2) throw new FormatException("traverse limit profile: bad line '" + line + "'");
+				knots.Add(new KeyValuePair<float, float>(
+					float.Parse(parts[0], CultureInfo.InvariantCulture),
+					float.Parse(parts[1], CultureInfo.InvariantCulture)));
 			}
 			return knots;
 		}
 
-		internal static void Apply(AimablePlatform gun, AimablePlatform traverse, List<KeyValuePair<float, float>> knots)
+		internal static TraverseLimits Apply(
+			AimablePlatform gun,
+			AimablePlatform traverse,
+			string tag,
+			List<KeyValuePair<float, float>> knots)
 		{
-			if (gun == null || traverse == null || knots == null) return;
-			var c = gun.GetComponent<TraverseLimits>() ?? gun.gameObject.AddComponent<TraverseLimits>();
-			c.Gun = gun; c.Traverse = traverse; c.Min = gun.LocalEulerLimits.x;
+			if (gun == null || traverse == null || knots == null) return null;
+			var component = gun.GetComponent<TraverseLimits>() ?? gun.gameObject.AddComponent<TraverseLimits>();
+			component.Gun = gun;
+			component.Traverse = traverse;
+			component.Min = gun.LocalEulerLimits.x;
 			var sorted = new List<KeyValuePair<float, float>>(knots.Count);
-			foreach (var k in knots) sorted.Add(new KeyValuePair<float, float>(Mathf.Repeat(k.Key, 360f), k.Value));
-			sorted.Sort((a, b) => a.Key.CompareTo(b.Key));
-			c._angles = sorted.ConvertAll(k => k.Key).ToArray();
-			c._limits = sorted.ConvertAll(k => k.Value).ToArray();
+			foreach (var knot in knots) sorted.Add(new KeyValuePair<float, float>(Mathf.Repeat(knot.Key, 360f), knot.Value));
+			sorted.Sort((f, s) => f.Key.CompareTo(s.Key));
+			component._angles = sorted.ConvertAll(k => k.Key).ToArray();
+			component._limits = sorted.ConvertAll(k => k.Value).ToArray();
+			return component;
 		}
+
+		internal float[] KnotAngles => _angles;
+		internal float[] KnotLimits => _limits;
 
 		internal float Yaw()
 		{
-			var t = Traverse.Transform;
-			return Mathf.DeltaAngle(0f, (Quaternion.Inverse(Orig(Traverse)) * t.localRotation).eulerAngles.y);
+			var turret = Traverse.Transform;
+			return Mathf.DeltaAngle(0f, (Quaternion.Inverse(Orig(Traverse)) * turret.localRotation).eulerAngles.y);
 		}
 
 		internal float MinAt(float yaw)
 		{
-			int n = _angles.Length;
-			if (n == 0) return Min;
-			float t = Mathf.Repeat(yaw, 360f);
-			int hi = 0;
-			while (hi < n && _angles[hi] < t) hi++;
-			int lo = hi - 1;
-			float a0, a1;
-			if (hi == n) { hi = 0; a0 = _angles[n - 1]; a1 = _angles[0] + 360f; lo = n - 1; }
-			else if (lo < 0) { lo = n - 1; a0 = _angles[n - 1] - 360f; a1 = _angles[hi]; }
-			else { a0 = _angles[lo]; a1 = _angles[hi]; }
-			float v = a1 > a0 ? Mathf.Lerp(_limits[lo], _limits[hi], (t - a0) / (a1 - a0)) : _limits[hi];
-			return Mathf.Max(Min, v);
+			int count = _angles.Length;
+			if (count == 0) return Min;
+			float angle = Mathf.Repeat(yaw, 360f);
+			int upper = 0;
+			while (upper < count && _angles[upper] < angle) upper++;
+			int lower = upper - 1;
+			float lowerAngle, upperAngle;
+			if (upper == count)
+			{
+				upper = 0;
+				lowerAngle = _angles[count - 1];
+				upperAngle = _angles[0] + 360f;
+				lower = count - 1;
+			}
+			else if (lower < 0)
+			{
+				lower = count - 1;
+				lowerAngle = _angles[count - 1] - 360f;
+				upperAngle = _angles[upper];
+			}
+			else
+			{
+				lowerAngle = _angles[lower];
+				upperAngle = _angles[upper];
+			}
+			float limit = upperAngle > lowerAngle
+				? Mathf.Lerp(_limits[lower], _limits[upper], (angle - lowerAngle) / (upperAngle - lowerAngle))
+				: _limits[upper];
+			return Mathf.Max(Min, limit);
 		}
 
 		// Update, so the limit's in before the platforms' LateUpdate.
@@ -71,9 +104,13 @@ namespace T90A.Common
 		{
 			if (Gun == null || Traverse == null || Traverse.Transform == null) return;
 			float lim = MinAt(Yaw());
-			var l = Gun.LocalEulerLimits;
-			if (l.x != lim) { l.x = lim; Gun.LocalEulerLimits = l; }
-			if (!Gun.enabled || Destroyed(Gun)) return;
+			var eulerLimits = Gun.LocalEulerLimits;
+			if (eulerLimits.x != lim)
+			{
+				eulerLimits.x = lim;
+				Gun.LocalEulerLimits = eulerLimits;
+			}
+			if (!Gun.enabled || Destroyed != null && Destroyed(Gun)) return;
 			// The limits only clamp inside doRotation, which an idle unstabilised gun never runs. It'd sit under the new
 			// limit forever.
 			if (Gun.GetCurrentEulerAngle() < lim - 0.001f)

@@ -24,121 +24,213 @@ namespace T90A.Common
 
 			void LateUpdate()
 			{
-				foreach (var w in Wheels)
+				foreach (var wheel in Wheels)
 				{
-					w.Drawn = RiseLimit > 0f ? Mathf.Min(Dy(w.Bone), RiseLimit) : Dy(w.Bone);
-					GearArc.Wheel(w.Rz, w.Ry, w.Drawn, out w.Z, out w.Y);
+					wheel.Drawn = RiseLimit > 0f ? Mathf.Min(Dy(wheel.Bone), RiseLimit) : Dy(wheel.Bone);
+					GearArc.Wheel(wheel.Rz, wheel.Ry, wheel.Drawn, out wheel.Z, out wheel.Y);
 				}
-				foreach (var a in Wheels)
+				foreach (var wheel in Wheels)
 				{
-					var b = a.Mate;
-					if (b == null || Wheels.IndexOf(b) < Wheels.IndexOf(a)) continue;
-					GearArc.Bogie(a.Pz, a.Py, a.Rz, a.Ry, a.Drawn, b.Pz, b.Py, b.Rz, b.Ry, b.Drawn, MinDist, out a.Z, out a.Y, out b.Z, out b.Y);
+					var mate = wheel.Mate;
+					if (mate == null || Wheels.IndexOf(mate) < Wheels.IndexOf(wheel)) continue;
+					GearArc.Bogie(
+						wheel.Pz,
+						wheel.Py,
+						wheel.Rz,
+						wheel.Ry,
+						wheel.Drawn,
+						mate.Pz,
+						mate.Py,
+						mate.Rz,
+						mate.Ry,
+						mate.Drawn,
+						MinDist,
+						out wheel.Z,
+						out wheel.Y,
+						out mate.Z,
+						out mate.Y);
 				}
-				foreach (var p in Parts)
+				foreach (var part in Parts)
 				{
-					switch (p.Kind)
+					switch (part.Kind)
 					{
 						case "wheel":
-							p.Swing.localPosition = new Vector3(0f, p.Wheel.Y - p.Wheel.Ry, p.Wheel.Z - p.Wheel.Rz);
-							p.Swing.localRotation = Quaternion.AngleAxis(SpinDeg(Root, p.Bone), Vector3.right);
+							part.Swing.localPosition = new Vector3(0f, part.Wheel.Y - part.Wheel.Ry, part.Wheel.Z - part.Wheel.Rz);
+							part.Swing.localRotation = Quaternion.AngleAxis(SpinDeg(Root, part.Bone), Vector3.right);
 							break;
 						case "arm":
-							p.Swing.localRotation = Quaternion.AngleAxis(GearArc.ArmDeg(p.Wheel.Rz, p.Wheel.Ry, p.Wheel.Z, p.Wheel.Y), Vector3.right);
+							part.Swing.localRotation = Quaternion.AngleAxis(
+								GearArc.ArmDeg(part.Wheel.Rz, part.Wheel.Ry, part.Wheel.Z, part.Wheel.Y),
+								Vector3.right);
 							break;
 						case "rod":
-							p.Swing.localPosition = new Vector3(0f, p.Wheel.Drawn, 0f);
+							part.Swing.localPosition = new Vector3(0f, part.Wheel.Drawn, 0f);
 							break;
 						default:
-							p.Swing.localRotation = Quaternion.AngleAxis(SpinDeg(Root, p.Bone), Vector3.right);
+							part.Swing.localRotation = Quaternion.AngleAxis(SpinDeg(Root, part.Bone), Vector3.right);
 							break;
 					}
 				}
-				foreach (var n in Nodes) n.T.localPosition = n.Rest + Vector3.up * n.Wheel.Drawn;
+				foreach (var node in Nodes) node.T.localPosition = node.Rest + Vector3.up * node.Wheel.Drawn;
 			}
 		}
 
-		internal sealed class RoadWheel { public Transform Bone; public RoadWheel Mate; public float Rz, Ry, Pz, Py, Drawn, Z, Y; }
+		internal sealed class RoadWheel
+		{
+			public Transform Bone;
+			public RoadWheel Mate;
+			public float Rz, Ry, Pz, Py, Drawn, Z, Y;
+		}
 
-		internal sealed class Part { public string Kind; public Transform Bone, Swing; public RoadWheel Wheel; }
+		internal sealed class Part
+		{
+			public string Kind;
+			public Transform Bone, Swing;
+			public RoadWheel Wheel;
+		}
 
-		internal sealed class Node { public Transform T; public RoadWheel Wheel; public Vector3 Rest; }
+		internal sealed class Node
+		{
+			public Transform T;
+			public RoadWheel Wheel;
+			public Vector3 Rest;
+		}
 
 		internal static float SpinDeg(Transform root, Transform bone)
 		{
-			var f = Quaternion.Inverse(root.rotation) * bone.rotation * Vector3.forward;
-			return Mathf.Atan2(-f.y, f.z) * Mathf.Rad2Deg;
+			var forward = Quaternion.Inverse(root.rotation) * bone.rotation * Vector3.forward;
+			return Mathf.Atan2(-forward.y, forward.z) * Mathf.Rad2Deg;
 		}
 
 		static readonly AccessTools.FieldRef<Tracks, Material> LeftMat = Reflect.FieldRefAccess<Tracks, Material>("leftMat");
 		static readonly AccessTools.FieldRef<Tracks, Material> RightMat = Reflect.FieldRefAccess<Tracks, Material>("rightMat");
 
-		internal static void Apply(Transform root, RigMap map, string prefix, Func<string, Transform> find)
+		internal static List<string> Apply(Transform root, RigMap map, string prefix, Func<string, Transform> find)
 		{
+			var log = new List<string>();
 			var hull = RigBones.Hull(root);
-			if (hull == null) return;
-			var bones = hull.GetComponentsInChildren<Transform>(true).GroupBy(t => t.name).ToDictionary(g => g.Key, g => g.First());
-			var driver = root.gameObject.AddComponent<Driver>();
-			driver.Root = root; driver.RestY = map.WheelRestY; driver.MinDist = 2f * map.WheelRadius + map.RimGap; driver.RiseLimit = map.WheelRiseLimit;
-			var wheels = new Dictionary<string, RoadWheel>();
-			foreach (var g in map.FollowParts.Where(x => x.Kind == "wheel"))
-				if (bones.TryGetValue(g.Drive, out var b))
-				{
-					var w = new RoadWheel { Bone = b, Rz = g.Pivot.z - g.Target.z, Ry = g.Pivot.y - g.Target.y, Pz = g.Target.z, Py = g.Target.y };
-					wheels[g.Drive] = w; driver.Wheels.Add(w);
-				}
-			foreach (var g in map.FollowParts.Where(x => x.Kind == "wheel" && x.Mate.Length > 0))
-				if (wheels.TryGetValue(g.Drive, out var a) && wheels.TryGetValue(g.Mate, out var b)) a.Mate = b;
-			var skins = new List<(string wt, SkinnedMeshRenderer smr)>();
-			foreach (var g in map.FollowParts)
+			if (hull == null)
 			{
-				var vis = find(g.Group);
-				if (vis == null) continue;
-				vis.name = prefix + g.Group;
-				if (g.Kind == "track")
+				log.Add("running gear: no hull bone; nothing moved");
+				return log;
+			}
+			var bones = hull
+				.GetComponentsInChildren<Transform>(true)
+				.GroupBy(b => b.name)
+				.ToDictionary(n => n.Key, nb => nb.First());
+			var driver = root.gameObject.AddComponent<Driver>();
+			driver.Root = root;
+			driver.RestY = map.WheelRestY;
+			driver.MinDist = 2f * map.WheelRadius + map.RimGap;
+			driver.RiseLimit = map.WheelRiseLimit;
+			var miss = new List<string>();
+			var wheels = new Dictionary<string, RoadWheel>();
+			foreach (var followPart in map.FollowParts.Where(p => p.Kind == "wheel"))
+				if (bones.TryGetValue(followPart.Drive, out var driveBone))
 				{
-					var smr = vis.GetComponent<SkinnedMeshRenderer>();
-					var names = g.Drive.Split(',');
-					int found = 0;
-					for (int i = 0; smr != null && i < names.Length && i + 1 < smr.bones.Length; i++)
-						if (wheels.TryGetValue(names[i], out var rw)) { driver.Nodes.Add(new Node { T = smr.bones[i + 1], Wheel = rw, Rest = smr.bones[i + 1].localPosition }); found++; }
-					if (!(smr == null || found != names.Length)) skins.Add((g.Wt, smr));
+					var wheel = new RoadWheel
+					{
+						Bone = driveBone,
+						Rz = followPart.Pivot.z - followPart.Target.z,
+						Ry = followPart.Pivot.y - followPart.Target.y,
+						Pz = followPart.Target.z,
+						Py = followPart.Target.y
+					};
+					wheels[followPart.Drive] = wheel;
+					driver.Wheels.Add(wheel);
+				}
+			foreach (var followPart in map.FollowParts.Where(p => p.Kind == "wheel" && p.Mate.Length > 0))
+				if (wheels.TryGetValue(followPart.Drive, out var wheel) && wheels.TryGetValue(followPart.Mate, out var mate))
+					wheel.Mate = mate;
+			var skins = new List<(string wt, SkinnedMeshRenderer smr)>();
+			foreach (var followPart in map.FollowParts)
+			{
+				var vis = find(followPart.Group);
+				if (vis == null)
+				{
+					miss.Add(followPart.Wt);
 					continue;
 				}
-				if (!bones.TryGetValue(g.Drive, out var bone)) continue;
-				wheels.TryGetValue(g.Drive, out var own);
-				if (g.Kind != "spin" && own == null) continue;
-				var holder = new GameObject($"{prefix}{g.Group} holder").transform;
+				vis.name = prefix + followPart.Group;
+				if (followPart.Kind == "track")
+				{
+					var smr = vis.GetComponent<SkinnedMeshRenderer>();
+					var names = followPart.Drive.Split(',');
+					int found = 0;
+					for (int i = 0; smr != null && i < names.Length && i + 1 < smr.bones.Length; i++)
+						if (wheels.TryGetValue(names[i], out var roadWheel))
+						{
+							driver.Nodes.Add(new Node { T = smr.bones[i + 1], Wheel = roadWheel, Rest = smr.bones[i + 1].localPosition });
+							found++;
+						}
+					if (smr == null || found != names.Length) miss.Add(followPart.Wt + " (track nodes)");
+					else skins.Add((followPart.Wt, smr));
+					continue;
+				}
+				if (!bones.TryGetValue(followPart.Drive, out var bone))
+				{
+					miss.Add(followPart.Wt + " (bone " + followPart.Drive + ")");
+					continue;
+				}
+				wheels.TryGetValue(followPart.Drive, out var own);
+				if (followPart.Kind != "spin" && own == null)
+				{
+					miss.Add(followPart.Wt + " (no road wheel " + followPart.Drive + ")");
+					continue;
+				}
+				var holder = new GameObject($"{prefix}{followPart.Group} holder").transform;
 				holder.SetParent(hull, false);
-				holder.SetPositionAndRotation(root.TransformPoint(g.Pivot), root.rotation);
-				var swing = new GameObject($"{prefix}{g.Group} swing").transform;
+				holder.SetPositionAndRotation(root.TransformPoint(followPart.Pivot), root.rotation);
+				var swing = new GameObject($"{prefix}{followPart.Group} swing").transform;
 				swing.SetParent(holder, false);
 				vis.SetParent(swing, true);
-				driver.Parts.Add(new Part { Kind = g.Kind, Bone = bone, Swing = swing, Wheel = own });
+				driver.Parts.Add(new Part { Kind = followPart.Kind, Bone = bone, Swing = swing, Wheel = own });
 			}
-			UseTracks(root, skins, map.TrackUv);
+			log.Add($"running gear (follow): {driver.Parts.Count} parts, {driver.Nodes.Count} track nodes on the base wheel bones"
+				+ (miss.Count > 0 ? "; NOT FOUND: " + string.Join(", ", miss) : ""));
+			log.Add(UseTracks(root, skins, map.TrackUv));
+			return log;
 		}
 
-		static void UseTracks(Transform root, List<(string wt, SkinnedMeshRenderer smr)> skins, Vector2 uv)
+		static string UseTracks(Transform root, List<(string wt, SkinnedMeshRenderer smr)> skins, Vector2 uv)
 		{
-			var vc = root.GetComponent<VehicleController>();
+			var vehicleController = root.GetComponent<VehicleController>();
 			var left = skins.FirstOrDefault(s => s.wt.EndsWith("_l")).smr;
 			var right = skins.FirstOrDefault(s => s.wt.EndsWith("_r")).smr;
-			if (vc == null || vc.tracks == null || left == null || right == null) return;
-			var t = vc.tracks;
-			var src = t.leftTrackRenderer != null ? t.leftTrackRenderer.sharedMaterial : null;
-			if (src != null) { Dress(left, src); Dress(right, src); }
-			t.leftTrackRenderer = left; t.rightTrackRenderer = right; t.uvDirection = uv;
-			if (LeftMat != null && LeftMat(t) != null) { LeftMat(t) = left.material; RightMat(t) = right.material; }
+			if (vehicleController == null || vehicleController.tracks == null || left == null || right == null)
+				return "tracks: no VehicleController or skin; the track doesn't scroll";
+			var tracks = vehicleController.tracks;
+			var src = tracks.leftTrackRenderer != null ? tracks.leftTrackRenderer.sharedMaterial : null;
+			if (src != null)
+			{
+				Dress(left, src);
+				Dress(right, src);
+			}
+			tracks.leftTrackRenderer = left;
+			tracks.rightTrackRenderer = right;
+			tracks.uvDirection = uv;
+			if (LeftMat != null && LeftMat(tracks) != null)
+			{
+				LeftMat(tracks) = left.material;
+				RightMat(tracks) = right.material;
+			}
+			return $"tracks: own skins scroll along ({uv.x}, {uv.y}), material {(src != null ? src.shader.name : "the bundle's")}";
 		}
 
 		static void Dress(SkinnedMeshRenderer r, Material src)
 		{
 			var own = r.sharedMaterial;
-			var m = new Material(src) { name = own.name + " (track)" };
-			foreach (var (to, from) in new[] { ("_MainTex", "_MainTex"), ("_Colour", "_MainTex"), ("_Normal", "_BumpMap"), ("_Smoothness", "_MetallicGlossMap") })
-				if (m.HasProperty(to) && own.HasProperty(from) && own.GetTexture(from) != null) m.SetTexture(to, own.GetTexture(from));
-			r.sharedMaterial = m;
+			var material = new Material(src) { name = own.name + " (track)" };
+			foreach (var (target, from) in new[]
+			{
+				("_MainTex", "_MainTex"),
+				("_Colour", "_MainTex"),
+				("_Normal", "_BumpMap"),
+				("_Smoothness", "_MetallicGlossMap")
+			})
+				if (material.HasProperty(target) && own.HasProperty(from) && own.GetTexture(from) != null)
+					material.SetTexture(target, own.GetTexture(from));
+			r.sharedMaterial = material;
 		}
 	}
 }

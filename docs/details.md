@@ -1,0 +1,162 @@
+# The T-90A in detail
+
+The bits that didn't fit in the [README](../README.md): the comparison with the T-72M1, the sights, the Kord and the
+ammo up close, the numbers, and where the mod isn't quite the real tank. The armour and Shtora-1 have their own pages,
+[armour.md](armour.md) and [screens.md](screens.md).
+
+## From the T-72M1 to the T-90A
+
+The T-90A (Object 188A1) is what the T-72B turned into, so underneath it's the same family as the game's own T-72M1.
+Same hull layout, running gear, autoloader and gearbox. What changed:
+
+| | T-72M1 (in the base game) | T-90A (this mod) |
+|---|---|---|
+| Turret | cast, quartz-filled cheeks | welded, 19 packages of reflecting plates in each cheek |
+| Front armour without ERA, vs APFSDS (cheeks / glacis) | 471 / 452 | 690 / 549 |
+| ERA | none | Kontakt-5, about +140 vs APFSDS / +550 vs HEAT |
+| Gunner's sight | TPD-K1, TPN-1-49-23 image intensifier at night | 1G46 stabilised on its own, ESSA thermal, 1A45T fire control |
+| Commander | head view, night vision goggles | TKN-4S day / night sight |
+| Guided missile | none | 9M119M Invar through the gun, out to 5 km |
+| Remote MG | none | Kord on the cupola, fired from under armour |
+| Defensive aids | 12 smoke tubes | Shtora-1: IR jammer, laser warning, 12 tubes of 3D17 aerosol grenades |
+| Engine | 800 hp | V-92S2, 1000 hp |
+
+GHPC has no T-72B, so the T-90A is built on the T-72M1 (running gear, hull internals, autoloader, diesel) and takes its
+army, voices, sight sounds and HUD from the T-80B. Those borrowed parts, plus the T-64B's machine-gun station and the
+M60A3 TTS thermal screen effect, are copied once from the game's own files.
+
+## A bit of history
+
+Uralvagonzavod's design bureau started on Object 188 in 1986, basically a T-72B with the T-80U's fire control (the 1A45,
+reworked for the T-72's autoloader as the 1A45T) and the new Shtora. It was accepted as the T-90 in October 1992, but
+only about 120 were built for the Russian army before the money ran out. Export orders from India in 2001 kept the
+factory going, and the Indian T-90S got a new welded turret. In 1999 the tank was named «Владимир» after its chief
+designer Vladimir Potkin, who'd just died.
+
+The T-90A (first called Object 188A1) brought all that home: the welded turret, the 1000 hp V-92S2, the 2A46M-5 gun, a
+faster stabiliser and an autoloader reworked for the longer APFSDS rounds. It was accepted on 15 April 2005. The first
+32 had the Buran-M image intensifier at night. From 2006 they got the ESSA thermal with the French Catherine FC camera,
+and about 337 of those were built up to 2010. A lot of them have since been rebuilt into T-90Ms.
+
+## The sights
+
+<p align="center">
+  <img src="images/sight_essa_wide.webp" width="49%" alt="ESSA thermal sight, wide field">
+  <img src="images/sight_essa_zoom.webp" width="49%" alt="ESSA thermal sight, narrow field with the x2 electronic zoom">
+</p>
+
+*The ESSA's wide field, and the narrow field with the x2 zoom.*
+
+**1G46:** 2.7-12x, stabilised independently of the gun, range and ammo readout under the picture. Line of sight -15° /
++20°, stabilised in both planes. The sight can run up to 8° ahead of the turret sideways, which is the real head's
+travel, and the turret catches up. Its head is the low hooded box on the roof in front of the gunner's hatch.
+
+**ESSA** (the default, as on most T-90As from 2006): the camera's 754 x 576 on a 4:3 CRT monitor, with scan lines and
+black bars either side. 9 × 6.75° / 3 × 2.25°, electronic x2 zoom, up to 7.5° ahead of the turret. The narrow field has
+the thin cross from the sight's manual and four black boxes under it: ready, round, range, mode. The wide field isn't
+for firing, so no cross, just corner marks and a status box. I couldn't get hold of the manual's picture of that
+field, so the marks are laid out like the T-90M's Sosna-U. The camera scans with a row of detectors and the picture
+has faint streaks that drift about. How strong they are is set by eye. The mode box always reads "ОСН", because the
+other fire-control modes aren't modelled.
+
+**Buran-M** (2004, the image intensifier of the first 32 tanks) sits on its own stabilised head, -10° / +20°. The night
+sight's head is the tall box behind the 1G46's.
+
+**TKN-4S:** reticles drawn from a photo of the real one and the PNK-4S manual. Aiming chevron, lead marks, stadiametric
+rangefinder, the Kord's ballistic scale and the ammo / ready indicator at the bottom. Its night field of view is a best
+guess. The "Dubl" mode isn't built, so the commander can't fire the main gun from it, though its main-gun scales are
+still drawn where they are on the real reticle.
+
+## The Kord
+
+![The Kord's belt feeding in, from above](images/kord_belt.jpg)
+
+- The belts are three B-32 armour-piercing incendiary to one BZT-44 tracer.
+- **PZU-7** sight for semi-automatic mode, or the **TKN-4S** in "Avtomat" mode: stabilised, follows the sight, range
+  keys set the superelevation. You only aim and fire it from those two, not from the commander's free-look head view.
+- The spent cases go out of the chute on the right, forward like on the real 6P49. They lie on the tank until it tilts
+  or brakes hard enough to shake them off.
+- The cupola turns with it at up to 35°/s (45° left / 60° right of the gun), and the Kord elevates -5° / +70° at 24°/s.
+  The 35°/s is the sight manual's figure; the 24°/s elevation is a guess.
+- Drives, sight and barrel can be knocked out. The ammo belt flexes as the gun elevates.
+- AI T-90As don't use it. Kept simple.
+
+## The ammo
+
+![The T-90A's ammo in the game's X-ray view](images/xray_stowage.jpg)
+
+*Pressing O: the carousel's ring under the turret, the spares round it, the Invar missiles (grey-green) and the 3BM60s.*
+
+- **22 in the autoloader's carousel** under the turret floor.
+- **20 spares** in the T-72B manual's places: against the rear bulkhead, at the front right beside the driver, along
+  the left wall and on the turret's rotating floor, each group in its own rack. The places are roughly where the T-72B's
+  manual puts them. How they lie and the racks' shapes are a best guess.
+- The 3BM60 has its own longer rod and sabot. The Invar is its own missile with the 9Kh949 charge instead of the game's
+  Kobra, and each has the right stencils. They're made from the game's own round models, so they don't look out of
+  place next to the vanilla shells.
+
+## The paint
+
+<p align="center">
+  <img src="images/paint_weathered.jpg" width="49%" alt="Weathered paint (default)">
+  <img src="images/paint_clean.jpg" width="49%" alt="Clean factory paint">
+</p>
+
+Weathered by default and made for the T-90A's own shape: dust and mud heavier toward the ground, grime in the crevices,
+streaks down the sides, chipped edges and rust running from the bolts at the back. `Weathered paint` set to false gives
+the clean factory finish on the right.
+
+## Numbers
+
+| | |
+|---|---|
+| Engine | V-92S2, 1000 hp at 2000 rpm, T-72 gearbox |
+| Mass | 46.5 t |
+| Speed | 60 km/h forward, 4.2 km/h reverse (the real gearbox's reverse) |
+| Turret traverse / gun elevation | 24°/s / 28°/s |
+| Gun | 2A46M-5, -6°13′ / +13°47′ over the front, less depression over the engine deck |
+| Autoloader | The game's own T-72M1 timing, about 7.2 s for every round |
+| Main gun ammo | 42 rounds: 3BM42 or 3BM60, 3BK18M HEAT, 3OF26 HE-Frag, 9M119M Invar |
+| Coax PKT | 2000 rounds (8 belts of 250) |
+| Smoke | 12 × 902B "Tucha", 3D17 aerosol grenades (each tube can be knocked out) |
+
+| Round | Penetration |
+|---|---|
+| 3BM42 "Mango" | ~580 mm at the muzzle, ~460 mm at 2 km |
+| 3BM60 "Svinets-2" (default) | ~690 mm at the muzzle, ~600 mm at 2 km |
+| 9M119M "Invar" | 700 mm, tandem warhead (sets off ERA first), 100-5000 m, guided along the gunner's sight line |
+| 3BK18M HEAT, 3OF26 HE-Frag | the game's own rounds |
+
+## Where it isn't the real tank
+
+- The armour you get by default is the game-scale set, matched to GHPC's other tanks: turret 690 / 820 and glacis 550 /
+  750, without ERA. The open-source figures are lower (turret 575 / 750, glacis 500 / 650) and are the `source-only`
+  setting.
+- The plate shapes are War Thunder's. None of its armour ratings is used, but where no source gives a thickness (the
+  turret's bottom plate, the driver's hatch, the nose beam) the plate is as thick as the model draws it.
+- The gun's depression at each turret angle is my own table, with the barrel kept 1 cm off the hull all the way round.
+  No source gives it. The gun's 28°/s elevation comes from a patent, not from a figure for this stabiliser.
+- The cupola's 35°/s is the sight manual's figure for the hatch. The Kord's 24°/s elevation is my guess, and so is the
+  mouth of its case chute. Its PZU-7 sight shows the T-64B's PZU-5 marks, because I found no picture of the real ones.
+- Some sources give the T-90A the Agat-M commander's sight instead of the TKN-4S; I kept the TKN-4S. Its night field of
+  view is a guess.
+- The "Dubl" mode isn't built, so the commander can't fire the main gun from the TKN-4S, and AI T-90As don't use the
+  Kord.
+- The twenty spares sit roughly where the T-72B's manual puts them, because nothing gives the T-90A's own plan. How they
+  lie in each place and the racks' shapes are a best guess.
+- The ESSA's wide field is laid out like the T-90M's Sosna-U, because I couldn't get hold of the manual's picture of it,
+  and its faint streaks are set by eye.
+- The Shtora panel's lamp layout is inferred from the heads' sectors, and its mode knob is only drawn. Where the
+  jammer's lock comes back after a jam, and how far its false commands wander, are my own numbers.
+- The War Thunder model has no set-off ERA brick, so the blown-open look (off by default) is a best guess.
+
+## What it shares with my T-90M
+
+I built the T-90A first, and the [T-90M](https://github.com/marsattackk/GHPC-T90M) after it on the same groundwork.
+Everything I worked out here carries over: how the armour's put together, the ERA that doesn't go off for a PKT round,
+the Invar's tandem precursor, the Kord's belt feed and spent cases, the paint, the T-80B's crew voices, and a fix on one
+goes into the other. What's only on the T-90A is what's only on the real one: Kontakt-5, the 1G46 with the ESSA, the
+TKN-4S, the Kord on the cupola and Shtora-1 with its IR jammer. It's still its own mod and neither needs the other.
+
+My [T-80UM2](https://github.com/marsattackk/GHPC-T80UM2) came after both, on the same groundwork, and it's the T-90A's
+closest relative of the lot: the same Kontakt-5, 1G46, TKN-4S and Invar, on the T-80U it was the rival of.

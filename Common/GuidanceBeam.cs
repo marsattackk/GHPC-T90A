@@ -4,8 +4,7 @@ using UnityEngine;
 
 namespace T90A.Common
 {
-	// MissileGuidanceUnit's AimElement, placed before its Update reads it. Not the optic itself, that only turns while
-	// its view is on screen.
+	// Aim element for the 1G46's missile. Not the optic itself. That only turns while its view is on screen.
 	[DefaultExecutionOrder(-50)]
 	internal sealed class GuidanceBeam : MonoBehaviour
 	{
@@ -21,8 +20,8 @@ namespace T90A.Common
 			if (_sight == null) _sight = DayOptic(Fcs)?.slot?.transform;
 			var dir = Fcs.AimWorldVector;
 			if (dir.sqrMagnitude < 1e-6f) dir = Gun.forward;
-			var at = _sight != null ? _sight.position : Gun.position;
-			transform.SetPositionAndRotation(at, Quaternion.LookRotation(dir.normalized, Gun.up));
+			var origin = _sight != null ? _sight.position : Gun.position;
+			transform.SetPositionAndRotation(origin, Quaternion.LookRotation(dir.normalized, Gun.up));
 		}
 
 		internal static UsableOptic DayOptic(FireControlSystem fcs)

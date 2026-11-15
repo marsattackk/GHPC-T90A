@@ -1,0 +1,55 @@
+off|Upper Front Plate
+off|Upper Front Plate Extra Armor
+off|Textolite.001
+off|Backing Plate Armor.004
+off|Driver Extra Armor
+off|Lower Front Plate
+off|Hull Side
+off|Hull Side.001
+off|Hull Floor
+off|Hull Roof 20mm
+off|Hull Roof 30mm 
+off|Hull rear
+off|Hull rear.001
+off|Turret Ring
+off|lp_driverhatch
+off|Mud Guard
+off|Mudguard Rubber
+off|Sponson
+off|Sponson Fuel Tank
+off|Fuel tanks
+off|Sponson Storage Container
+off|Log
+off|Plow
+off|Turret.002
+off|Composite Armor Array
+off|Turret Storage box
+off|Sight Shielding
+off|Loaders Hatch.002
+off|Ejector Door
+off|Gun Mantlet
+off|Commanders Cupola
+off|Commanders Hatch
+off|Commanders Spotlight
+off|Commanders Light Cover
+off|Luna
+off|Luna Cover
+off|Gunsight Housing
+off|NightSight Housing
+off|Night Sight Cover
+off|Gunsight Glass
+off|Night Sight Glass
+off|Gunner Sight
+off|Night Sight
+off|Fire Wall
+xform|Breech|1,0,0,0,0,1,0,0,0,0,1,0,0,-0.0160000324,-0.08000001,1
+xform|Breechblock|1,0,0,0,0,1,0,0,0,0,1,0,0,-0.0160000324,-0.08000001,1
+xform|Gun assembly|1,0,0,0,0,1,0,0,0,0,1,0,0,-0.0160000324,-0.08000001,1
+xform|PKT|1,0,0,0,0,1,0,0,0,0,1,0,-0.0159999728,-0.01999998,0.04000002,1
+xform|LRF hit zone|1,0,0,0,0,1,0,0,0,0,1,0,0.004999995,0.06999993,-0.155,1
+reshape|Turret Volume (COMPARTMENT)
+reshape|Hull Volume (COMPARTMENT)
+reshape|Engine Volume (COMPARTMENT)
+reshape|Cannon
+bone|---MESH---/HULL/TURRET/CUPOLA|T-72 CUPOLA COLLIDERS|0.02700001,0.02,-0.200999975
+strip|Commander Para

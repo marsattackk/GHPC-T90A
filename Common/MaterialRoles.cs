@@ -1,8 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace T90A.Common
 {
+	// Which of my materials stand in for which vanilla ones (glass, mostly).
 	public sealed class MaterialRoles
 	{
 		public sealed class Entry
@@ -16,21 +18,48 @@ namespace T90A.Common
 
 		public IEnumerable<Entry> Applied => Entries.Where(e => !string.IsNullOrEmpty(e.Vanilla));
 
+		public string ToText()
+		{
+			var builder = new StringBuilder("# material\trole\tvanilla material at spawn\tdonor units (portkit MaterialRoles)\n");
+			foreach (var entry in Entries)
+				builder
+					.Append(entry.Material)
+					.Append('\t')
+					.Append(entry.Role)
+					.Append('\t')
+					.Append(string.IsNullOrEmpty(entry.Vanilla) ? "-" : entry.Vanilla)
+					.Append('\t')
+					.Append(string.Join(",", entry.Units))
+					.Append('\n');
+			return builder.ToString();
+		}
+
 		public static MaterialRoles Parse(string text)
 		{
-			var m = new MaterialRoles();
+			var roles = new MaterialRoles();
 			foreach (var line in text.Split('\n'))
 			{
 				if (line.Length == 0 || line[0] == '#') continue;
-				var f = line.TrimEnd('\r').Split('\t');
-				if (f.Length < 2) continue;
-				m.Entries.Add(new Entry
+				var fields = line.TrimEnd('\r').Split('\t');
+				if (fields.Length < 2) continue;
+				roles.Entries.Add(new Entry
 				{
-					Material = f[0], Role = f[1], Vanilla = f.Length > 2 && f[2] != "-" ? f[2] : null,
-					Units = f.Length > 3 && f[3].Length > 0 ? f[3].Split(',') : new string[0],
+					Material = fields[0],
+					Role = fields[1],
+					Vanilla = fields.Length > 2 && fields[2] != "-" ? fields[2] : null,
+					Units = fields.Length > 3 && fields[3].Length > 0 ? fields[3].Split(',') : new string[0],
 				});
 			}
-			return m;
+			return roles;
 		}
+
+		public string Summary()
+			=> $"{Entries.Count} materials in {Entries.Select(e => e.Role).Distinct().Count()} roles; at spawn: " +
+				(Applied.Any()
+					? string.Join(
+						", ",
+						Applied.GroupBy(e => e.Vanilla)
+							.Select(g => $"'{g.Key}' on {string.Join(" / ", g.Select(e => e.Material))}"))
+					: "none");
 	}
 }

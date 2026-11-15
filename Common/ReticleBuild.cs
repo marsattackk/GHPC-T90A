@@ -10,42 +10,68 @@ using UnityEngine.UI;
 
 namespace T90A.Common
 {
+	// ReticleSpec to ReticleSO, or to an overlay for the thermal view.
 	internal static class ReticleBuild
 	{
 		static readonly MethodInfo Clone = typeof(object).GetMethod("MemberwiseClone", BindingFlags.NonPublic | BindingFlags.Instance);
 
-		internal static ReticleSO Build(ReticleSpec spec, ReticleSO host, ReticleTree.Text font, Func<string, AmmoCodexScriptable> ammo, List<string> problems)
+		internal static ReticleSO Build(
+			ReticleSpec spec,
+			ReticleSO host,
+			ReticleTree.Text font,
+			Func<string, AmmoCodexScriptable> ammo,
+			List<string> problems)
 		{
-			var so = ScriptableObject.CreateInstance<ReticleSO>();
-			so.name = spec.Name;
+			var reticle = ScriptableObject.CreateInstance<ReticleSO>();
+			reticle.name = spec.Name;
 			problems.AddRange(spec.Problems);
 			if (spec.LightsFromHost && host != null)
-				so.lights = host.lights.Select(l => new ReticleTree.Light { type = l.type, color = Set(spec, l.type) ?? l.color }).ToList();
-			foreach (var kv in spec.Lights)
+				reticle.lights = host.lights
+					.Select(l => new ReticleTree.Light { type = l.type, color = Set(spec, l.type) ?? l.color })
+					.ToList();
+			foreach (var entry in spec.Lights)
 			{
-				if (!Enum.TryParse(kv.Key, out ReticleTree.Light.Type t)) { problems.Add($"lights: unknown light '{kv.Key}'"); continue; }
-				if (!so.lights.Any(l => l.type == t)) so.lights.Add(new ReticleTree.Light { type = t, color = Rgb(kv.Value) });
+				if (!Enum.TryParse(entry.Key, out ReticleTree.Light.Type lightType))
+				{
+					problems.Add($"lights: unknown light '{entry.Key}'");
+					continue;
+				}
+				if (!reticle.lights.Any(l => l.type == lightType))
+					reticle.lights.Add(new ReticleTree.Light { type = lightType, color = Rgb(entry.Value) });
 			}
-			// GHPC ignores Second, every reticle draws in the first focal plane.
-			var plane = new ReticleTree.FocalPlane(spec.Plane == "second" ? ReticleTree.FocalPlane.Type.Second : ReticleTree.FocalPlane.Type.First);
+			// GHPC ignores Second. Every reticle draws in the first focal plane.
+			var plane = new ReticleTree.FocalPlane(spec.Plane == "second"
+				? ReticleTree.FocalPlane.Type.Second
+				: ReticleTree.FocalPlane.Type.First);
 			plane.elements = new List<ReticleTree.TransformElement>();
-			so.planes.Add(plane);
+			reticle.planes.Add(plane);
 			var ctx = new Ctx { Font = font, Ammo = ammo };
-			foreach (var n in spec.Top)
+			foreach (var node in spec.Top)
 			{
-				var e = Make(n, null, false, ctx, problems);
-				if (e != null) plane.elements.Add(e);
+				var element = Make(node, null, false, ctx, problems);
+				if (element != null) plane.elements.Add(element);
 			}
-			foreach (var light in AllOf<ReticleTree.VisualElement>(so).Select(v => v.illumination).Distinct())
-				if (light != ReticleTree.Light.Type.None && !so.lights.Any(l => l.type == light))
+			foreach (var light in AllOf<ReticleTree.VisualElement>(reticle).Select(v => v.illumination).Distinct())
+				if (light != ReticleTree.Light.Type.None && !reticle.lights.Any(l => l.type == light))
 					problems.Add($"elements lit by '{light}', which the reticle has no colour for");
-			foreach (var u in Unaligned(so)) problems.Add("still without an alignment: " + u);
-			return so;
+			foreach (var unaligned in Unaligned(reticle)) problems.Add("still without an alignment: " + unaligned);
+			return reticle;
+		}
+
+		// A copied reticle mesh keeps the old built mesh (Load then builds nothing) and the old light states by position.
+		internal static void PrepareCopy(ReticleMesh rm)
+		{
+			if (rm == null || rm.reticleSO == null) return;
+			var smr = rm.GetComponent<SkinnedMeshRenderer>();
+			if (smr != null) smr.sharedMesh = null;
+			rm.lights = rm.reticleSO.lights
+				.Select(l => new ReticleEditor.LightState(l, l.type == ReticleTree.Light.Type.NightIllumination ? 0f : 1f))
+				.ToList();
 		}
 
 		static RGB? Set(ReticleSpec spec, ReticleTree.Light.Type t)
 		{
-			foreach (var kv in spec.Lights) if (kv.Key == t.ToString()) return Rgb(kv.Value);
+			foreach (var entry in spec.Lights) if (entry.Key == t.ToString()) return Rgb(entry.Value);
 			return null;
 		}
 
@@ -58,30 +84,44 @@ namespace T90A.Common
 			internal bool FontMissingReported;
 		}
 
-		static ReticleTree.TransformElement Make(ReticleSpec.Node n, ReticleTree.GroupBase parent, bool aligned, Ctx ctx, List<string> problems)
+		static ReticleTree.TransformElement Make(
+			ReticleSpec.Node n,
+			ReticleTree.GroupBase parent,
+			bool aligned,
+			Ctx ctx,
+			List<string> problems)
 		{
 			var pos = new Vector2();
-			if (n is ReticleSpec.Group g)
+			if (n is ReticleSpec.Group specGroup)
 			{
 				var align = ReticleTree.GroupBase.Alignment.None;
-				if (g.Align != null && !Enum.TryParse(g.Align, out align)) { problems.Add($"{g.Path}: unknown alignment '{g.Align}' (group left out)"); return null; }
-				pos = new Vector2((float)g.X, (float)g.Y);
-				ReticleTree.GroupBase grp;
-				if (g.Ammo != null)
+				if (specGroup.Align != null && !Enum.TryParse(specGroup.Align, out align))
 				{
-					var round = ctx.Ammo?.Invoke(g.Ammo);
-					if (round == null) { problems.Add($"{g.Path}: no round for '{g.Ammo}' (ballistic group left out)"); return null; }
-					var vb = new ReticleTree.VerticalBallistic(pos, parent, align) { projectile = round };
-					vb.UpdateBC();
-					grp = vb;
+					problems.Add($"{specGroup.Path}: unknown alignment '{specGroup.Align}' (group left out)");
+					return null;
 				}
-				else if (g.Stadia > 0) grp = new ReticleTree.Stadia(pos, parent, align) { targetSize = new LinearLength((float)g.Stadia) };
-				else grp = new ReticleTree.Angular(pos, parent, align) { name = g.Name };
-				bool under = aligned || align != ReticleTree.GroupBase.Alignment.None;
-				foreach (var c in g.Children)
+				pos = new Vector2((float)specGroup.X, (float)specGroup.Y);
+				ReticleTree.GroupBase grp;
+				if (specGroup.Ammo != null)
 				{
-					var e = Make(c, grp, under, ctx, problems);
-					if (e != null) grp.elements.Add(e);
+					var round = ctx.Ammo?.Invoke(specGroup.Ammo);
+					if (round == null)
+					{
+						problems.Add($"{specGroup.Path}: no round for '{specGroup.Ammo}' (ballistic group left out)");
+						return null;
+					}
+					var ballistic = new ReticleTree.VerticalBallistic(pos, parent, align) { projectile = round };
+					ballistic.UpdateBC();
+					grp = ballistic;
+				}
+				else if (specGroup.Stadia > 0)
+					grp = new ReticleTree.Stadia(pos, parent, align) { targetSize = new LinearLength((float)specGroup.Stadia) };
+				else grp = new ReticleTree.Angular(pos, parent, align) { name = specGroup.Name };
+				bool under = aligned || align != ReticleTree.GroupBase.Alignment.None;
+				foreach (var child in specGroup.Children)
+				{
+					var element = Make(child, grp, under, ctx, problems);
+					if (element != null) grp.elements.Add(element);
 				}
 				return grp;
 			}
@@ -93,33 +133,45 @@ namespace T90A.Common
 			}
 			switch (n)
 			{
-				case ReticleSpec.Line l:
+				case ReticleSpec.Line lineSpec:
 				{
-					var line = new ReticleTree.Line(new Vector2((float)l.X, (float)l.Y), (float)l.Deg, (float)l.Len, (float)l.W, 1f, parent);
+					var line = new ReticleTree.Line(
+						new Vector2((float)lineSpec.X, (float)lineSpec.Y),
+						(float)lineSpec.Deg,
+						(float)lineSpec.Len,
+						(float)lineSpec.W,
+						1f,
+						parent);
 					line.length.unit = AngularLength.AngularUnit.MIL_USSR;
 					line.thickness.unit = AngularLength.AngularUnit.MIL_USSR;
-					return Look(line, l.Visual, l.Light, l.Path, problems);
+					return Look(line, lineSpec.Visual, lineSpec.Light, lineSpec.Path, problems);
 				}
-				case ReticleSpec.Circle c:
+				case ReticleSpec.Circle circleSpec:
 				{
-					var circle = new ReticleTree.Circle(new Vector2((float)c.X, (float)c.Y), 0f, (float)c.R, (float)c.W, c.Segments, parent);
-					return Look(circle, c.Visual, c.Light, c.Path, problems);
+					var circle = new ReticleTree.Circle(
+						new Vector2((float)circleSpec.X, (float)circleSpec.Y),
+						0f,
+						(float)circleSpec.R,
+						(float)circleSpec.W,
+						circleSpec.Segments,
+						parent);
+					return Look(circle, circleSpec.Visual, circleSpec.Light, circleSpec.Path, problems);
 				}
-				case ReticleSpec.Text t:
+				case ReticleSpec.Text textSpec:
 				{
 					if (ctx.Font == null)
 					{
-						if (!ctx.FontMissingReported) problems.Add($"{t.Path}: no reticle font to clone; labels left out");
+						if (!ctx.FontMissingReported) problems.Add($"{textSpec.Path}: no reticle font to clone; labels left out");
 						ctx.FontMissingReported = true;
 						return null;
 					}
 					var label = (ReticleTree.Text)Clone.Invoke(ctx.Font, null);
-					label.position = new ReticleTree.Position((float)t.X, (float)t.Y, AngularLength.AngularUnit.MIL_USSR);
+					label.position = new ReticleTree.Position((float)textSpec.X, (float)textSpec.Y, AngularLength.AngularUnit.MIL_USSR);
 					label.rotation = new AngularLength(0f, AngularLength.AngularUnit.DEG);
 					label.parent = parent;
-					label.text = t.Value;
-					label.fontSize = (float)t.Size;
-					return Look(label, t.Visual, t.Light, t.Path, problems);
+					label.text = textSpec.Value;
+					label.fontSize = (float)textSpec.Size;
+					return Look(label, textSpec.Visual, textSpec.Light, textSpec.Path, problems);
 				}
 			}
 			return null;
@@ -130,7 +182,7 @@ namespace T90A.Common
 			if (visual == "painted") v.visualType = ReticleTree.VisualElement.Type.Painted;
 			else if (visual == "additive") v.visualType = ReticleTree.VisualElement.Type.ReflectedAdditive;
 			else problems.Add($"{path}: unknown visual '{visual}' (painted, additive)");
-			if (Enum.TryParse(light, out ReticleTree.Light.Type t)) v.illumination = t;
+			if (Enum.TryParse(light, out ReticleTree.Light.Type lightType)) v.illumination = lightType;
 			else problems.Add($"{path}: unknown light '{light}'");
 			return v;
 		}
@@ -138,16 +190,16 @@ namespace T90A.Common
 		internal static List<string> Unaligned(ReticleSO so)
 		{
 			var bad = new List<string>();
-			void Walk(ReticleTree.TransformElement e, bool aligned, string path)
+			void Walk(ReticleTree.TransformElement element, bool aligned, string path)
 			{
-				if (e is ReticleTree.GroupBase g)
+				if (element is ReticleTree.GroupBase container)
 				{
-					bool under = aligned || g.align != ReticleTree.GroupBase.Alignment.None;
-					foreach (var c in g.elements) Walk(c, under, path + "/" + g);
+					bool under = aligned || container.align != ReticleTree.GroupBase.Alignment.None;
+					foreach (var child in container.elements) Walk(child, under, path + "/" + container);
 				}
-				else if (e is ReticleTree.VisualElement && !aligned) bad.Add(path + "/" + e);
+				else if (element is ReticleTree.VisualElement && !aligned) bad.Add(path + "/" + element);
 			}
-			foreach (var p in so.planes) foreach (var e in p.elements) Walk(e, false, so.name);
+			foreach (var plane in so.planes) foreach (var element in plane.elements) Walk(element, false, so.name);
 			return bad;
 		}
 
@@ -155,7 +207,27 @@ namespace T90A.Common
 		{
 			if (host == null) return null;
 			var labels = AllOf<ReticleTree.Text>(host).ToList();
-			return labels.FirstOrDefault(t => t.font != null && t.font.name.StartsWith("TPD_Etch")) ?? labels.FirstOrDefault();
+			return labels.FirstOrDefault(l => l.font != null && l.font.name.StartsWith("TPD_Etch")) ?? labels.FirstOrDefault();
+		}
+
+		internal static ReticleSO FontHost(ReticleSO own, Transform unit)
+		{
+			bool Labelled(ReticleSO reticle)
+				=> reticle != null && reticle.planes != null && AllOf<ReticleTree.Text>(reticle).Any(l => l.font != null);
+			if (Labelled(own)) return own;
+			var onUnit = unit == null
+				? null
+				: unit
+					.GetComponentsInChildren<GHPC.Equipment.Optics.UsableOptic>(true)
+					.Select(o => o.reticleMesh != null ? o.reticleMesh.reticleSO : null)
+					.FirstOrDefault(Labelled);
+			if (onUnit != null) return onUnit;
+			var loaded = Resources.FindObjectsOfTypeAll<ReticleSO>()
+				.Where(Labelled)
+				.OrderBy(r => r.name, StringComparer.Ordinal)
+				.ToList();
+			return loaded.FirstOrDefault(r => FontTemplate(r)?.font?.name.StartsWith("TPD_Etch") == true)
+				?? loaded.FirstOrDefault();
 		}
 
 		internal static IEnumerable<T> AllOf<T>(ReticleSO so) where T : ReticleTree.TransformElement
@@ -163,9 +235,9 @@ namespace T90A.Common
 			var stack = new Stack<ReticleTree.TransformElement>(so.planes.SelectMany(p => p.elements));
 			while (stack.Count > 0)
 			{
-				var e = stack.Pop();
-				if (e is T match) yield return match;
-				if (e is ReticleTree.GroupBase g) foreach (var c in g.elements) stack.Push(c);
+				var element = stack.Pop();
+				if (element is T match) yield return match;
+				if (element is ReticleTree.GroupBase container) foreach (var child in container.elements) stack.Push(child);
 			}
 		}
 
@@ -178,82 +250,114 @@ namespace T90A.Common
 
 		internal static Overlay BuildOverlay(ReticleSpec spec, Transform parent, float fovDeg, List<string> problems)
 		{
-			var o = new Overlay { Root = new GameObject(spec.ScreenName, typeof(RectTransform)) };
-			o.Root.transform.SetParent(parent, false);
-			var canvas = o.Root.AddComponent<Canvas>();
+			var overlay = new Overlay { Root = new GameObject(spec.ScreenName, typeof(RectTransform)) };
+			overlay.Root.transform.SetParent(parent, false);
+			var canvas = overlay.Root.AddComponent<Canvas>();
 			canvas.renderMode = RenderMode.ScreenSpaceOverlay;
 			canvas.sortingOrder = -1;
-			var scaler = o.Root.AddComponent<CanvasScaler>();
+			var scaler = overlay.Root.AddComponent<CanvasScaler>();
 			scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
 			scaler.referenceResolution = new Vector2(800f, 600f);
 			scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
 			scaler.matchWidthOrHeight = 1f;
-			float u = 600f / (fovDeg * Mathf.Deg2Rad * 1000f);
-			foreach (var it in spec.Screen)
+			float scale = 600f / (fovDeg * Mathf.Deg2Rad * 1000f);
+			foreach (var item in spec.Screen)
 			{
-				float ay = it.Anchor == "bottom" ? 0f : it.Anchor == "top" ? 1f : 0.5f;
-				var pos = new Vector2((float)it.X * u, (float)it.Y * u);
-				var col = new Color(it.Color[0], it.Color[1], it.Color[2], it.Color[3]);
-				switch (it.Kind)
+				float anchorY = item.Anchor == "bottom" ? 0f : item.Anchor == "top" ? 1f : 0.5f;
+				var pos = new Vector2((float)item.X * scale, (float)item.Y * scale);
+				var col = new Color(item.Color[0], item.Color[1], item.Color[2], item.Color[3]);
+				switch (item.Kind)
 				{
 					case "rect":
 					case "seg":
 					{
-						var rt = it.FullWidth ? Rect(it.Name, o.Root.transform, new Vector2(0f, ay), new Vector2(1f, ay), pos, new Vector2(0f, (float)it.H * u))
-							: Rect(it.Name, o.Root.transform, new Vector2(0.5f, ay), new Vector2(0.5f, ay), pos, new Vector2((float)it.W * u, (float)it.H * u));
-						if (it.Kind == "seg") rt.localRotation = Quaternion.Euler(0f, 0f, (float)it.Deg);
-						rt.gameObject.AddComponent<Image>().color = col;
+						var rectTransform = item.FullWidth ? Rect(
+							item.Name,
+							overlay.Root.transform,
+							new Vector2(0f, anchorY),
+							new Vector2(1f, anchorY),
+							pos,
+							new Vector2(0f, (float)item.H * scale))
+							: Rect(
+								item.Name,
+								overlay.Root.transform,
+								new Vector2(0.5f, anchorY),
+								new Vector2(0.5f, anchorY),
+								pos,
+								new Vector2((float)item.W * scale, (float)item.H * scale));
+						if (item.Kind == "seg") rectTransform.localRotation = Quaternion.Euler(0f, 0f, (float)item.Deg);
+						rectTransform.gameObject.AddComponent<Image>().color = col;
 						break;
 					}
 					case "text":
 					case "readout":
 					{
-						var rt = Rect(it.Kind == "readout" ? it.Name + " text" : "text", o.Root.transform, new Vector2(0.5f, ay), new Vector2(0.5f, ay), pos, new Vector2((float)it.W * u, (float)it.H * u));
-						var tmp = rt.gameObject.AddComponent<TextMeshProUGUI>();
-						var f = it.Font != null ? Font(it.Font) : null;
-						if (f != null) tmp.font = f;
-						else if (it.Font != null) problems.Add($"{it.Path}: no TMP font '{it.Font}' (default font used)");
-						var lacks = Missing(f ?? tmp.font, it.Value);
-						if (lacks.Length > 0) problems.Add($"{it.Path}: font '{(f ?? tmp.font)?.name}' lacks '{lacks}'");
-						tmp.fontSize = (float)it.Size * u;
-						tmp.color = col;
-						tmp.alignment = it.Align == "left" ? TextAlignmentOptions.Left : it.Align == "right" ? TextAlignmentOptions.Right : TextAlignmentOptions.Center;
-						tmp.enableWordWrapping = false;
-						tmp.richText = true;
-						tmp.text = it.Value ?? "";
-						if (it.Kind == "readout") o.Readouts[it.Name] = tmp;
+						var rectTransform = Rect(
+							item.Kind == "readout" ? item.Name + " text" : "text",
+							overlay.Root.transform,
+							new Vector2(0.5f, anchorY),
+							new Vector2(0.5f, anchorY),
+							pos,
+							new Vector2((float)item.W * scale, (float)item.H * scale));
+						var label = rectTransform.gameObject.AddComponent<TextMeshProUGUI>();
+						var font = item.Font != null ? Font(item.Font) : null;
+						if (font != null) label.font = font;
+						else if (item.Font != null) problems.Add($"{item.Path}: no TMP font '{item.Font}' (default font used)");
+						var lacks = Missing(font ?? label.font, item.Value);
+						if (lacks.Length > 0) problems.Add($"{item.Path}: font '{(font ?? label.font)?.name}' lacks '{lacks}'");
+						label.fontSize = (float)item.Size * scale;
+						label.color = col;
+						label.alignment = item.Align == "left"
+							? TextAlignmentOptions.Left
+							: item.Align == "right" ? TextAlignmentOptions.Right : TextAlignmentOptions.Center;
+						label.enableWordWrapping = false;
+						label.richText = true;
+						label.text = item.Value ?? "";
+						if (item.Kind == "readout") overlay.Readouts[item.Name] = label;
 						break;
 					}
 					case "lamp":
 					{
-						var size = new Vector2((float)it.Size * u, (float)it.Size * u);
-						var off = Rect(it.Name + " (unlit)", o.Root.transform, new Vector2(0.5f, ay), new Vector2(0.5f, ay), pos, size);
+						var size = new Vector2((float)item.Size * scale, (float)item.Size * scale);
+						var off = Rect(
+							item.Name + " (unlit)",
+							overlay.Root.transform,
+							new Vector2(0.5f, anchorY),
+							new Vector2(0.5f, anchorY),
+							pos,
+							size);
 						var offImg = off.gameObject.AddComponent<Image>();
 						offImg.sprite = LampSprite();
 						offImg.color = new Color(col.r * 0.22f, col.g * 0.22f, col.b * 0.22f, 1f);
-						var on = Rect(it.Name, o.Root.transform, new Vector2(0.5f, ay), new Vector2(0.5f, ay), pos, size);
-						var img = on.gameObject.AddComponent<Image>();
+						var litRect = Rect(
+							item.Name,
+							overlay.Root.transform,
+							new Vector2(0.5f, anchorY),
+							new Vector2(0.5f, anchorY),
+							pos,
+							size);
+						var img = litRect.gameObject.AddComponent<Image>();
 						img.sprite = LampSprite();
 						img.color = col;
-						on.gameObject.SetActive(false);
-						o.Lamps[it.Name] = on.gameObject;
+						litRect.gameObject.SetActive(false);
+						overlay.Lamps[item.Name] = litRect.gameObject;
 						break;
 					}
 				}
 			}
-			return o;
+			return overlay;
 		}
 
 		static RectTransform Rect(string name, Transform parent, Vector2 anchorMin, Vector2 anchorMax, Vector2 pos, Vector2 size)
 		{
-			var rt = (RectTransform)new GameObject(name, typeof(RectTransform)).transform;
-			rt.SetParent(parent, false);
-			rt.anchorMin = anchorMin;
-			rt.anchorMax = anchorMax;
-			rt.pivot = new Vector2(0.5f, 0.5f);
-			rt.anchoredPosition = pos;
-			rt.sizeDelta = size;
-			return rt;
+			var rectTransform = (RectTransform)new GameObject(name, typeof(RectTransform)).transform;
+			rectTransform.SetParent(parent, false);
+			rectTransform.anchorMin = anchorMin;
+			rectTransform.anchorMax = anchorMax;
+			rectTransform.pivot = new Vector2(0.5f, 0.5f);
+			rectTransform.anchoredPosition = pos;
+			rectTransform.sizeDelta = size;
+			return rectTransform;
 		}
 
 		internal static string Missing(TMP_FontAsset font, string text)
@@ -268,11 +372,12 @@ namespace T90A.Common
 
 		internal static TMP_FontAsset Font(string name)
 		{
-			if (Fonts.TryGetValue(name, out var f) && f != null) return f;
+			if (Fonts.TryGetValue(name, out var font) && font != null) return font;
 			// Loaded fonts only, one that lives in a vehicle bundle turns up with its vehicle.
-			f = Resources.FindObjectsOfTypeAll<TMP_FontAsset>().FirstOrDefault(x => x.name == name) ?? Resources.LoadAll<TMP_FontAsset>("").FirstOrDefault(x => x.name == name);
-			if (f != null) Fonts[name] = f;
-			return f;
+			font = Resources.FindObjectsOfTypeAll<TMP_FontAsset>().FirstOrDefault(a => a.name == name)
+				?? Resources.LoadAll<TMP_FontAsset>("").FirstOrDefault(a => a.name == name);
+			if (font != null) Fonts[name] = font;
+			return font;
 		}
 
 		static Sprite _lamp;
@@ -280,17 +385,17 @@ namespace T90A.Common
 		static Sprite LampSprite()
 		{
 			if (_lamp != null) return _lamp;
-			const int n = 64;
-			var tex = new Texture2D(n, n, TextureFormat.RGBA32, false);
-			float r = n / 2f;
-			for (int y = 0; y != n; y++)
-				for (int x = 0; x != n; x++)
+			const int size = 64;
+			var tex = new Texture2D(size, size, TextureFormat.RGBA32, false);
+			float radius = size / 2f;
+			for (int y = 0; y != size; y++)
+				for (int x = 0; x != size; x++)
 				{
-					float d = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(r, r));
-					tex.SetPixel(x, y, new Color(1f, 1f, 1f, Mathf.Clamp01(r - 1f - d)));
+					float distance = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(radius, radius));
+					tex.SetPixel(x, y, new Color(1f, 1f, 1f, Mathf.Clamp01(radius - 1f - distance)));
 				}
 			tex.Apply();
-			_lamp = Sprite.Create(tex, new Rect(0f, 0f, n, n), new Vector2(0.5f, 0.5f));
+			_lamp = Sprite.Create(tex, new Rect(0f, 0f, size, size), new Vector2(0.5f, 0.5f));
 			return _lamp;
 		}
 	}

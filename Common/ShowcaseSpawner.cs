@@ -47,10 +47,10 @@ namespace T90A.Common
 				if (vehicles.Any(v => anchors.Contains(v.UniqueName))) break;
 				yield return null;
 			}
-			foreach (var e in Entries)
+			foreach (var entry in Entries)
 			{
 				vehicles = UnityEngine.Object.FindObjectsByType<Vehicle>(FindObjectsSortMode.None);
-				Place(e, vehicles);
+				Place(entry, vehicles);
 			}
 		}
 
@@ -58,13 +58,20 @@ namespace T90A.Common
 		{
 			string name = e.Name?.Invoke() ?? e.Key;
 			if (vehicles.Any(v => v.UniqueName == e.Key)) return;
-			var anchor = e.Anchors.Select(k => vehicles.FirstOrDefault(v => v.UniqueName == k)).FirstOrDefault(v => v != null) ?? vehicles.FirstOrDefault();
-			if (anchor == null || UnitSpawner.Instance == null) { MelonLogger.Warning($"Showcase: no vehicle to place the {name} next to."); return; }
+			var anchor = e.Anchors
+				.Select(a => vehicles.FirstOrDefault(v => v.UniqueName == a))
+				.FirstOrDefault(v => v != null)
+				?? vehicles.FirstOrDefault();
+			if (anchor == null || UnitSpawner.Instance == null)
+			{
+				MelonLogger.Warning($"Showcase: no vehicle to place the {name} next to.");
+				return;
+			}
 
-			var t = anchor.transform;
+			var anchorTransform = anchor.transform;
 			foreach (float k in e.Offsets)
 			{
-				var pos = t.position + t.right * k;
+				var pos = anchorTransform.position + anchorTransform.right * k;
 				if (vehicles.Any(v => Vector3.Distance(v.transform.position, pos) < e.MinGap)) continue;
 				if (Physics.Raycast(pos + Vector3.up * 30f, Vector3.down, out var ground, 60f, 1 << CodeUtils.LAYER_INDEX_TERRAIN))
 					pos = ground.point;
@@ -73,7 +80,7 @@ namespace T90A.Common
 					Name = e.Key,
 					Allegiance = Faction.Neutral,
 					Position = pos,
-					Rotation = t.rotation,
+					Rotation = anchorTransform.rotation,
 					UnitType = UnitType.GroundVehicle,
 				});
 				return;

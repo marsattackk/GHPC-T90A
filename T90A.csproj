@@ -15,6 +15,7 @@
     <PathMap>$(MSBuildProjectDirectory)=.</PathMap>
     <GameDir Condition="'$(GameDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Gunner HEAT PC\Bin</GameDir>
     <NoWarn>$(NoWarn);MSB3277;CS0618</NoWarn>
+    <DefaultItemExcludes>$(DefaultItemExcludes);tests\**</DefaultItemExcludes>   <!-- its own project -->
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,33 +23,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Resources\T72M1_skin_hull_trimmed.bin" LogicalName="T72M1_skin_hull_trimmed.bin" />
-    <EmbeddedResource Include="Resources\round_3bm42_co.png" LogicalName="round_3bm42_co.png" />
-    <EmbeddedResource Include="Resources\round_3bm60_co.png" LogicalName="round_3bm60_co.png" />
-    <EmbeddedResource Include="Resources\round_9m119m_co.png" LogicalName="round_9m119m_co.png" />
-    <EmbeddedResource Include="Resources\round_meshes.txt" LogicalName="round_meshes.txt" />
-    <EmbeddedResource Include="Resources\round_mesh_3bm60_charge.mesh" LogicalName="round_mesh_3bm60_charge.mesh" />
-    <EmbeddedResource Include="Resources\round_mesh_3bm60_oring.mesh" LogicalName="round_mesh_3bm60_oring.mesh" />
-    <EmbeddedResource Include="Resources\round_mesh_3bm60_rod.mesh" LogicalName="round_mesh_3bm60_rod.mesh" />
-    <EmbeddedResource Include="Resources\round_mesh_3bm60_sabot_001.mesh" LogicalName="round_mesh_3bm60_sabot_001.mesh" />
-    <EmbeddedResource Include="Resources\round_mesh_3bm60_sabot_003.mesh" LogicalName="round_mesh_3bm60_sabot_003.mesh" />
-    <EmbeddedResource Include="Resources\round_mesh_3bm60_sabot_004.mesh" LogicalName="round_mesh_3bm60_sabot_004.mesh" />
-    <EmbeddedResource Include="Resources\round_mesh_9m119m_missile.mesh" LogicalName="round_mesh_9m119m_missile.mesh" />
-    <EmbeddedResource Include="Resources\round_mesh_9x949_charge.mesh" LogicalName="round_mesh_9x949_charge.mesh" />
-    <EmbeddedResource Include="Resources\tkn4s_day.jsonc" LogicalName="tkn4s_day.jsonc" />
-    <EmbeddedResource Include="Resources\tkn4s_night.jsonc" LogicalName="tkn4s_night.jsonc" />
-    <EmbeddedResource Include="Resources\essa_monitor.jsonc" LogicalName="essa_monitor.jsonc" />
-    <EmbeddedResource Include="Resources\essa_wide.jsonc" LogicalName="essa_wide.jsonc" />
-    <EmbeddedResource Include="Resources\essa_narrow.jsonc" LogicalName="essa_narrow.jsonc" />
-    <EmbeddedResource Include="Resources\essa_row.jsonc" LogicalName="essa_row.jsonc" />
-    <EmbeddedResource Include="Resources\modules_built.json" LogicalName="modules_built.json" />
-    <EmbeddedResource Include="Resources\interior_map.txt" LogicalName="interior_map.txt" />
-    <EmbeddedResource Include="Resources\gun_depression.txt" LogicalName="gun_depression.txt" />
-    <EmbeddedResource Include="Resources\shtora_panel.png" LogicalName="shtora_panel.png" />
-    <EmbeddedResource Include="Resources\shtora_lamp_off.png" LogicalName="shtora_lamp_off.png" />
-    <EmbeddedResource Include="Resources\shtora_lamp_on.png" LogicalName="shtora_lamp_on.png" />
-    <EmbeddedResource Include="Resources\shtora_layout.txt" LogicalName="shtora_layout.txt" />
-    <EmbeddedResource Include="Resources\shtora_alarm.wav" LogicalName="shtora_alarm.wav" />
+    <!-- Everything in Resources\ under its plain file name, which is the name the code asks for. -->
+    <EmbeddedResource Include="Resources\*" Exclude="Resources\README.md" LogicalName="%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>
@@ -59,14 +35,19 @@
     </Reference>
   </ItemGroup>
 
-  <!-- Build stamp (BuildStamp.targets, beside this file): AssemblyInformationalVersion "<version>+<commit>.public", logged on
-       load. The commit is the one this source was cleaned from when the release build passes it (-p:GitCommit=...), else "unknown". -->
+  <!-- Without the game the build would fail with hundreds of missing-type errors: stop first and say what to pass. -->
+  <Target Name="CheckGameDir" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(GameDir)\GHPC_Data\Managed\Assembly-CSharp.dll')"
+           Text="Gunner, HEAT, PC! not found in GameDir '$(GameDir)'. Build with -p:GameDir=&quot;&lt;the game's Bin folder&gt;&quot;, the folder that holds GHPC_Data and MelonLoader." />
+    <Error Condition="!Exists('$(GameDir)\MelonLoader\net35\MelonLoader.dll')"
+           Text="MelonLoader not found in GameDir '$(GameDir)'. Install MelonLoader into the game, or pass -p:GameDir=&quot;&lt;the game's Bin folder&gt;&quot;." />
+  </Target>
+
+  <!-- The version stamp the DLL logs on load (BuildStamp.targets). Pass -p:GitCommit=<hash> or the commit shows as "unknown". -->
   <PropertyGroup>
     <BuildFlavour Condition="'$(BuildFlavour)' == ''">public</BuildFlavour>
     <StampAskGit>false</StampAskGit>
   </PropertyGroup>
   <Import Project="BuildStamp.targets" Condition="Exists('BuildStamp.targets')" />
-  <!-- A mod with a native half: its build and embedding (Native.targets, beside this file, when the mod has one). -->
-  <Import Project="Native.targets" Condition="Exists('Native.targets')" />
 
 </Project>

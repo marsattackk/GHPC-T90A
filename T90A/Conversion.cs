@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using GHPC.Vehicle;
 using MelonLoader;
@@ -8,275 +9,310 @@ using UnityEngine;
 
 namespace T90A
 {
-	internal static class Conversion
+	// Turns a spawned T-72M1 into a T-90A. Most of it happens at spawn, sights and voices two frames later.
+	internal static partial class Conversion
 	{
+		const string FriendlyName = T90AMod.FriendlyName;
 		const string PaintedPrefix = "t90a_t_90a_";
+		const string HullPath = "---MESH---/HULL";
+		const string TurretPath = HullPath + "/TURRET";
+		const string GunPath = TurretPath + "/GUN";
 
-		const float ReverseTrackFactor = 4.52f / 4.17f;   // GHPC's tracks run ~8 % over NWH's gear formula
-		// Caps are cruise-control targets. One at the real 4.18 held it at 2.4, the gearing limits it instead.
-		const float ReverseCapKmh = 12.5f;
+		// What the steps share: the vehicle and the three bones the visuals hang on.
+		sealed class Parts
+		{
+			internal Vehicle Vehicle;
+			internal Transform Root;
+			internal Transform Hull;
+			internal Transform Turret;
+			internal Transform Gun;
+			internal bool HasRig => Hull != null && Turret != null && Gun != null;
+		}
+
+		// The order matters: visuals and armour go on the T-72's bones before the turret axis moves, and the Kord and the
+		// modules are built on the final rig. The commander's seat comes before the interior: both move the commander figure,
+		// the seat by an offset and the interior to a fixed place, which has to be the one that stands.
+		static readonly ConversionStep<Parts>[] Steps =
+		{
+			new ConversionStep<Parts> { What = "base visuals", Run = HideBase },
+			new ConversionStep<Parts> { What = "visuals", Run = AttachVisuals },
+			new ConversionStep<Parts> { What = "paint", Run = Paint },
+			new ConversionStep<Parts> { What = "hatch undersides", Otherwise = "left plain", Run = PaintHatchUndersides },
+			new ConversionStep<Parts> { What = "tactical numbers", Run = PlaceNumbers },
+			new ConversionStep<Parts> { What = "leftovers", Run = HideLeftovers },
+			new ConversionStep<Parts> { What = "armour", Run = p => Armour.Apply(p.Vehicle) },
+			new ConversionStep<Parts> { What = "commander's seat", Run = p => CommanderSeat.Apply(p.Vehicle) },
+			new ConversionStep<Parts>
+			{
+				What = "interior",
+				Otherwise = "left as the T-72M1's",
+				Run = p => Interior.Apply(p.Vehicle),
+			},
+			new ConversionStep<Parts>
+			{
+				What = "ammo setup",
+				Run = p => PortAmmo.ApplyAtSpawn(p.Vehicle),
+				SpawnOnly = true,
+				Late = "T-90A ammo: {0} was converted after its racks were filled; keeping base ammo.",
+			},
+			new ConversionStep<Parts>
+			{
+				What = "coax setup",
+				Run = p => PortAmmo.ApplyCoaxAtSpawn(p.Vehicle),
+				SpawnOnly = true
+			},
+			new ConversionStep<Parts> { What = "gun setup", Otherwise = "left as the T-72M1's", Run = SetGun },
+			new ConversionStep<Parts> { What = "mobility setup", Otherwise = "left as the T-72M1's", Run = SetMobility },
+			new ConversionStep<Parts> { What = "smoke launchers", Run = SeatSmoke },
+			new ConversionStep<Parts> { What = "hatches", Otherwise = "left closed", Run = MoveHatches },
+			new ConversionStep<Parts> { What = "turret axis", Run = MoveAxes },
+			new ConversionStep<Parts>
+			{
+				What = "commander's station",
+				Run = p => Commander.Apply(p.Vehicle),
+				SpawnOnly = true,
+				Late = "T-90A Kord: {0} was converted after spawn; no remote Kord fitted.",
+			},
+			new ConversionStep<Parts> { What = "modules", Run = p => Modules.Build(p.Vehicle), SpawnOnly = true },
+			new ConversionStep<Parts> { What = "periscope placement", Run = PlacePeriscope, SpawnOnly = true },
+			new ConversionStep<Parts> { What = "Shtora-1", Run = p => Countermeasures.Apply(p.Vehicle), SpawnOnly = true },
+			new ConversionStep<Parts> { What = "LOD materials", Run = SyncLods },
+		};
 
 		internal static void Convert(Vehicle vehicle, bool atSpawn = false)
 		{
-			if (!ConvertSweep.Mark(vehicle)) return;
-			try { ApplyVisuals(vehicle); }
-			catch (Exception e) { MelonLogger.Error("T-90A visuals failed: " + e); }
-			try { ArmorSetup.Apply(vehicle); }
-			catch (Exception e) { MelonLogger.Error("T-90A armour failed: " + e); }
-			if (atSpawn)
-			{
-				try { PortAmmo.ApplyAtSpawn(vehicle); }
-				catch (Exception e) { MelonLogger.Error("T-90A ammo setup failed: " + e); }
-				try { PortAmmo.ApplyCoaxAtSpawn(vehicle); }
-				catch (Exception e) { MelonLogger.Error("T-90A coax PKT setup failed: " + e); }
-			}
-			else MelonLogger.Warning("T-90A ammo: " + vehicle.name + " was converted after its racks were filled; keeping base ammo.");
-			try { Crew(vehicle); }
-			catch (Exception e) { MelonLogger.Error("T-90A crew stations failed: " + e); }
-			try { CommanderSeat.Apply(vehicle); }
-			catch (Exception e) { MelonLogger.Error("T-90A commander station failed: " + e); }
-			try { Interior.Apply(vehicle); }
-			catch (Exception e) { MelonLogger.Error("T-90A interior failed (left as the T-72M1's): " + e); }
-			try { Hatches(vehicle); }
-			catch (Exception e) { MelonLogger.Error("T-90A hatches failed (left closed): " + e); }
-			try { RealAxis.Apply(vehicle); }
-			catch (Exception e) { MelonLogger.Error("T-90A turret axis failed: " + e); }
-			// Spawn only: Unit builds its weapon and camera lists straight after, a late Kord never makes it in.
-			if (atSpawn) try { Kord.Apply(vehicle); }
-			catch (Exception e) { MelonLogger.Error("T-90A Kord failed: " + e); }
-			else MelonLogger.Warning("T-90A Kord: " + vehicle.name + " was converted after spawn; no remote Kord fitted.");
-			if (atSpawn) try { Modules.Build(vehicle); }
-			catch (Exception e) { MelonLogger.Error("T-90A modules failed: " + e); }
-			bool shtora = atSpawn && T90AMod.ShtoraOn.Value;
-			var jammer = Jammer.Copy();
-			jammer.OnAtSpawn = T90AMod.ShtoraJammerAtSpawn.Value;
-			if (shtora) try { Shtora.Apply(vehicle, jammer); }
-			catch (Exception e) { MelonLogger.Error("T-90A Shtora-1 jammer failed: " + e); }
-			var screens = Screens.Copy();
-			screens.Automatic = T90AMod.ShtoraAutomatic.Value;
-			screens.AlarmTone = T90AMod.ShtoraTone.Value;
-			screens.PanelShown = T90AMod.ShtoraPanel.Value;
-			screens.PanelAlways = T90AMod.ShtoraPanelAlways.Value;
-			if (shtora) try { ShtoraScreen.Apply(vehicle, screens); }
-			catch (Exception e) { MelonLogger.Error("T-90A Shtora-1 screens failed: " + e); }
-			MelonCoroutines.Start(LateSetup(vehicle));
-		}
-
-		static readonly Shtora.Settings Jammer = new Shtora.Settings
-		{
-			Tag = "T-90A",
-			EmitterLeft = "shtora_l", EmitterRight = "shtora_r",
-			SectorAz = 20f,
-			SectorEl = 2.25f,
-			BreakChance = 0.6f,
-			Relock = new Vector2(0.3f, 0.7f),   // no source says where the lock comes back, this and the jitter are mine
-			JitterDeg = 30f,
-			Missiles = new[] { "BGM-71", "HOT", "MILAN", "9M111", "9M113", "9M112", "9M17", "9M114" },
-			OnAtSpawn = true,
-		};
-
-		internal static readonly ShtoraScreen.Settings Screens = new ShtoraScreen.Settings
-		{
-			Tag = "T-90A",
-			PreciseHalfAz = 45f, HeadEl = new Vector2(-5f, 25f),
-			Automatic = true,
-			OwnShotBlock = 15f,
-			LaunchAngle = 12f,
-			Distance = new Vector2(50f, 80f),
-			CloudBuild = 3f,
-			CloudLife = 20f,
-			FuseSeconds = 1f, TubeHeight = 2.3f,
-			WhiteSmokeDonors = new[] { "LEO2A3", "M60A3", "LEO1A3", "M1" }, CloudBottomHeight = 2f,
-			// GHPC's sight blockers are half a particle wide, fewer or smaller particles leave gaps the AI sees through.
-			CloudSpread = 8f, CloudSizeScale = 4f, CloudParticles = 60, CloudRise = 0f,
-			AiLaseDelay = new Vector2(0.5f, 1f), AiRelase = 10f,
-			SameThreatDeg = 20f,
-			BlindAi = true, BlindRange = new Vector2(0.9f, 1.1f),
-		};
-
-		static readonly GunSetup.Settings Gun = new GunSetup.Settings
-		{
-			Tag = "T-90A",
-			TurretSpeed = 24f,
-			GunSpeed = 28f,
-			GunLimits = new Vector2(-(6f + 13f / 60f), 13f + 47f / 60f),
-			DepressionProfile = "gun_depression.txt",   // mine, no source: barrel kept 1 cm off the hull all the way round
-			AutoloaderCycle = 6.5f,
-			GunName = "125mm Gun 2A46M-5",
-			CodexName = "T90A 2A46M-5",
-		};
-
-		static readonly Mobility.Settings Drive = new Mobility.Settings
-		{
-			MaxPower = 1000f,
-			MaxRpm = 2000f,
-			FinalDrive = 5.297f,
-			// NWH clamps the up-shift to 0.95 x max rpm. The T-72M1's 2250 sat above that and it never shifted up.
-			ShiftUpRpm = 1900f,
-			ReverseGears = new[] { -14.35f * ReverseTrackFactor },
-			MaxForwardKmh = 60f,
-			ReverseCapKmh = ReverseCapKmh,
-		};
-
-		static void Crew(Vehicle vehicle)
-		{
-			GunSetup.Apply(vehicle, Gun);
-			SmokeLaunchers.Seat(vehicle, T90AMod.SmokePoints);
-			SmokeCaps.Apply(vehicle.transform);
-
-			Mobility.Apply(vehicle, Drive);
-
-			var peri = FindDeep(vehicle.transform, "Gunner's Periscope Camera")?.GetComponent<GHPC.Camera.CameraSlot>();
-			if (peri != null) peri.DirectAttachOnly = true;   // Unit skips these when it lists the views
-			else MelonLogger.Warning("T-90A: gunner's periscope slot not found.");
-		}
-
-		static IEnumerator LateSetup(Vehicle vehicle)
-		{
-			yield return null;
-			yield return null;
-			if (vehicle == null) yield break;
-			try
-			{
-				var smoke = vehicle.GetComponentInChildren<GHPC.Equipment.VehicleSmokeManager>(true);
-				// VehicleSmokeManager cached the crew brains before they existed, no smoke ever without this.
-				if (smoke != null) SmokeLaunchers.RefreshCrew(smoke);
-			}
-			catch (Exception e) { MelonLogger.Error("T-90A smoke crew refresh failed: " + e); }
-			try { CrewVoices.Apply(vehicle, "T-90A"); }
-			catch (Exception e) { MelonLogger.Error("T-90A voices failed: " + e); }
-			try { Kord.LateSetup(vehicle); }
-			catch (Exception e) { MelonLogger.Error("T-90A Kord late setup failed: " + e); }
-			try { SightSetup.Apply(vehicle); }
-			catch (Exception e) { MelonLogger.Error("T-90A sight setup failed: " + e); }
-			try { Modules.Wire(vehicle); }
-			catch (Exception e) { MelonLogger.Error("T-90A module wiring failed: " + e); }
-			try { PortAmmo.SelfCheck(vehicle); }
-			catch (Exception e) { MelonLogger.Error("T-90A ammunition self-check failed: " + e); }
-			try
-			{
-				ThermalHeat.Apply(vehicle.transform, ThermalHeat.PortParts(vehicle.transform, "T90A_"));
-			}
-			catch (Exception e) { MelonLogger.Error("T-90A thermal heat failed: " + e); }
-		}
-
-		static byte[] _trimmedSkin;
-		static bool _trimmedSkinRead, _skinWarned;
-
-		static byte[] TrimmedSkin()
-		{
-			if (_trimmedSkinRead) return _trimmedSkin;
-			_trimmedSkinRead = true;
-			using (var s = typeof(Conversion).Assembly.GetManifestResourceStream("T72M1_skin_hull_trimmed.bin"))
-			{
-				if (s == null) { MelonLogger.Warning("T-90A: running-gear mesh missing from the DLL; T-72 skirts hidden by collapsed bones only."); return null; }
-				var ms = new System.IO.MemoryStream(); s.CopyTo(ms); _trimmedSkin = ms.ToArray();
-			}
-			return _trimmedSkin;
-		}
-
-		static void ApplyVisuals(Vehicle vehicle)
-		{
-			if (T90AMod.Visual == null) return;
+			if (T90AMod.Visual == null || !ConvertSweep.Mark(vehicle)) return;
 			var root = vehicle.transform;
-			var hull = root.Find("---MESH---/HULL");
-			var turret = root.Find("---MESH---/HULL/TURRET");
-			var gun = root.Find("---MESH---/HULL/TURRET/GUN");
-			if (hull == null || turret == null || gun == null)
+			var parts = new Parts
 			{
-				MelonLogger.Error("T-90A: base vehicle has no ---MESH---/HULL/TURRET/GUN rig; visuals not applied.");
-				return;
-			}
+				Vehicle = vehicle,
+				Root = root,
+				Hull = root.Find(HullPath),
+				Turret = root.Find(TurretPath),
+				Gun = root.Find(GunPath),
+			};
+			if (!parts.HasRig)
+				MelonLogger.Error($"{FriendlyName}: base vehicle has no ---MESH---/HULL/TURRET/GUN rig; visuals not applied.");
+			Func<ConversionStep<Parts>, bool> keep = null;
+			DevKeeps(ref keep);
+			ConversionSteps.Run(FriendlyName, Steps, parts, vehicle.name, atSpawn, keep);
+			MelonCoroutines.Start(LateSetup(vehicle, atSpawn));
+		}
 
-			BaseRigT72M1.HideBaseVisuals(root, TrimmedSkin());
+		static void HideBase(Parts parts)
+		{
+			if (!parts.HasRig) return;
+			BaseRigT72M1.HideBaseVisuals(parts.Root, EmbeddedFile.T72M1Skin(FriendlyName));
 			if (BaseRigT72M1.TrimFailure != null && !_skinWarned)
 			{
 				_skinWarned = true;
-				MelonLogger.Warning("T-90A: " + BaseRigT72M1.TrimFailure + "; the T-72 side skirts may show through the T-90A hull.");
+				MelonLogger.Warning(
+					$"{FriendlyName}: {BaseRigT72M1.TrimFailure}; the T-72 side skirts may show through the T-90A hull.");
 			}
+		}
+
+		static bool _skinWarned;
+
+		static void AttachVisuals(Parts parts)
+		{
+			if (!parts.HasRig) return;
+			var attached = VisualParts.Attach(parts.Root, T90AMod.Visual, "T90A_", new[]
+			{
+				("HULL", HullPath, Vector3.zero),
+				("TURRET", TurretPath, Vector3.zero),
+				("GUN", GunPath, Vector3.zero),
+				("STUB_HATCH", TurretPath, HatchHinge),
+				("MANTLET_COVER", GunPath, Vector3.zero),
+				("CUPOLA", TurretPath, Commander.CupolaAxis - BaseRigT72M1.TurretPivot),
+				("KORD", TurretPath, Commander.Trunnion - BaseRigT72M1.TurretPivot),
+			});
+			if (attached.ContainsKey("STUB_HATCH"))
+				BaseRigT72M1.MoveEjectionMarkers(parts.Root, parts.Turret.TransformVector(HatchPortShift));
+			if (!attached.TryGetValue("MANTLET_COVER", out var cover))
+			{
+				MelonLogger.Warning($"{FriendlyName}: bundle has no MANTLET_COVER; the cover stays part of the turret.");
+				return;
+			}
+			if (MantletCover.Skin(parts.Root, parts.Turret, parts.Gun, cover) == null)
+				MelonLogger.Warning($"{FriendlyName}: mantlet cover has no mesh; left rigid on the gun.");
+		}
+
+		static void Paint(Parts parts)
+		{
+			if (!parts.HasRig) return;
+			var root = parts.Root;
 			var template = BaseRigT72M1.FindTemplate(root);
 			var flir = Shader.Find("Standard (FLIR)");
-
-			var inst = UnityEngine.Object.Instantiate(T90AMod.Visual);
-			Attach(inst.transform.Find("HULL"), hull);
-			Attach(inst.transform.Find("TURRET"), turret);
-			Attach(inst.transform.Find("GUN"), gun);
-			var hatch = inst.transform.Find("STUB_HATCH");
-			if (hatch != null) StubHatch(root, turret, hatch);
-			var cover = inst.transform.Find("MANTLET_COVER");
-			if (cover != null)
-			{
-				Attach(cover, gun);
-				string skinned = MantletCover.Skin(root, turret, gun, cover);
-				if (skinned == null) MelonLogger.Warning("T-90A: mantlet cover has no mesh; left rigid on the gun.");
-			}
-			else MelonLogger.Warning("T-90A: bundle has no MANTLET_COVER; the cover stays part of the turret.");
-			AttachAt(inst.transform.Find("CUPOLA"), turret, Kord.CupolaAxis - RealAxis.T72Turret);
-			AttachAt(inst.transform.Find("KORD"), turret, Kord.Trunnion - RealAxis.T72Turret);
-			UnityEngine.Object.Destroy(inst);
-
 			PaintFinish.Apply(T90AMod.WeatheredPaint);
-			foreach (var name in new[] { "HULL", "TURRET", "GUN", "STUB_HATCH", "MANTLET_COVER", "CUPOLA", "KORD" })
+			// The three big parts sit right under their bone. The small ones are found by name anywhere on the vehicle, all
+			// in one scan.
+			var smallParts = new Dictionary<string, Transform>();
+			foreach (var child in root.GetComponentsInChildren<Transform>(true))
 			{
-				var part = name != "HULL" && name != "TURRET" && name != "GUN" ? root.GetComponentsInChildren<Transform>(true).FirstOrDefault(x => x.name == "T90A_" + name)
-					: (name == "HULL" ? hull : name == "TURRET" ? turret : gun).Find("T90A_" + name);
+				if (child.name.StartsWith("T90A_") && !smallParts.ContainsKey(child.name)) smallParts.Add(child.name, child);
+			}
+			var paintedParts = new[]
+			{
+				parts.Hull.Find("T90A_HULL"),
+				parts.Turret.Find("T90A_TURRET"),
+				parts.Gun.Find("T90A_GUN"),
+				Lookup(smallParts, "T90A_STUB_HATCH"),
+				Lookup(smallParts, "T90A_MANTLET_COVER"),
+				Lookup(smallParts, "T90A_CUPOLA"),
+				Lookup(smallParts, "T90A_KORD"),
+			};
+			foreach (var part in paintedParts)
+			{
 				if (part == null) continue;
 				VehiclePaint.ApplyPaint(part.gameObject, template, flir, PaintedPrefix);
 			}
-			CoatGlass(root);
-			if (HatchUndersides.Plain(root, "t90a_hatch_inner") == 0) MelonLogger.Warning("T-90A: no hatch underside material found (old bundle?).");
-			try
-			{
-				HatchUndersides.Paint(root, "t90a_hatch_inner", TurretPaint, new RectInt(320, 1350, 230, 110), new Vector2Int(4096, 2048));
-			}
-			catch (Exception e) { MelonLogger.Error("T-90A hatch undersides failed (left plain): " + e); }
-			try { Numbers.Apply(root, turret, T90AMod.NumberPosition); }
-			catch (Exception e) { MelonLogger.Error("T-90A tactical numbers failed: " + e); }
-			try
-			{
-				BaseRigT72M1.HideLeftovers(root, "T90A_");
-			}
-			catch (Exception e) { MelonLogger.Error("T-90A leftover hiding failed: " + e); }
-			try { VisualLods.Sync(root, new[] { Kord.BeltSettings.BeltMaterial }); }
-			catch (Exception e) { MelonLogger.Error("T-90A LOD materials failed: " + e); }
+			VanillaMaterials.Apply(root, T90AMod.Roles);
+			DevPaint(parts);
 		}
 
-		static readonly Vector3 HatchHinge = new Vector3(-0.224f, 2.100f - 1.369f, -1.494f + 0.527f);
+		static Transform Lookup(Dictionary<string, Transform> parts, string name)
+		{
+			parts.TryGetValue(name, out var part);
+			return part;
+		}
+
+		static void PaintHatchUndersides(Parts parts)
+		{
+			if (!parts.HasRig) return;
+			if (HatchUndersides.Plain(parts.Root, "t90a_hatch_inner") == 0)
+				MelonLogger.Warning($"{FriendlyName}: no hatch underside material found (old bundle?).");
+			HatchUndersides.Paint(
+				parts.Root,
+				"t90a_hatch_inner",
+				TurretPaint,
+				// A smooth plate of the turret atlas (x 320-550, y 1350-1460 of 4096 x 2048): a flat normal map with no bolts, welds or
+				// cast texture, so the undersides take the turret's paint as one green colour (the owner's call, 2026-10-20).
+				new RectInt(320, 1350, 230, 110),
+				new Vector2Int(4096, 2048));
+		}
+
+		static void PlaceNumbers(Parts parts)
+		{
+			if (!parts.HasRig) return;
+			TacticalNumbers.Apply(parts.Root, parts.Turret, Numbers);
+		}
+
+		static void HideLeftovers(Parts parts)
+		{
+			if (!parts.HasRig) return;
+			BaseRigT72M1.HideLeftovers(parts.Root, "T90A_");
+		}
+
+		static void SyncLods(Parts parts)
+		{
+			if (!parts.HasRig) return;
+			VisualLods.Sync(parts.Root, FriendlyName, new[] { Commander.BeltSettings.BeltMaterial });
+		}
+
+		static void SetGun(Parts parts)
+		{
+			GunSetup.Apply(parts.Vehicle, Firepower.Gun);
+		}
+
+		static void SeatSmoke(Parts parts)
+		{
+			SmokeLaunchers.Seat(parts.Vehicle, T90AMod.SmokePoints);
+			SmokeCaps.Apply(parts.Root);
+		}
+
+		static void SetMobility(Parts parts)
+		{
+			Mobility.Apply(parts.Vehicle, Drive.Settings);
+		}
+
+		static void PlacePeriscope(Parts parts)
+		{
+			var peri = FindDeep(parts.Root, "Gunner's Periscope Camera")?.GetComponent<GHPC.Camera.CameraSlot>();
+			if (peri != null) peri.DirectAttachOnly = true;   // Unit skips these when it lists the views
+			else MelonLogger.Warning($"{FriendlyName}: gunner's periscope slot not found.");
+		}
+
+		// The T-90A's turret sits 22 cm further back on the ring than the T-72's, the trunnion 8 cm back and 7.5 cm lower, and
+		// turret and seat sit 1.2 deg nose-down; the numbers are in the rig map.
+		static void MoveAxes(Parts parts)
+		{
+			var axes = PortAxes.FromRig(T90AMod.Rig, BaseRigT72M1.TurretPivot, BaseRigT72M1.GunPivot, FriendlyName);
+			if (axes != null) PortAxes.Apply(parts.Vehicle, axes);
+			else MelonLogger.Warning($"{FriendlyName}: the rig map has no axes; the turret turns on the T-72M1's pivots.");
+		}
+
+		static void MoveHatches(Parts parts)
+		{
+			HatchRig.Apply(parts.Root, T90AMod.Rig, "T90A_", FriendlyName);
+		}
+
+		// The steps that need the components' Start to have run, in order. Each has its own try, as in Steps, so one that
+		// throws leaves the rest of the tank set up.
+		static readonly ConversionStep<Vehicle>[] LateSteps =
+		{
+			new ConversionStep<Vehicle> { What = "voices", Run = v => CrewVoices.Apply(v, FriendlyName) },
+			new ConversionStep<Vehicle> { What = "sight setup", Run = Sights.Apply },
+			new ConversionStep<Vehicle> { What = "commander's station late setup", Run = Commander.LateSetup },
+			new ConversionStep<Vehicle> { What = "module wiring", Run = v => Modules.Wire(v), SpawnOnly = true },
+			new ConversionStep<Vehicle> { What = "thermal heat", Run = ApplyThermalHeat },
+			new ConversionStep<Vehicle> { What = "ammunition self-check", Run = PortAmmo.SelfCheck, SpawnOnly = true },
+		};
+
+		static void ApplyThermalHeat(Vehicle vehicle)
+		{
+			var parts = ThermalHeat.PortParts(vehicle.transform, "T90A_");
+			ThermalHeat.Apply(vehicle.transform, parts, FriendlyName);
+		}
+
+		static IEnumerator LateSetup(Vehicle vehicle, bool atSpawn)
+		{
+			// A spawned unit's smoke launcher cached the crew before it existed and never fires without a refresh.
+			yield return SmokeLaunchers.RefreshCrewLater(vehicle, FriendlyName);
+			if (vehicle == null) yield break;
+			Func<ConversionStep<Vehicle>, bool> keep = null;
+			DevKeeps(ref keep);
+			ConversionSteps.Run(FriendlyName, LateSteps, vehicle, vehicle.name, atSpawn, keep);
+			DevAfter(vehicle, atSpawn);
+		}
+
+		// Turret-bone space: prefab minus the T-72 ring centre.
+		static readonly TacticalNumbers.Settings Numbers = new TacticalNumbers.Settings
+		{
+			Mode = T90AMod.NumberPosition,
+			LampFace = new Vector3(-0.489f, 2.380f, -1.684f) - BaseRigT72M1.TurretPivot,
+			LampNormal = new Vector3(0f, 0f, -1f),
+			BoxFaceR = new Vector3(1.179f, 1.804f, -1.592f) - BaseRigT72M1.TurretPivot,
+			BoxNormalR = new Vector3(0.92f, -0.02f, -0.39f),
+			BoxFaceL = new Vector3(-1.278f, 1.827f, -1.558f) - BaseRigT72M1.TurretPivot,
+			BoxNormalL = new Vector3(-0.91f, -0.01f, -0.41f),
+			DigitScale = 1.25f,
+		};
+
+		static readonly InteriorMap.Embedded Interior = new InteriorMap.Embedded(
+			typeof(Conversion).Assembly,
+			FriendlyName,
+			T90AMod.UnitKey,
+			"T-72M1");
+		static readonly PortModules Modules = new PortModules(
+			typeof(Conversion).Assembly,
+			FriendlyName,
+			"T-72M1",
+			T90AMod.UnitKey);
+
+		// The hinge of the War Thunder model's hatch, in turret-bone space.
+		static readonly Vector3 HatchHinge = new Vector3(-0.224f, 2.100f, -1.494f) - BaseRigT72M1.TurretPivot;
+		// From the T-72M1's hatch port centre to the T-90A's hatch centre.
 		static readonly Vector3 HatchPortShift = new Vector3(-0.03f, 0.09f, -0.28f);
-
-		static void StubHatch(Transform root, Transform turret, Transform hatch)
-		{
-			Attach(hatch, turret);
-			hatch.localPosition = HatchHinge;
-			BaseRigT72M1.MoveEjectionMarkers(root, turret.TransformVector(HatchPortShift));
-		}
-
-		static void Hatches(Vehicle vehicle)
-		{
-			var root = vehicle.transform;
-			HatchRig.Apply(root, T90AMod.Rig, "T90A_", "T-90A");
-		}
 
 		const string TurretPaint = "t90a_t_90a_turret";
 
-		static void CoatGlass(Transform root)
-		{
-			VanillaMaterials.Apply(root, T90AMod.Roles);
-		}
-
 		internal static Transform FindDeep(Transform root, string name) =>
-			root.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == name);
+			root.GetComponentsInChildren<Transform>(true).FirstOrDefault(c => c.name == name);
 
-		static void Attach(Transform part, Transform bone) => AttachAt(part, bone, Vector3.zero);
-
-		static void AttachAt(Transform part, Transform bone, Vector3 offset)
-		{
-			if (part == null) return;
-			part.name = "T90A_" + part.name;
-			part.SetParent(bone, false);
-			part.localPosition = offset;
-			part.localRotation = Quaternion.identity;
-			part.localScale = Vector3.one;
-		}
+		// Dev hooks: optional methods the author's own test harness fills in. They compile to nothing in a normal build.
+		static partial void DevKeeps(ref Func<ConversionStep<Parts>, bool> keep);
+		static partial void DevKeeps(ref Func<ConversionStep<Vehicle>, bool> keep);
+		static partial void DevPaint(Parts parts);
+		static partial void DevAfter(Vehicle vehicle, bool atSpawn);
 	}
 }

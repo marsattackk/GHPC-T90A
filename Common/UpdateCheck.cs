@@ -16,7 +16,8 @@ namespace T90A.Common
 			internal Outcome Outcome;
 			internal string Latest, Via, Why;
 			internal float Seconds;
-			public override string ToString() => $"{Outcome}{(Latest != null ? " " + Latest : "")}{(Via != null ? " via " + Via : "")}{(Why != null ? " (" + Why + ")" : "")} in {Seconds:0.0} s";
+			public override string ToString()
+				=> $"{Outcome}{(Latest != null ? " " + Latest : "")}{(Via != null ? " via " + Via : "")}{(Why != null ? " (" + Why + ")" : "")} in {Seconds:0.0} s";
 		}
 
 		internal const int TimeoutSeconds = 15;
@@ -30,9 +31,14 @@ namespace T90A.Common
 
 		internal static void Config(MelonPreferences_Category cfg, string friendlyName, string modVersion, string repo)
 		{
-			_name = friendlyName; _version = modVersion; _repo = repo;
+			_name = friendlyName;
+			_version = modVersion;
+			_repo = repo;
 			if (repo == null) return;
-			_enabled = cfg.CreateEntry("Check for updates", true, description: $"true (default): once per game start, asks GitHub whether a newer {friendlyName} release is out and, if so, says so in the MelonLoader console (nothing is downloaded or installed). false = no check.");
+			_enabled = cfg.CreateEntry(
+				"Check for updates",
+				true,
+				description: $"true (default): once per game start, asks GitHub whether a newer {friendlyName} release is out and, if so, says so in the MelonLoader console (nothing is downloaded or installed). false = no check.");
 		}
 
 		internal static void OnSceneLoaded(bool isMenu)
@@ -44,66 +50,90 @@ namespace T90A.Common
 
 		static IEnumerator Run()
 		{
-			Result r = null;
-			yield return Ask(_repo, _version, ApiUrl(_repo), LatestPage(_repo), x => r = x);
-			if (r == null) yield break;
-			if (r.Outcome == Outcome.Newer) MelonLogger.Msg($"{_name} {r.Latest} is out (you have {_version}): {ReleasesPage(_repo)}");
+			Result result = null;
+			yield return Ask(_repo, _version, ApiUrl(_repo), LatestPage(_repo), r => result = r);
+			if (result == null) yield break;
+			if (result.Outcome == Outcome.Newer)
+				MelonLogger.Msg($"{_name} {result.Latest} is out (you have {_version}): {ReleasesPage(_repo)}");
 		}
 
 		internal static IEnumerator Ask(string repo, string installed, string apiUrl, string pageUrl, Action<Result> done)
 		{
-			float t0 = Time.realtimeSinceStartup;
+			float startTime = Time.realtimeSinceStartup;
 			string tag = null, via = null, why = null;
 			yield return Get(apiUrl, false, (code, body, location, error) =>
 			{
-				var m = body != null ? Regex.Match(body, "\"tag_name\"\\s*:\\s*\"([^\"]+)\"") : Match.Empty;
-				if (code == 200 && m.Success) { tag = m.Groups[1].Value; via = "API"; }
+				var match = body != null ? Regex.Match(body, "\"tag_name\"\\s*:\\s*\"([^\"]+)\"") : Match.Empty;
+				if (code == 200 && match.Success)
+				{
+					tag = match.Groups[1].Value;
+					via = "API";
+				}
 				else why = "API " + (error ?? "HTTP " + code);
 			});
-			// The API has an hourly limit per address, the release page's redirect still answers past it.
+			// The API has an hourly limit per address but the release page's redirect still answers past it.
 			if (tag == null)
 			{
 				var tagIn = new Regex("/" + Regex.Escape(repo) + "/releases/tag/([^\"'?#<>\\s/]+)", RegexOptions.IgnoreCase);
 				yield return Get(pageUrl, true, (code, body, location, error) =>
 				{
-					var m = location != null ? tagIn.Match(location) : Match.Empty;
-					if (!m.Success && body != null) m = tagIn.Match(body);
-					if (m.Success) { tag = Uri.UnescapeDataString(m.Groups[1].Value); via = "release page"; why = null; }
+					var match = location != null ? tagIn.Match(location) : Match.Empty;
+					if (!match.Success && body != null) match = tagIn.Match(body);
+					if (match.Success)
+					{
+						tag = Uri.UnescapeDataString(match.Groups[1].Value);
+						via = "release page";
+						why = null;
+					}
 					else why += "; release page " + (error ?? "HTTP " + code) + (location != null ? " to " + location : "");
 				});
 			}
-			var r = new Result { Via = via, Why = why, Seconds = Time.realtimeSinceStartup - t0 };
-			var latest = PortSettings.Parse(tag);
-			var mine = PortSettings.Parse(installed);
-			if (latest == null || mine == null) { r.Outcome = Outcome.NoReply; r.Why = why ?? $"not a version: '{tag}' / '{installed}'"; }
-			else { r.Latest = tag.TrimStart('v', 'V'); r.Outcome = latest > mine ? Outcome.Newer : Outcome.UpToDate; }
-			try { done(r); } catch { }
+			var result = new Result { Via = via, Why = why, Seconds = Time.realtimeSinceStartup - startTime };
+			if (PortSettings.Parse(tag) == null || PortSettings.Parse(installed) == null)
+			{
+				result.Outcome = Outcome.NoReply;
+				result.Why = why ?? $"not a version: '{tag}' / '{installed}'";
+			}
+			else
+			{
+				result.Latest = tag.TrimStart('v', 'V');
+				result.Outcome = PortSettings.IsNewer(tag, installed) ? Outcome.Newer : Outcome.UpToDate;
+			}
+			try { done(result); }
+			catch { }
 		}
 
 		static IEnumerator Get(string url, bool noRedirect, Action<long, string, string, string> done)
 		{
 			UnityWebRequest req = null;
-			UnityWebRequestAsyncOperation op = null;
+			UnityWebRequestAsyncOperation operation = null;
 			string error = null;
 			try
 			{
 				req = UnityWebRequest.Get(url);
 				req.timeout = TimeoutSeconds;
 				if (noRedirect) req.redirectLimit = 0;
-				req.SetRequestHeader("User-Agent", (_name ?? "GHPC mod").Replace(" ", "") + "/" + (_version ?? "0") + " (GHPC mod update check)");
+				req.SetRequestHeader(
+					"User-Agent",
+					(_name ?? "GHPC mod").Replace(" ", "") + "/" + (_version ?? "0") + " (GHPC mod update check)");
 				req.SetRequestHeader("Accept", "application/vnd.github+json");
-				op = req.SendWebRequest();
+				operation = req.SendWebRequest();
 			}
-			catch (Exception e) { error = e.GetType().Name; }
+			catch (Exception exception) { error = exception.GetType().Name; }
 			float until = Time.realtimeSinceStartup + TimeoutSeconds + 5f;
-			while (op != null && !op.isDone && Time.realtimeSinceStartup < until)
+			while (operation != null && !operation.isDone && Time.realtimeSinceStartup < until)
 			{
 				yield return null;
 			}
-			long code = 0; string body = null, location = null;
+			long code = 0;
+			string body = null, location = null;
 			try
 			{
-				if (op != null && !op.isDone) { req.Abort(); error = "no answer in " + TimeoutSeconds + " s"; }
+				if (operation != null && !operation.isDone)
+				{
+					req.Abort();
+					error = "no answer in " + TimeoutSeconds + " s";
+				}
 				else if (req != null && error == null)
 				{
 					code = req.responseCode;
@@ -112,12 +142,14 @@ namespace T90A.Common
 					else if (location == null) error = req.error ?? req.result.ToString();
 				}
 			}
-			catch (Exception e) { error = e.GetType().Name; }
+			catch (Exception exception) { error = exception.GetType().Name; }
 			finally
 			{
-				try { req?.Dispose(); } catch { }
+				try { req?.Dispose(); }
+				catch { }
 			}
-			try { done(code, body, location, error); } catch { }
+			try { done(code, body, location, error); }
+			catch { }
 		}
 	}
 }

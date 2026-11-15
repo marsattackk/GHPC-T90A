@@ -11,6 +11,8 @@ using UnityEngine;
 
 namespace T90A.Common
 {
+	// Kontakt-5 and Relikt. A brick goes off on a hit, takes its neighbours with it, throws its lid and leaves the
+	// plate under bare.
 	internal static class EraBricks
 	{
 		// GHPC sets ERA off on every hit, spall included. Kontakt-5 ignores up to 30 mm and HE fragments from beyond 10 m.
@@ -23,34 +25,40 @@ namespace T90A.Common
 		internal const string LinksAsset = "era_links";
 		static readonly Dictionary<string, string> _links = new Dictionary<string, string>();
 
-		internal static void LoadLinks(TextAsset links)
+		internal static void LoadLinks(AssetBundle bundle)
 		{
 			_links.Clear();
-			if (links == null) return;
-			foreach (var line in links.text.Split('\n'))
+			var text = PortText.Load(bundle, LinksAsset);
+			if (text == null) return;
+			foreach (var line in text.Split('\n'))
 			{
-				var f = line.TrimEnd('\r').Split('\t');
-				if (f.Length >= 2 && !f[0].StartsWith("#")) _links[f[0]] = f[1];
+				var fields = line.TrimEnd('\r').Split('\t');
+				if (fields.Length >= 2 && !fields[0].StartsWith("#")) _links[fields[0]] = fields[1];
 			}
 		}
 
 		internal const string GoneAsset = "era_gone";
 		internal const string GoneArmourPrefix = "box_";
 		static readonly Dictionary<string, string[]> _gone = new Dictionary<string, string[]>();
-		static readonly Dictionary<GameObject, List<(Transform part, GameObject armour)>> _goneBy = new Dictionary<GameObject, List<(Transform, GameObject)>>();
+		static readonly Dictionary<GameObject, List<(Transform part, GameObject armour)>> _goneBy =
+			new Dictionary<GameObject, List<(Transform, GameObject)>>();
 
-		internal static void LoadGone(TextAsset gone)
+		internal static void LoadGone(AssetBundle bundle)
 		{
 			_gone.Clear();
-			if (gone == null) return;
-			foreach (var line in gone.text.Split('\n'))
+			var text = PortText.Load(bundle, GoneAsset);
+			if (text == null) return;
+			foreach (var line in text.Split('\n'))
 			{
-				var f = line.TrimEnd('\r').Split('\t');
-				if (f.Length >= 2 && !f[0].StartsWith("#") && f[1].Length > 0) _gone[f[0]] = f[1].Split(',');
+				var fields = line.TrimEnd('\r').Split('\t');
+				if (fields.Length >= 2 && !fields[0].StartsWith("#") && fields[1].Length > 0) _gone[fields[0]] = fields[1].Split(',');
 			}
 		}
 
+		// Fields a tank never sets keep their defaults here: another tank sets them (CS0649 is off for this declaration only).
+#pragma warning disable CS0649
 		internal static bool Vanish;
+#pragma warning restore CS0649
 		internal static Func<bool> Look = () => true;
 		internal static Func<string, bool> VanishRest = n => false;
 		internal const float ScorchAmount = 1f;
@@ -61,16 +69,20 @@ namespace T90A.Common
 		static readonly Dictionary<UniformArmor, Transform> _lidOf = new Dictionary<UniformArmor, Transform>();
 		static readonly Dictionary<UniformArmor, Transform> _sootOf = new Dictionary<UniformArmor, Transform>();
 		static readonly HashSet<Transform> _linked = new HashSet<Transform>();
+
+		internal static Transform LidOf(UniformArmor a) => _lidOf.TryGetValue(a, out var lid) ? lid : null;
 		static bool _patched;
 
 		internal static void Register(UniformArmor armour, Transform vehicleRoot)
 		{
-			foreach (var dead in _ours.Keys.Where(k => k == null).ToList()) _ours.Remove(dead);
-			_linked.RemoveWhere(t => t == null);
-			foreach (var dead in _goneBy.Keys.Where(k => k == null).ToList()) _goneBy.Remove(dead);
-			_done.RemoveWhere(a => a == null);
-			_quietMates.RemoveWhere(a => a == null);
-			foreach (var dead in _roundOf.Keys.Where(k => k == null).ToList()) _roundOf.Remove(dead);
+			UnityKeys.Prune(_ours);
+			_linked.RemoveWhere(p => p == null);
+			UnityKeys.Prune(_goneBy);
+			_done.RemoveWhere(p => p == null);
+			_quietMates.RemoveWhere(p => p == null);
+			UnityKeys.Prune(_roundOf);
+			UnityKeys.Prune(_lidOf);
+			UnityKeys.Prune(_sootOf);
 			_ours[armour] = vehicleRoot;
 			Version++;
 			if (vehicleRoot != null && vehicleRoot.GetComponent<EraWatch>() == null) vehicleRoot.gameObject.AddComponent<EraWatch>();
@@ -81,15 +93,18 @@ namespace T90A.Common
 		internal static int Version;
 		static readonly Dictionary<UniformArmor, string> _roundOf = new Dictionary<UniformArmor, string>();
 
-		internal static void SetOffDetonated(List<UniformArmor> pieces)
+		internal static int SetOffDetonated(List<UniformArmor> pieces)
 		{
-			foreach (var a in pieces)
+			int count = 0;
+			foreach (var piece in pieces)
 			{
-				if (a == null || !a.IsDetonated || _done.Contains(a)) continue;
-				_done.Add(a);
-				if (_quietMates.Remove(a)) continue;
-				SetOff(a);
+				if (piece == null || !piece.IsDetonated || _done.Contains(piece)) continue;
+				_done.Add(piece);
+				if (_quietMates.Remove(piece)) continue;
+				SetOff(piece);
+				count++;
 			}
+			return count;
 		}
 
 		static readonly HashSet<UniformArmor> _quietMates = new HashSet<UniformArmor>();
@@ -97,8 +112,9 @@ namespace T90A.Common
 
 		internal static List<UniformArmor> MatesOf(UniformArmor a)
 		{
-			if (a == null || !_ours.TryGetValue(a, out var root) || !_links.TryGetValue(a.name, out var box)) return new List<UniformArmor>();
-			return Of(root).Where(m => m != a && _links.TryGetValue(m.name, out var mb) && mb == box).ToList();
+			if (a == null || !_ours.TryGetValue(a, out var root) || !_links.TryGetValue(a.name, out var box))
+				return new List<UniformArmor>();
+			return Of(root).Where(m => m != a && _links.TryGetValue(m.name, out var mateBox) && mateBox == box).ToList();
 		}
 
 		static void DetonatePostfix(UniformArmor __instance)
@@ -107,20 +123,23 @@ namespace T90A.Common
 			try
 			{
 				if (__instance == null || !__instance.IsDetonated || !_ours.ContainsKey(__instance)) return;
+				string box = _links.TryGetValue(__instance.name, out var linkedBox) ? linkedBox : null;
 				_settingOffMates = true;
-				foreach (var m in MatesOf(__instance))
+				foreach (var mate in MatesOf(__instance))
 				{
-					if (m.IsDetonated) continue;
-					var fx = m.DetonateEffect;
-					m.DetonateEffect = null;
-					try { m.Detonate(); }
-					finally { m.DetonateEffect = fx; }
-					if (m.IsDetonated) _quietMates.Add(m);
+					if (mate.IsDetonated) continue;
+					var effect = mate.DetonateEffect;
+					mate.DetonateEffect = null;
+					try { mate.Detonate(); }
+					finally { mate.DetonateEffect = effect; }
+					if (mate.IsDetonated) _quietMates.Add(mate);
 				}
 			}
-			catch (Exception e) { PatchGuard.Failed("ERA bricks: container mates", e); }
+			catch (Exception exception) { PatchGuard.Failed("ERA bricks: container mates", exception); }
 			finally { _settingOffMates = false; }
 		}
+
+		internal static bool IsOurs(UniformArmor a) => a != null && _ours.ContainsKey(a);
 
 		internal static bool Insensitive(LiveRound r, Vector3 brick)
 		{
@@ -128,7 +147,10 @@ namespace T90A.Common
 			{
 				var shot = r.ShotInfo;
 				var parent = shot?.ParentShot?.TypeInfo;
-				bool burstNear = parent != null && parent.TntEquivalentKg > 0f && !Small(parent) && (shot.StartPosition - brick).sqrMagnitude <= BurstRangeM * BurstRangeM;
+				bool burstNear = parent != null
+					&& parent.TntEquivalentKg > 0f
+					&& !Small(parent)
+					&& (shot.StartPosition - brick).sqrMagnitude <= BurstRangeM * BurstRangeM;
 				return !burstNear;
 			}
 			return Small(r.Info);
@@ -136,122 +158,179 @@ namespace T90A.Common
 
 		static bool Small(AmmoType a) => a != null && a.Caliber > 0f && a.Caliber <= MaxCalibreMm;   // missiles and some APFSDS carry calibre 0
 
-		internal static List<UniformArmor> Of(Transform root) => _ours.Where(kv => kv.Value == root && kv.Key != null).Select(kv => kv.Key).ToList();
+		internal static List<UniformArmor> Of(Transform root)
+			=> _ours.Where(p => p.Value == root && p.Key != null).Select(x => x.Key).ToList();
 
 		// Not Collider.bounds: armour colliders stay off until a round's near, and an off collider reports its pivot.
 		internal static Vector3 Centre(UniformArmor a)
 		{
 			if (a.CenterPoint != null) return a.CenterPoint.position;
-			var m = a.GetComponent<MeshCollider>()?.sharedMesh ?? a.GetComponent<MeshFilter>()?.sharedMesh;
-			return m != null ? a.transform.TransformPoint(m.bounds.center) : a.transform.position;
+			var mesh = a.GetComponent<MeshCollider>()?.sharedMesh ?? a.GetComponent<MeshFilter>()?.sharedMesh;
+			return mesh != null ? a.transform.TransformPoint(mesh.bounds.center) : a.transform.position;
 		}
 
 		// Linked at the first detonation: the turret's collider group is stale just after spawn.
-		internal static void Link(Transform root)
+		internal static string Link(Transform root)
 		{
 			_linked.Add(root);
 			var bricks = new List<(Transform t, Transform open, Bounds b)>();
-			foreach (var mf in root.GetComponentsInChildren<MeshFilter>(true))
+			foreach (var meshFilter in root.GetComponentsInChildren<MeshFilter>(true))
 			{
-				if (mf.sharedMesh == null || mf.name.EndsWith(OpenSuffix) || mf.transform.parent == null) continue;
-				var open = mf.transform.parent.Find(mf.name + OpenSuffix);
-				if (open == null || open.GetComponent<Renderer>() == null || mf.GetComponent<Renderer>() == null) continue;
-				var b = mf.sharedMesh.bounds; b.Expand(0.04f);
-				bricks.Add((mf.transform, open, b));
+				if (meshFilter.sharedMesh == null || meshFilter.name.EndsWith(OpenSuffix) || meshFilter.transform.parent == null) continue;
+				var open = meshFilter.transform.parent.Find(meshFilter.name + OpenSuffix);
+				if (open == null || open.GetComponent<Renderer>() == null || meshFilter.GetComponent<Renderer>() == null) continue;
+				var bounds = meshFilter.sharedMesh.bounds;
+				bounds.Expand(0.04f);
+				bricks.Add((meshFilter.transform, open, bounds));
 			}
+			int linked = 0, none = 0, byName = 0;
 			var assigned = new List<(UniformArmor a, Transform t)>();
-			foreach (var a in Of(root))
+			foreach (var piece in Of(root))
 			{
-				var pts = Points(a);
-				int best = -1, bestIn = 0; float bestD = float.MaxValue;
-				// Geometry alone puts a cheek box's element plates in the next box, they overlap its bounds.
-				if (_links.TryGetValue(a.name, out var linkedName)) { best = bricks.FindIndex(b => b.t.name == linkedName); if (best >= 0) bestIn = pts.Count; }
+				var pts = Points(piece);
+				int best = -1, bestIn = 0;
+				float bestD = float.MaxValue;
+				// Geometry alone puts a cheek box's element plates in the next box because they overlap its bounds.
+				if (_links.TryGetValue(piece.name, out var linkedName))
+				{
+					best = bricks.FindIndex(b => b.t.name == linkedName);
+					if (best >= 0)
+					{
+						bestIn = pts.Count;
+						byName++;
+					}
+				}
 				bool byGeometry = best < 0;
 				for (int i = 0; byGeometry && i < bricks.Count; i++)
 				{
-					var (t, _, b) = bricks[i];
-					int inside = 0; float d = float.MaxValue;
-					foreach (var p in pts)
+					var (brickPart, _, brickBounds) = bricks[i];
+					int inside = 0;
+					float distance = float.MaxValue;
+					foreach (var point in pts)
 					{
-						var q = t.InverseTransformPoint(p);
-						if (b.Contains(q)) inside++;
-						else d = Mathf.Min(d, (b.ClosestPoint(q) - q).magnitude);
+						var localPoint = brickPart.InverseTransformPoint(point);
+						if (brickBounds.Contains(localPoint)) inside++;
+						else distance = Mathf.Min(distance, (brickBounds.ClosestPoint(localPoint) - localPoint).magnitude);
 					}
-					if (inside > 0) d = 0f;
-					if (inside > bestIn || (inside == bestIn && d < bestD)) { best = i; bestIn = inside; bestD = d; }
+					if (inside > 0) distance = 0f;
+					if (inside > bestIn || (inside == bestIn && distance < bestD))
+					{
+						best = i;
+						bestIn = inside;
+						bestD = distance;
+					}
 				}
-				if (best < 0 || (bestIn == 0 && bestD > 0.1f)) continue;
-				var (bt, bo, _) = bricks[best];
-				a.UndetonatedObjects = new[] { bt.gameObject };
-				a.DetonatedObjects = new[] { bo.gameObject };
-				assigned.Add((a, bt));
-				var lid = bt.parent.Find(bt.name + LidSuffix);
-				_lidOf[a] = lid;
-				_sootOf[a] = bt.parent.Find(bt.name + SootSuffix);
+				if (best < 0 || (bestIn == 0 && bestD > 0.1f))
+				{
+					none++;
+					continue;
+				}
+				var (bestBrick, bestOpen, _) = bricks[best];
+				piece.UndetonatedObjects = new[] { bestBrick.gameObject };
+				piece.DetonatedObjects = new[] { bestOpen.gameObject };
+				assigned.Add((piece, bestBrick));
+				var lid = bestBrick.parent.Find(bestBrick.name + LidSuffix);
+				_lidOf[piece] = lid;
+				_sootOf[piece] = bestBrick.parent.Find(bestBrick.name + SootSuffix);
+				linked++;
 			}
-			var taken = new HashSet<Transform>(assigned.Select(x => x.t));
-			foreach (var (a, bt) in assigned)
+			var taken = new HashSet<Transform>(assigned.Select(e => e.t));
+			int mates = 0;
+			foreach (var (brickArmour, brickTransform) in assigned)
 			{
-				int at = bt.name.LastIndexOf("_c", StringComparison.Ordinal);
-				if (at <= 0) continue;
-				string brick = bt.name.Substring(0, at);
-				var extra = bricks.Where(x => !taken.Contains(x.t) && x.t.parent == bt.parent && x.t.name.StartsWith(brick + "_c", StringComparison.Ordinal)).ToList();
+				int suffixIndex = brickTransform.name.LastIndexOf("_c", StringComparison.Ordinal);
+				if (suffixIndex <= 0) continue;
+				string brick = brickTransform.name.Substring(0, suffixIndex);
+				var extra = bricks
+					.Where(c => !taken.Contains(c.t)
+						&& c.t.parent == brickTransform.parent
+						&& c.t.name.StartsWith(brick + "_c", StringComparison.Ordinal))
+					.ToList();
 				if (extra.Count == 0) continue;
-				a.UndetonatedObjects = a.UndetonatedObjects.Concat(extra.Select(x => x.t.gameObject)).ToArray();
-				a.DetonatedObjects = a.DetonatedObjects.Concat(extra.Select(x => x.open.gameObject)).ToArray();
+				brickArmour.UndetonatedObjects = brickArmour.UndetonatedObjects
+					.Concat(extra.Select(c => c.t.gameObject))
+					.ToArray();
+				brickArmour.DetonatedObjects = brickArmour.DetonatedObjects
+					.Concat(extra.Select(c => c.open.gameObject))
+					.ToArray();
+				mates += extra.Count;
 			}
+			int goneParts = 0, goneLinks = 0;
 			if (_gone.Count > 0)
 			{
 				var all = root.GetComponentsInChildren<Transform>(true);
-				var armourGroups = Of(root).Select(a => a.transform.parent).Where(p => p != null).Distinct().ToList();
-				var armourPieces = armourGroups.SelectMany(p => p.GetComponentsInChildren<UniformArmor>(true)).Concat(root.GetComponentsInChildren<UniformArmor>(true)).ToList();
-				foreach (var kv in _gone)
+				var armourGroups = Of(root).Select(p => p.transform.parent).Where(p => p != null).Distinct().ToList();
+				var armourPieces = armourGroups
+					.SelectMany(p => p.GetComponentsInChildren<UniformArmor>(true))
+					.Concat(root.GetComponentsInChildren<UniformArmor>(true))
+					.ToList();
+				foreach (var entry in _gone)
 				{
-					var part = all.FirstOrDefault(t => t.name == kv.Key && t.GetComponent<Renderer>() != null);
+					var part = all.FirstOrDefault(c => c.name == entry.Key && c.GetComponent<Renderer>() != null);
 					if (part == null) continue;
-					var armour = armourPieces.FirstOrDefault(u => u.name == GoneArmourPrefix + kv.Key)?.gameObject;
-					foreach (var cname in kv.Value)
+					var armour = armourPieces.FirstOrDefault(p => p.name == GoneArmourPrefix + entry.Key)?.gameObject;
+					goneParts++;
+					foreach (var cname in entry.Value)
 					{
-						var c = bricks.FirstOrDefault(b => b.t.name == cname).t;
-						if (c == null) continue;
-						if (!_goneBy.TryGetValue(c.gameObject, out var list)) _goneBy[c.gameObject] = list = new List<(Transform, GameObject)>();
+						var container = bricks.FirstOrDefault(b => b.t.name == cname).t;
+						if (container == null) continue;
+						if (!_goneBy.TryGetValue(container.gameObject, out var list))
+							_goneBy[container.gameObject] = list = new List<(Transform, GameObject)>();
 						list.Add((part, armour));
+						goneLinks++;
 					}
 				}
 			}
+			return $"ERA bricks of {root.name}: {linked} armour pieces linked to {bricks.Count} visual bricks ({byName} by the build's links, the rest by geometry), {none} without one, {mates} unlinked containers going with a linked one, lids {_lidOf.Count(p => p.Value != null && p.Key != null && _ours.TryGetValue(p.Key, out var ownRoot) && ownRoot == root)}, gone parts {goneParts} on {goneLinks} containers"
+				;
 		}
 
-		static void GoneWith(UniformArmor a)
+		static string GoneWith(UniformArmor a)
 		{
-			foreach (var go in a.UndetonatedObjects ?? new GameObject[0])
+			var notes = new List<string>();
+			foreach (var brick in a.UndetonatedObjects ?? new GameObject[0])
 			{
-				if (go == null || !_goneBy.TryGetValue(go, out var list)) continue;
+				if (brick == null || !_goneBy.TryGetValue(brick, out var list)) continue;
 				foreach (var (part, armour) in list)
 				{
 					if (part == null) continue;
 					int off = 0;
-					foreach (var r in part.GetComponentsInChildren<Renderer>(true)) if (r.enabled) { r.enabled = false; off++; }
+					foreach (var renderer in part.GetComponentsInChildren<Renderer>(true))
+						if (renderer.enabled)
+						{
+							renderer.enabled = false;
+							off++;
+						}
 					if (off == 0) continue;
-					if (armour != null && armour.activeSelf) armour.SetActive(false);
+					bool armourOff = false;
+					if (armour != null && armour.activeSelf)
+					{
+						armour.SetActive(false);
+						armourOff = true;
+					}
+					notes.Add($"{part.name} gone ({off} renderers off{(armourOff ? $", armour {armour.name} off" : "")})");
 				}
 			}
+			return notes.Count > 0 ? string.Join(", ", notes) : "no gone parts";
 		}
 
 		static List<Vector3> Points(UniformArmor a)
 		{
-			var mc = a.GetComponent<MeshCollider>();
-			var m = mc != null ? mc.sharedMesh : null;
-			if (m == null || !m.isReadable) return new List<Vector3> { Centre(a) };
-			var t = a.transform;
-			return m.vertices.Select(v => t.TransformPoint(v)).ToList();
+			var meshCollider = a.GetComponent<MeshCollider>();
+			var mesh = meshCollider != null ? meshCollider.sharedMesh : null;
+			if (mesh == null || !mesh.isReadable) return new List<Vector3> { Centre(a) };
+			var armourTransform = a.transform;
+			return mesh.vertices.Select(v => armourTransform.TransformPoint(v)).ToList();
 		}
 
 		// No Harmony __state: it's keyed by patch class name, and two ports carrying this class overwrote each other's.
 		[ThreadStatic] static LiveRound _round;
 		[ThreadStatic] static bool _hadLine, _parentHadLine;
 		[ThreadStatic] static Stack<(LiveRound round, bool had, bool parentHad)> _penStack;
-		static readonly AccessTools.FieldRef<LiveRound.ShotStory, HashSet<string>> StoryEvents = Reflect.FieldRefAccess<LiveRound.ShotStory, HashSet<string>>("events");
-		static readonly AccessTools.FieldRef<LiveRound.ShotStory, StringBuilder> StoryText = Reflect.FieldRefAccess<LiveRound.ShotStory, StringBuilder>("builder");
+		static readonly AccessTools.FieldRef<LiveRound.ShotStory, HashSet<string>> StoryEvents =
+			Reflect.FieldRefAccess<LiveRound.ShotStory, HashSet<string>>("events");
+		static readonly AccessTools.FieldRef<LiveRound.ShotStory, StringBuilder> StoryText =
+			Reflect.FieldRefAccess<LiveRound.ShotStory, StringBuilder>("builder");
 
 		static void Patch()
 		{
@@ -259,13 +338,25 @@ namespace T90A.Common
 			try
 			{
 				var harmony = new HarmonyLib.Harmony("ghpcmods.erabricks." + typeof(EraBricks).Assembly.GetName().Name);
-				var pen = Reflect.Method(typeof(LiveRound), "penCheck", new[] { typeof(Collider), typeof(Vector3), typeof(Vector3), typeof(Vector3), typeof(ITarget) });
+				var pen = Reflect.Method(
+					typeof(LiveRound),
+					"penCheck",
+					new[] { typeof(Collider), typeof(Vector3), typeof(Vector3), typeof(Vector3), typeof(ITarget) });
 				var det = Reflect.Method(typeof(UniformArmor), nameof(UniformArmor.Detonate), Type.EmptyTypes);
 				if (pen == null || det == null) return;
-				harmony.Patch(pen, prefix: new HarmonyMethod(typeof(EraBricks), nameof(PenPrefix)), finalizer: new HarmonyMethod(typeof(EraBricks), nameof(PenFinalizer)));
-				harmony.Patch(det, prefix: new HarmonyMethod(typeof(EraBricks), nameof(DetonatePrefix)), postfix: new HarmonyMethod(typeof(EraBricks), nameof(DetonatePostfix)));
+				harmony.Patch(
+					pen,
+					prefix: new HarmonyMethod(typeof(EraBricks), nameof(PenPrefix)),
+					finalizer: new HarmonyMethod(typeof(EraBricks), nameof(PenFinalizer)));
+				harmony.Patch(
+					det,
+					prefix: new HarmonyMethod(typeof(EraBricks), nameof(DetonatePrefix)),
+					postfix: new HarmonyMethod(typeof(EraBricks), nameof(DetonatePostfix)));
 			}
-			catch (Exception e) { MelonLogger.Warning($"ERA bricks: patching failed ({e.GetType().Name}: {e.Message}); bricks behave as in GHPC."); }
+			catch (Exception exception)
+			{
+				MelonLogger.Warning($"ERA bricks: patching failed ({exception.GetType().Name}: {exception.Message}); bricks behave as in GHPC.");
+			}
 		}
 
 		static void PenPrefix(LiveRound __instance)
@@ -276,7 +367,7 @@ namespace T90A.Common
 				bool had = Said(__instance.Story), parentHad = Said(__instance.ParentRound?.Story);
 				(_round, _hadLine, _parentHadLine) = (__instance, had, parentHad);
 			}
-			catch (Exception e) { PatchGuard.Failed("ERA bricks: round in penCheck", e); }
+			catch (Exception exception) { PatchGuard.Failed("ERA bricks: round in penCheck", exception); }
 		}
 
 		static Exception PenFinalizer()
@@ -298,16 +389,19 @@ namespace T90A.Common
 			try
 			{
 				if (__instance.IsDetonated || !_ours.TryGetValue(__instance, out var root)) return true;
-				var r = _round;
-				if (r != null && Insensitive(r, Centre(__instance)))
+				var round = _round;
+				if (round != null && Insensitive(round, Centre(__instance)))
 				{
-					Unsay(r);
+					Unsay(round);
 					return false;
 				}
-				if (root != null && !_linked.Contains(root) && Look()) Link(root);
-				_roundOf[__instance] = r?.Info?.Name;
+				if (root != null && !_linked.Contains(root) && Look())
+				{
+					string links = Link(root);
+				}
+				_roundOf[__instance] = round?.Info?.Name;
 			}
-			catch (Exception e) { PatchGuard.Failed("ERA bricks: set-off rule", e); }
+			catch (Exception exception) { PatchGuard.Failed("ERA bricks: set-off rule", exception); }
 			return true;
 		}
 
@@ -315,66 +409,103 @@ namespace T90A.Common
 		{
 			try
 			{
+				string cause = _roundOf.TryGetValue(a, out var roundName) && roundName != null ? $" by {roundName}" : "";
 				if (!Look())
 				{
-					foreach (var go in a.UndetonatedObjects ?? new GameObject[0]) if (go != null) foreach (var r in go.GetComponentsInChildren<Renderer>(true)) r.enabled = true;
-					foreach (var go in a.DetonatedObjects ?? new GameObject[0]) if (go != null) foreach (var r in go.GetComponentsInChildren<Renderer>(true)) r.enabled = false;
+					foreach (var brick in a.UndetonatedObjects ?? new GameObject[0])
+						if (brick != null) foreach (var renderer in brick.GetComponentsInChildren<Renderer>(true)) renderer.enabled = true;
+					foreach (var openBrick in a.DetonatedObjects ?? new GameObject[0])
+						if (openBrick != null)
+							foreach (var renderer in openBrick.GetComponentsInChildren<Renderer>(true)) renderer.enabled = false;
 					return;
 				}
-				var at = Centre(a);
-				Blast.Play(at, Blast.Size.EraBrick);
-				NetCut.Cut(a.UndetonatedObjects?.FirstOrDefault(g => g != null)?.transform);
-				GoneWith(a);
+				var position = Centre(a);
+				Blast.Play(position, Blast.Size.EraBrick);
+				string nets = NetCut.Cut(a.UndetonatedObjects?.FirstOrDefault(b => b != null)?.transform);
+				string gone = GoneWith(a);
 				if (Vanish)
 				{
-					foreach (var go in a.DetonatedObjects ?? new GameObject[0])
-						if (go != null) foreach (var r in go.GetComponentsInChildren<Renderer>(true)) r.enabled = false;
-					var sr0 = _sootOf.TryGetValue(a, out var s) && s != null ? s.GetComponent<Renderer>() : null;
+					int off = 0;
+					foreach (var openBrick in a.DetonatedObjects ?? new GameObject[0])
+						if (openBrick != null)
+							foreach (var renderer in openBrick.GetComponentsInChildren<Renderer>(true))
+							{
+								renderer.enabled = false;
+								off++;
+							}
+					var sr0 = _sootOf.TryGetValue(a, out var sootMark) && sootMark != null ? sootMark.GetComponent<Renderer>() : null;
 					if (sr0 != null) sr0.enabled = true;
-					RestGone(a);
+					bool sooted = sr0 != null;
+					string rest = RestGone(a);
 					return;
 				}
-				Char(a.DetonatedObjects);
-				if (_sootOf.TryGetValue(a, out var sootT) && sootT != null) { var sr = sootT.GetComponent<Renderer>(); if (sr != null) sr.enabled = true; }
+				int charred = Char(a.DetonatedObjects);
+				if (_sootOf.TryGetValue(a, out var sootT) && sootT != null)
+				{
+					var sootRenderer = sootT.GetComponent<Renderer>();
+					if (sootRenderer != null)
+					{
+						sootRenderer.enabled = true;
+					}
+				}
+				string lidNote = "no lid";
 				if (_lidOf.TryGetValue(a, out var lid) && lid != null)
 				{
-					if (lid.GetComponent<EraLid>() == null)
+					if (lid.GetComponent<EraLid>() != null) lidNote = "lid thrown already";
+					else
 					{
 						_ours.TryGetValue(a, out var root);
-						EraLid.Throw(lid, root != null ? root.GetComponent<Rigidbody>() : null);
+						var thrown = EraLid.Throw(lid, root != null ? root.GetComponent<Rigidbody>() : null);
 						Char(new[] { lid.gameObject });
+						lidNote = thrown != null ? $"lid thrown ({thrown.MassKg:0.0} kg at {EraLid.LidSpeed:0} m/s)" : "lid not thrown";
 					}
 				}
 			}
-			catch (Exception e) { PatchGuard.Failed("ERA bricks: blast", e); }
+			catch (Exception exception) { PatchGuard.Failed("ERA bricks: blast", exception); }
 		}
 
-		static void RestGone(UniformArmor a)
+		static string RestGone(UniformArmor a)
 		{
-			var c = a.UndetonatedObjects?.FirstOrDefault(g => g != null)?.transform;
-			if (c == null || c.parent == null) return;
-			int at = c.name.LastIndexOf("_c", StringComparison.Ordinal);
-			if (at <= 0) return;
-			string brick = c.name.Substring(0, at);
-			if (!VanishRest(brick)) return;
-			var rest = c.parent.Find(brick);
-			if (rest == null) return;
-			var containers = Enumerable.Range(0, c.parent.childCount).Select(i => c.parent.GetChild(i))
-				.Where(t => t.name.StartsWith(brick + "_c", StringComparison.Ordinal) && int.TryParse(t.name.Substring(brick.Length + 2), out _));
-			if (containers.Any(t => t.GetComponent<Renderer>()?.enabled == true)) return;
-			foreach (var r in rest.GetComponentsInChildren<Renderer>(true)) r.enabled = false;
-		}
-
-		internal static void Char(GameObject[] objects)
-		{
-			foreach (var go in objects ?? new GameObject[0])
+			var container = a.UndetonatedObjects?.FirstOrDefault(c => c != null)?.transform;
+			if (container == null || container.parent == null) return "no container";
+			int suffixIndex = container.name.LastIndexOf("_c", StringComparison.Ordinal);
+			if (suffixIndex <= 0) return "no brick name";
+			string brick = container.name.Substring(0, suffixIndex);
+			if (!VanishRest(brick)) return "rest kept";
+			var rest = container.parent.Find(brick);
+			if (rest == null) return "no rest object";
+			var containers = Enumerable.Range(0, container.parent.childCount).Select(i => container.parent.GetChild(i))
+				.Where(c => c.name.StartsWith(brick + "_c", StringComparison.Ordinal)
+					&& int.TryParse(c.name.Substring(brick.Length + 2), out _));
+			if (containers.Any(c => c.GetComponent<Renderer>()?.enabled == true)) return "rest kept (containers left)";
+			int count = 0;
+			foreach (var renderer in rest.GetComponentsInChildren<Renderer>(true))
 			{
-				if (go == null) continue;
-				foreach (var r in go.GetComponentsInChildren<Renderer>(true))
+				renderer.enabled = false;
+				count++;
+			}
+			return $"rest '{brick}' gone ({count} renderers)";
+		}
+
+		internal static int Char(GameObject[] objects)
+		{
+			int count = 0;
+			foreach (var part in objects ?? new GameObject[0])
+			{
+				if (part == null) continue;
+				foreach (var renderer in part.GetComponentsInChildren<Renderer>(true))
 				{
-					foreach (var m in r.materials) if (m != null && m.HasProperty(ScorchProp)) m.SetFloat(ScorchProp, ScorchAmount);
+					bool any = false;
+					foreach (var material in renderer.materials)
+						if (material != null && material.HasProperty(ScorchProp))
+						{
+							material.SetFloat(ScorchProp, ScorchAmount);
+							any = true;
+						}
+					if (any) count++;
 				}
 			}
+			return count;
 		}
 
 		static void Unsay(LiveRound r)
@@ -382,9 +513,14 @@ namespace T90A.Common
 			foreach (var (story, had) in new[] { (r.Story, _hadLine), (r.ParentRound?.Story, _parentHadLine) })
 			{
 				if (story == null || had) continue;
-				var text = StoryText(story); var events = StoryEvents(story);
+				var text = StoryText(story);
+				var events = StoryEvents(story);
 				string line = DetonatedEvent + Environment.NewLine;
-				if (text == null || events == null || text.Length < line.Length || text.ToString(text.Length - line.Length, line.Length) != line) continue;
+				if (text == null
+					|| events == null
+					|| text.Length < line.Length
+					|| text.ToString(text.Length - line.Length, line.Length) != line)
+					continue;
 				text.Length -= line.Length;
 				events.Remove(DetonatedEvent);
 			}
@@ -398,7 +534,11 @@ namespace T90A.Common
 
 		void LateUpdate()
 		{
-			if (_version != EraBricks.Version) { _pieces = EraBricks.Of(transform); _version = EraBricks.Version; }
+			if (_version != EraBricks.Version)
+			{
+				_pieces = EraBricks.Of(transform);
+				_version = EraBricks.Version;
+			}
 			EraBricks.SetOffDetonated(_pieces);
 		}
 	}
@@ -407,50 +547,67 @@ namespace T90A.Common
 	internal sealed class EraLid : MonoBehaviour
 	{
 		internal const float LidSpeed = 6f, SideSpeed = 3f, LifeS = 60f, PlateM = 0.015f, SteelKgM3 = 7850f;
+		internal static int Thrown;
 		internal float MassKg;
+		internal bool Resting => _rb == null;
 		float _t0;
 		Rigidbody _rb;
 		GameObject _col, _dp;
 
-		internal static void Throw(Transform lid, Rigidbody vehicle)
+		internal static EraLid Throw(Transform lid, Rigidbody vehicle)
 		{
-			var go = lid.gameObject;
-			if (go.GetComponent<EraLid>() != null) return;
-			var l = go.AddComponent<EraLid>();
-			var r = go.GetComponent<Renderer>();
-			if (r != null) r.enabled = true;
-			var mf = go.GetComponent<MeshFilter>();
-			var b = mf != null && mf.sharedMesh != null ? mf.sharedMesh.bounds : new Bounds(Vector3.zero, new Vector3(0.3f, 0.02f, 0.3f));
-			l.MassKg = Mathf.Clamp(b.size.x * b.size.z * PlateM * SteelKgM3, 2f, 30f);
+			var lidObject = lid.gameObject;
+			if (lidObject.GetComponent<EraLid>() != null) return null;
+			var eraLid = lidObject.AddComponent<EraLid>();
+			var renderer = lidObject.GetComponent<Renderer>();
+			if (renderer != null) renderer.enabled = true;
+			var meshFilter = lidObject.GetComponent<MeshFilter>();
+			var bounds = meshFilter != null && meshFilter.sharedMesh != null
+				? meshFilter.sharedMesh.bounds
+				: new Bounds(Vector3.zero, new Vector3(0.3f, 0.02f, 0.3f));
+			eraLid.MassKg = Mathf.Clamp(bounds.size.x * bounds.size.z * PlateM * SteelKgM3, 2f, 30f);
 			var colGo = new GameObject("lid collider");
 			colGo.SetActive(false);
 			colGo.layer = 14;
 			colGo.transform.SetParent(lid, false);
 			var box = colGo.AddComponent<BoxCollider>();
-			box.center = b.center; box.size = Vector3.Max(b.size, new Vector3(0.03f, 0.03f, 0.03f));
-			l._col = colGo;
+			box.center = bounds.center;
+			box.size = Vector3.Max(bounds.size, new Vector3(0.03f, 0.03f, 0.03f));
+			eraLid._col = colGo;
 			var dpGo = new GameObject("lid throw");
 			dpGo.SetActive(false);
 			dpGo.transform.SetParent(lid, false);
-			var dp = dpGo.AddComponent<GHPC.Effects.DetachableParent>();
-			dp.Transform = lid; dp.UpReferenceTransform = lid; dp.ForceReceivingLocation = lid;
-			dp.MassKg = l.MassKg;
-			dp.MaxTorque = l.MassKg * 0.4f; dp.MinLateralForce = 0f; dp.MaxLateralForce = 0f;
-			dp.DownforceMultiplier = 0f; dp.LocalShiftOnDetach = new Vector3(0f, 0.02f, 0f);
-			dp.ColliderObjects = new[] { colGo }; dp.ObjectsToDeactivate = new GameObject[0]; dp.TransformsToLeaveBehind = new Transform[0];
-			dp.AarHideItemsParents = new Transform[0]; dp.OtherParents = new Transform[0];
+			var detachable = dpGo.AddComponent<GHPC.Effects.DetachableParent>();
+			detachable.Transform = lid;
+			detachable.UpReferenceTransform = lid;
+			detachable.ForceReceivingLocation = lid;
+			detachable.MassKg = eraLid.MassKg;
+			detachable.MaxTorque = eraLid.MassKg * 0.4f;
+			detachable.MinLateralForce = 0f;
+			detachable.MaxLateralForce = 0f;
+			detachable.DownforceMultiplier = 0f;
+			detachable.LocalShiftOnDetach = new Vector3(0f, 0.02f, 0f);
+			detachable.ColliderObjects = new[] { colGo };
+			detachable.ObjectsToDeactivate = new GameObject[0];
+			detachable.TransformsToLeaveBehind = new Transform[0];
+			detachable.AarHideItemsParents = new Transform[0];
+			detachable.OtherParents = new Transform[0];
 			dpGo.SetActive(true);
-			l._dp = dpGo;
+			eraLid._dp = dpGo;
 			var up = lid.up;
-			dp.Detach(0f);
-			l._rb = dp.RBody;
-			if (l._rb != null)
+			detachable.Detach(0f);
+			eraLid._rb = detachable.RBody;
+			if (eraLid._rb != null)
 			{
-				l._rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+				eraLid._rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
 				var side = Vector3.ProjectOnPlane(UnityEngine.Random.onUnitSphere, up).normalized;
-				l._rb.velocity = up * LidSpeed + side * (SideSpeed * UnityEngine.Random.Range(0.5f, 1f)) + (vehicle != null ? vehicle.velocity : Vector3.zero);
+				eraLid._rb.velocity = up * LidSpeed
+					+ side * (SideSpeed * UnityEngine.Random.Range(0.5f, 1f))
+					+ (vehicle != null ? vehicle.velocity : Vector3.zero);
 			}
-			l._t0 = Time.time;
+			eraLid._t0 = Time.time;
+			Thrown++;
+			return eraLid;
 		}
 
 		void Update()
@@ -459,8 +616,8 @@ namespace T90A.Common
 			if (_rb != null && ((age > 1.5f && _rb.IsSleeping()) || transform.position.y < -100f)) Rest();
 			if (age > LifeS)
 			{
-				var r = GetComponent<Renderer>();
-				if (r != null) r.enabled = false;
+				var lidRenderer = GetComponent<Renderer>();
+				if (lidRenderer != null) lidRenderer.enabled = false;
 				Rest();
 				enabled = false;
 			}
@@ -471,7 +628,9 @@ namespace T90A.Common
 			if (_dp != null) Destroy(_dp);
 			if (_col != null) Destroy(_col);
 			if (_rb != null) Destroy(_rb);
-			_dp = null; _col = null; _rb = null;
+			_dp = null;
+			_col = null;
+			_rb = null;
 		}
 	}
 }

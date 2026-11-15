@@ -7,8 +7,11 @@ using UnityEngine;
 
 namespace T90A.Common
 {
+	// Range, ready lamp, ammo and laser lamps on a sight's readout, in seven-segment or Cyrillic.
 	internal sealed class SightReadout : MonoBehaviour
 	{
+		// Fields a tank never sets keep their defaults here: another tank sets them (CS0649 is off for this declaration only).
+#pragma warning disable CS0649
 		internal sealed class Settings
 		{
 			public string Range;
@@ -22,6 +25,7 @@ namespace T90A.Common
 			public float LaserRecharge = 2f;
 			public (string name, Func<bool> lit)[] Lit = new (string, Func<bool>)[0];
 		}
+#pragma warning restore CS0649
 
 		// Seven segments can't do Cyrillic: 6 for Б, K for К, 0 for О, Y for У.
 		internal static string Glyph7(AmmoType ammo) =>
@@ -45,13 +49,14 @@ namespace T90A.Common
 		GameObject _laser;
 		float _laserRecharge, _laserDarkUntil = -1f;
 
-		internal static void Attach(UsableOptic optic, ReticleBuild.Overlay o, Settings s, List<string> problems)
+		internal static string Attach(UsableOptic optic, ReticleBuild.Overlay o, Settings s, List<string> problems)
 		{
+			var bound = new List<string>();
 			GameObject Item(string name)
 			{
 				if (string.IsNullOrEmpty(name)) return null;
-				if (o.Readouts.TryGetValue(name, out var t)) return t.gameObject;
-				if (o.Lamps.TryGetValue(name, out var l)) return l;
+				if (o.Readouts.TryGetValue(name, out var label)) return label.gameObject;
+				if (o.Lamps.TryGetValue(name, out var found)) return found;
 				problems.Add($"no readout or lamp '{name}' in the description");
 				return null;
 			}
@@ -67,6 +72,7 @@ namespace T90A.Common
 					optic.RangeTextSuffix = s.RangeSuffix;
 					optic.InvalidRangeBlink = true;
 					optic.ZeroOutInvalidRange = true;
+					bound.Add($"range '{s.Range}'");
 				}
 				else problems.Add($"no readout '{s.Range}' for the range");
 			}
@@ -75,28 +81,40 @@ namespace T90A.Common
 			{
 				optic.ReadyToFireObject = ready;
 				ready.SetActive(false);
+				bound.Add($"ready '{s.Ready}'");
 			}
-			var r = o.Root.AddComponent<SightReadout>();
-			r._fcs = optic.FCS;
+			var readout = o.Root.AddComponent<SightReadout>();
+			readout._fcs = optic.FCS;
 			if (!string.IsNullOrEmpty(s.Ammo) && s.AmmoText != null)
 			{
-				if (o.Readouts.TryGetValue(s.Ammo, out var ammo)) { r._ammo = ammo; r._ammoText = s.AmmoText; }
+				if (o.Readouts.TryGetValue(s.Ammo, out var ammo))
+				{
+					readout._ammo = ammo;
+					readout._ammoText = s.AmmoText;
+					bound.Add($"round '{s.Ammo}'");
+				}
 				else problems.Add($"no readout '{s.Ammo}' for the round");
 			}
-			r._laser = Item(s.LaserLamp);
-			if (r._laser != null)
+			if (!string.IsNullOrEmpty(s.LaserLamp))
 			{
-				r._laserRecharge = s.LaserRecharge;
-				r._laser.SetActive(true);
-				if (r._fcs != null) r._fcs.LaserFired += r.OnLase;
+				readout._laser = Item(s.LaserLamp);
+				if (readout._laser != null)
+				{
+					readout._laserRecharge = s.LaserRecharge;
+					readout._laser.SetActive(true);
+					if (readout._fcs != null) readout._fcs.LaserFired += readout.OnLase;
+					bound.Add($"laser lamp '{s.LaserLamp}' ({s.LaserRecharge:0.#} s)");
+				}
 			}
 			foreach (var (name, lit) in s.Lit ?? new (string, Func<bool>)[0])
 			{
 				var lamp = Item(name);
 				if (lamp == null || lit == null) continue;
 				lamp.SetActive(false);
-				r._lit.Add((lamp, lit));
+				readout._lit.Add((lamp, lit));
+				bound.Add($"lamp '{name}'");
 			}
+			return string.Join(", ", bound);
 		}
 
 		void OnLase() => _laserDarkUntil = Time.time + _laserRecharge;
@@ -110,9 +128,9 @@ namespace T90A.Common
 		{
 			if (_ammo != null && _fcs != null)
 			{
-				var a = _fcs.CurrentAmmoType;
-				string t = a != null ? _ammoText(a) : "";
-				if (_ammo.text != t) _ammo.text = t;
+				var ammo = _fcs.CurrentAmmoType;
+				string text = ammo != null ? _ammoText(ammo) : "";
+				if (_ammo.text != text) _ammo.text = text;
 			}
 			if (_laser != null)
 			{
@@ -121,9 +139,10 @@ namespace T90A.Common
 			}
 			foreach (var (lamp, test) in _lit)
 			{
-				bool on = false;
-				try { on = test(); } catch { }
-				if (lamp != null && lamp.activeSelf != on) lamp.SetActive(on);
+				bool active = false;
+				try { active = test(); }
+				catch { }
+				if (lamp != null && lamp.activeSelf != active) lamp.SetActive(active);
 			}
 		}
 	}

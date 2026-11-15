@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -26,18 +27,42 @@ namespace T90A.Common
 			return spec;
 		}
 
-		internal ReticleSO Build(string file, ReticleSO host, ReticleSO fontHost, Dictionary<string, AmmoCodexScriptable> rounds)
+		internal ReticleSO Build(
+			string file,
+			ReticleSO host,
+			ReticleSO fontHost,
+			Dictionary<string, AmmoCodexScriptable> rounds,
+			Dictionary<string, double> vars = null)
 		{
-			string key = file + RoundsKey(rounds);
-			if (_built.TryGetValue(key, out var so) && so != null) return so;
-			var spec = Spec(file);
+			string key = file
+				+ RoundsKey(rounds)
+				+ (vars == null
+					? ""
+					: "|"
+						+ string.Join(
+							"|",
+							Enumerable.Select(
+								Enumerable.OrderBy(vars, p => p.Key, StringComparer.Ordinal),
+								p => p.Key + "=" + p.Value.ToString("R", System.Globalization.CultureInfo.InvariantCulture))));
+			if (_built.TryGetValue(key, out var reticle) && reticle != null) return reticle;
+			var spec = vars == null ? Spec(file) : ReticleSpec.FromResource(_assembly, file, vars);
 			var problems = new List<string>();
-			so = ReticleBuild.Build(spec, host, ReticleBuild.FontTemplate(fontHost), k => rounds != null && rounds.TryGetValue(k, out var a) ? a : null, problems);
-			foreach (var p in problems) MelonLogger.Warning($"{_tag} reticle '{spec.Name}': {p}");
-			return _built[key] = so;
+			reticle = ReticleBuild.Build(
+				spec,
+				host,
+				ReticleBuild.FontTemplate(fontHost),
+				r => rounds != null && rounds.TryGetValue(r, out var ammo) ? ammo : null,
+				problems);
+			foreach (var problem in problems) MelonLogger.Warning($"{_tag} reticle '{spec.Name}': {problem}");
+			return _built[key] = reticle;
 		}
 
 		static string RoundsKey(Dictionary<string, AmmoCodexScriptable> rounds) => rounds == null || rounds.Count == 0 ? ""
-			: "|" + string.Join("|", Enumerable.Select(Enumerable.OrderBy(rounds, kv => kv.Key, System.StringComparer.Ordinal), kv => kv.Key + "=" + (kv.Value != null ? kv.Value.name : "-")));
+			: "|"
+				+ string.Join(
+					"|",
+					Enumerable.Select(
+						Enumerable.OrderBy(rounds, p => p.Key, StringComparer.Ordinal),
+						p => p.Key + "=" + (p.Value != null ? p.Value.name : "-")));
 	}
 }

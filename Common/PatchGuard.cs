@@ -4,8 +4,8 @@ using MelonLoader;
 
 namespace T90A.Common
 {
-	// LiveRoundBatchHandler doesn't catch the unborn rounds' first update, one throw from a patch there kills the batch
-	// every frame.
+	// LiveRoundBatchHandler doesn't catch the first update of unborn rounds, and one throw from a patch there kills the
+	// batch every frame. Patches on rounds log here three times, then go quiet.
 	internal static class PatchGuard
 	{
 		internal const int Logged = 3;
@@ -15,14 +15,16 @@ namespace T90A.Common
 		{
 			try
 			{
-				int n;
+				int count;
 				lock (Failures)
 				{
-					n = Failures.TryGetValue(feature, out int had) ? had : 0;
-					Failures[feature] = ++n;
+					count = Failures.TryGetValue(feature, out int had) ? had : 0;
+					Failures[feature] = ++count;
 				}
-				if (n <= Logged) MelonLogger.Error($"{feature} failed (the game carries on without it this time; {n} of {Logged} logged): {e}");
-				else if (n == Logged + 1) MelonLogger.Warning($"{feature} keeps failing ({n} times); not logging it again this session.");
+				if (count <= Logged)
+					MelonLogger.Error($"{feature} failed (the game carries on without it this time; {count} of {Logged} logged): {e}");
+				else if (count == Logged + 1)
+					MelonLogger.Warning($"{feature} keeps failing ({count} times); not logging it again this session.");
 			}
 			catch { }
 		}

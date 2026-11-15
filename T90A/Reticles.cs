@@ -5,7 +5,7 @@ using T90A.Common;
 
 namespace T90A
 {
-	internal static class Reticles
+	internal static partial class Reticles
 	{
 		static readonly PortReticles All = new PortReticles(typeof(Reticles).Assembly, "T-90A");
 

@@ -1,0 +1,24 @@
+t90a_glass	optic_glass	fake glass	T62,T55A,LEO2A3
+t90a_glass_backing	glass_backing	-	
+t90a_glass_emitter	lamp_reflector	fake glass	T62,T55A,LEO2A3
+t90a_glass_lamp	lamp_reflector	fake glass	T62,T55A,LEO2A3
+t90a_hatch_inner	plain_underside	-	
+t90a_headlight_glass	lamp_lens	glass semi matte	T80B
+t90a_headlight_glass_a	lamp_lens	glass semi matte	T80B
+t90a_headlight_glass_a_under	lens_under	-	
+t90a_headlight_glass_spot	lamp_lens	glass semi matte	T80B
+t90a_headlight_glass_spot_under	lens_under	-	
+t90a_headlight_glass_under	lens_under	-	
+t90a_interior	back_faces	-	
+t90a_lamp_backing	lamp_backing	-	
+t90a_lamp_cover	lamp_cover	-	
+t90a_mg_6p49_kord	small_arms	-	
+t90a_mg_6p49_kord_ammo	small_arms	-	
+t90a_mg_pkt	small_arms	-	
+t90a_net_b	net	-	
+t90a_net_f	net	-	
+t90a_optic_wall	optic_wall	-	
+t90a_smooth_barrel_a	barrel	-	
+t90a_t_90a_body	paint	-	
+t90a_t_90a_gun	paint	-	
+t90a_t_90a_turret	paint	-	
