@@ -21,10 +21,9 @@ dotnet build -c Release -p:GameDir="<GHPC folder>\Bin"
 Copy it to `Mods\T90A.dll` in the game.
 
 The bundle (model, textures, armour meshes) is not in this repo and is not built from it: take `Mods\T90A\t90a` from the
-latest [release zip](https://github.com/marsattackk/GHPC-T90A/releases/latest). Until 0.5.0, `main` does not match the
-0.4.4 bundle's armour (that bundle still has the old armour pieces), so to run the released mod build from the tag
-`v0.4.4`. Without the bundle's model the mod loads and the T-90A stays a complete T-72M1: nothing of the conversion is
-applied.
+latest [release zip](https://github.com/marsattackk/GHPC-T90A/releases/latest). A bundle from before 0.5.0 won't
+do, because it still has the old armour pieces. Without the bundle's model the mod loads and the T-90A stays a complete
+T-72M1: nothing of the conversion is applied.
 
 The DLL logs a stamp when it loads, like `T-90A 0.4.4+3dac81f.public, game <version>, Steam build <number>`, so a
 player's log tells you which build they ran. The version comes from `MelonInfo` in `T90A\Mod.cs`, the commit from

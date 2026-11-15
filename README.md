@@ -254,8 +254,8 @@ are welcome, and under the GPL a fork is fine too.
 `T90A\` is the tank itself and `Common\` is the machinery it's built with, shared with my other ports. `Resources\`
 holds the data built into the DLL: reticles, armour values, hatches, smoke points and the rest. The asset bundle
 (`Mods\T90A\t90a`: model, textures, armour meshes) isn't built from this repo and neither is the Unity project behind
-it, so take it from a release. The code here needs the bundle that comes with 0.5.0, because the 0.4.4 one still has
-the old armour pieces. Until 0.5.0 is out, build the released mod from the `v0.4.4` tag with the 0.4.4 bundle.
+it, so take it from a release. The code here needs the bundle from 0.5.0 or later, because the 0.4.4 one still has
+the old armour pieces.
 
 To build it you need the .NET SDK 6 or newer and GHPC with MelonLoader, because the build references the game's DLLs:
 
