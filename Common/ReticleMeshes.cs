@@ -9,6 +9,6 @@ namespace T90A.Common
 	{
 		internal static readonly FieldInfo Smr = Reflect.Field(typeof(ReticleMesh), "SMR");
 
-		internal static void ClearSmr(ReticleMesh mesh) => Smr.SetValue(mesh, null);
+		internal static void ClearSmr(ReticleMesh mesh) => Smr?.SetValue(mesh, null);
 	}
 }

@@ -20,6 +20,7 @@ namespace T90A
 			const float RangeX = 30f;
 			const float LampSize = 18f;
 
+			// Green ready lamp on the left, red override lamp on the right, as the legend of the manual's figure 9 has them.
 			internal static readonly Color LampReady = new Color(0.157f, 1f, 0f, 1f);
 			static readonly Color LampOverride = new Color(1f, 0.11f, 0.17f, 1f);
 
@@ -54,7 +55,7 @@ namespace T90A
 				readout.letter = Text("ammo text", root.transform, LetterX, 24f, TextAlignmentOptions.Center, "6");
 
 				optic.RangeText = range;
-				optic.RangeTextQuantize = 5;
+				optic.RangeTextQuantize = 5;   // 5 m steps, as the T-80B's 1G42 readout
 				optic.RangeTextDivideBy = 1;
 				optic.RangeTextArchetype = "0000";
 				optic.RangeTextPrefix = "<mspace=0.9em>";

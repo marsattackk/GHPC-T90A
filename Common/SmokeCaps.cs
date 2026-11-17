@@ -11,7 +11,7 @@ namespace T90A.Common
 		{
 			var mgr = unit.GetComponentInChildren<VehicleSmokeManager>(true);
 			if (mgr == null) return "no smoke manager";
-			var slots = (VehicleSmokeManager.SmokeSlot[])Reflect.Field(typeof(VehicleSmokeManager), "_smokeSlots").GetValue(mgr);
+			var slots = Reflect.Field(typeof(VehicleSmokeManager), "_smokeSlots")?.GetValue(mgr) as VehicleSmokeManager.SmokeSlot[];
 			var caps = unit.GetComponentsInChildren<MeshRenderer>(true).Where(r => r.name.StartsWith("smoke_cap_")).ToList();
 			if (slots == null || caps.Count == 0) return $"{caps.Count} caps, {slots?.Length ?? 0} slots: nothing wired";
 			var free = caps.ToList();

@@ -14,11 +14,13 @@ namespace T90A.Common
 	{
 		internal static void ApplyAtSpawn(Vehicle vehicle)
 		{
-			if (!Build()) return;
+			if (!Build() || RegisterAllBallistics == null) return;
 			var loadoutManager = vehicle.GetComponent<LoadoutManager>();
 			if (loadoutManager == null) return;
 			var weapon = vehicle.GetComponent<WeaponsManager>().Weapons[0].Weapon;
 			var list = PortList(loadoutManager.LoadedAmmoList.AmmoClips, DefaultApfsds(warn: true));
+			if (Missile != null && weapon.GuidanceUnit == null && (FeedMissileGuidance == null || FeedGuidanceStopped == null))
+				list.Remove(Missile);
 			loadoutManager.LoadedAmmoList.AmmoClips = list.ToArray();
 			loadoutManager.TotalAmmoCounts = Columns(S.TotalCounts, list, "the load");
 			int missile = Missile != null ? list.IndexOf(Missile) : -1;
@@ -130,7 +132,7 @@ namespace T90A.Common
 			if (Missile != null && clips.Contains(Missile) && weapon != null)
 			{
 				if (weapon.GuidanceUnit == null) problems.Add("missile guidance unit missing");
-				else if (!ReferenceEquals(FeedMissileGuidance.GetValue(weapon.Feed), weapon.GuidanceUnit))
+				else if (FeedMissileGuidance != null && !ReferenceEquals(FeedMissileGuidance.GetValue(weapon.Feed), weapon.GuidanceUnit))
 					problems.Add("missile guidance unit not linked to the gun's feed");
 			}
 			Report(vehicle, problems);
@@ -158,7 +160,7 @@ namespace T90A.Common
 
 		internal static void ApplyCoaxAtSpawn(Vehicle vehicle)
 		{
-			if (S == null || S.CoaxRounds <= 0) return;
+			if (S == null || S.CoaxRounds <= 0 || InitialClipCounts == null) return;
 			var feed = vehicle.GetComponentsInChildren<AmmoFeed>(true).FirstOrDefault(c => c.name.Contains(S.CoaxFeed));
 			var rack = feed?.ReadyRack;
 			if (rack == null || rack.ClipTypes == null || rack.ClipTypes.Length == 0)

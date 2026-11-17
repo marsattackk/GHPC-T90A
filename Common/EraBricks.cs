@@ -379,7 +379,7 @@ namespace T90A.Common
 
 		static bool Said(LiveRound.ShotStory story)
 		{
-			if (story == null) return false;
+			if (story == null || StoryEvents == null) return false;
 			var events = StoryEvents(story);
 			return events != null && events.Contains(DetonatedEvent);
 		}
@@ -510,6 +510,7 @@ namespace T90A.Common
 
 		static void Unsay(LiveRound r)
 		{
+			if (StoryText == null || StoryEvents == null) return;
 			foreach (var (story, had) in new[] { (r.Story, _hadLine), (r.ParentRound?.Story, _parentHadLine) })
 			{
 				if (story == null || had) continue;

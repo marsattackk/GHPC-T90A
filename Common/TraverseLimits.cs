@@ -17,9 +17,10 @@ namespace T90A.Common
 		static readonly AccessTools.FieldRef<AimablePlatform, Quaternion> Orig =
 			Reflect.FieldRefAccess<AimablePlatform, Quaternion>("_originalLocalRotation");
 		static readonly AccessTools.FieldRef<AimablePlatform, bool> Destroyed = Reflect.FieldRefAccess<AimablePlatform, bool>("_destroyed");
-		static readonly Action<AimablePlatform> Enforce = AccessTools.MethodDelegate<Action<AimablePlatform>>(Reflect.Method(
-			typeof(AimablePlatform),
-			"enforceEulerLimits"));
+		static readonly System.Reflection.MethodInfo EnforceMethod = Reflect.Method(typeof(AimablePlatform), "enforceEulerLimits");
+		static readonly Action<AimablePlatform> Enforce = EnforceMethod == null
+			? null
+			: AccessTools.MethodDelegate<Action<AimablePlatform>>(EnforceMethod);
 
 		internal static List<KeyValuePair<float, float>> Parse(string text)
 		{
@@ -44,7 +45,7 @@ namespace T90A.Common
 			string tag,
 			List<KeyValuePair<float, float>> knots)
 		{
-			if (gun == null || traverse == null || knots == null) return null;
+			if (gun == null || traverse == null || knots == null || Orig == null) return null;
 			var component = gun.GetComponent<TraverseLimits>() ?? gun.gameObject.AddComponent<TraverseLimits>();
 			component.Gun = gun;
 			component.Traverse = traverse;
@@ -115,7 +116,7 @@ namespace T90A.Common
 			// limit forever.
 			if (Gun.GetCurrentEulerAngle() < lim - 0.001f)
 			{
-				Enforce(Gun);
+				Enforce?.Invoke(Gun);
 			}
 		}
 	}

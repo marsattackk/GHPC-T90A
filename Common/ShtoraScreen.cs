@@ -16,6 +16,8 @@ namespace T90A.Common
 	{
 		internal enum Look { ControlPanel, ScreenPage }
 
+		// Fields a tank never sets keep their defaults here: another tank sets them (CS0649 is off for this declaration only).
+#pragma warning disable CS0649
 		internal sealed class Settings
 		{
 			public string Tag;
@@ -51,6 +53,7 @@ namespace T90A.Common
 			public Vector2 BlindRange = new Vector2(0.9f, 1.1f);
 			internal Settings Copy() => (Settings)MemberwiseClone();
 		}
+#pragma warning restore CS0649
 
 		internal static readonly List<Station> Stations = new List<Station>();
 		internal static Station Of(Unit u)

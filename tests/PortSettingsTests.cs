@@ -98,9 +98,9 @@ namespace T90A.Tests
 			Assert.Equal("drei", t90a["Campaign unlock after missions"]);
 			Assert.Equal("3BM42", t90a["APFSDS"]);
 			Assert.False(t90a.ContainsKey("Enabled"));
-			var t90m = PortSettings.QuotedValues(lines, "T-90M");
-			Assert.Equal("0,35", t90m["Campaign prevalence"]);
-			Assert.Equal(2, t90m.Count);
+			var other = PortSettings.QuotedValues(lines, "T-72M1");
+			Assert.Equal("0,35", other["Campaign prevalence"]);
+			Assert.Equal(2, other.Count);
 			Assert.Empty(PortSettings.QuotedValues(lines, "T-80B"));
 		}
 

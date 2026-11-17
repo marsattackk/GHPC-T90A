@@ -34,14 +34,24 @@ namespace T90A
 		// the seat by an offset and the interior to a fixed place, which has to be the one that stands.
 		static readonly ConversionStep<Parts>[] Steps =
 		{
-			new ConversionStep<Parts> { What = "base visuals", Run = HideBase },
-			new ConversionStep<Parts> { What = "visuals", Run = AttachVisuals },
-			new ConversionStep<Parts> { What = "paint", Run = Paint },
+			new ConversionStep<Parts> { What = "base visuals", Otherwise = "the T-72M1's body stays drawn", Run = HideBase },
+			new ConversionStep<Parts> { What = "visuals", Otherwise = "no T-90A model is drawn", Run = AttachVisuals },
+			new ConversionStep<Parts> { What = "paint", Otherwise = "the T-90A keeps the bundle's materials", Run = Paint },
 			new ConversionStep<Parts> { What = "hatch undersides", Otherwise = "left plain", Run = PaintHatchUndersides },
-			new ConversionStep<Parts> { What = "tactical numbers", Run = PlaceNumbers },
-			new ConversionStep<Parts> { What = "leftovers", Run = HideLeftovers },
-			new ConversionStep<Parts> { What = "armour", Run = p => Armour.Apply(p.Vehicle) },
-			new ConversionStep<Parts> { What = "commander's seat", Run = p => CommanderSeat.Apply(p.Vehicle) },
+			new ConversionStep<Parts> { What = "tactical numbers", Otherwise = "no tactical numbers", Run = PlaceNumbers },
+			new ConversionStep<Parts>
+			{
+				What = "leftovers",
+				Otherwise = "the T-72M1's interior shows through the turret",
+				Run = HideLeftovers,
+			},
+			new ConversionStep<Parts> { What = "armour", Otherwise = "the T-72M1's armour stays", Run = p => Armour.Apply(p.Vehicle) },
+			new ConversionStep<Parts>
+			{
+				What = "commander's seat",
+				Otherwise = "the commander sits where the T-72M1's does",
+				Run = p => CommanderSeat.Apply(p.Vehicle),
+			},
 			new ConversionStep<Parts>
 			{
 				What = "interior",
@@ -51,6 +61,7 @@ namespace T90A
 			new ConversionStep<Parts>
 			{
 				What = "ammo setup",
+				Otherwise = "it keeps the T-72M1's ammunition",
 				Run = p => PortAmmo.ApplyAtSpawn(p.Vehicle),
 				SpawnOnly = true,
 				Late = "T-90A ammo: {0} was converted after its racks were filled; keeping base ammo.",
@@ -58,25 +69,76 @@ namespace T90A
 			new ConversionStep<Parts>
 			{
 				What = "coax setup",
+				Otherwise = "the coax keeps the T-72M1's belt",
 				Run = p => PortAmmo.ApplyCoaxAtSpawn(p.Vehicle),
-				SpawnOnly = true
+				SpawnOnly = true,
 			},
 			new ConversionStep<Parts> { What = "gun setup", Otherwise = "left as the T-72M1's", Run = SetGun },
 			new ConversionStep<Parts> { What = "mobility setup", Otherwise = "left as the T-72M1's", Run = SetMobility },
-			new ConversionStep<Parts> { What = "smoke launchers", Run = SeatSmoke },
+			new ConversionStep<Parts>
+			{
+				What = "smoke launchers",
+				Otherwise = "the smoke grenades leave from the T-72M1's tubes",
+				Run = SeatSmoke,
+			},
 			new ConversionStep<Parts> { What = "hatches", Otherwise = "left closed", Run = MoveHatches },
-			new ConversionStep<Parts> { What = "turret axis", Run = MoveAxes },
+			new ConversionStep<Parts> { What = "turret axis", Otherwise = "the turret turns on the T-72M1's pivots", Run = MoveAxes },
 			new ConversionStep<Parts>
 			{
 				What = "commander's station",
+				Otherwise = "no remote Kord",
 				Run = p => Commander.Apply(p.Vehicle),
 				SpawnOnly = true,
 				Late = "T-90A Kord: {0} was converted after spawn; no remote Kord fitted.",
 			},
-			new ConversionStep<Parts> { What = "modules", Run = p => Modules.Build(p.Vehicle), SpawnOnly = true },
-			new ConversionStep<Parts> { What = "periscope placement", Run = PlacePeriscope, SpawnOnly = true },
-			new ConversionStep<Parts> { What = "Shtora-1", Run = p => Countermeasures.Apply(p.Vehicle), SpawnOnly = true },
-			new ConversionStep<Parts> { What = "LOD materials", Run = SyncLods },
+			new ConversionStep<Parts>
+			{
+				What = "modules",
+				Otherwise = "the T-90A's own modules are not built and cannot be hit",
+				Run = p => Modules.Build(p.Vehicle),
+				SpawnOnly = true,
+			},
+			new ConversionStep<Parts>
+			{
+				What = "periscope placement",
+				Otherwise = "the gunner's periscope stays in the list of views",
+				Run = PlacePeriscope,
+				SpawnOnly = true,
+			},
+			new ConversionStep<Parts>
+			{
+				What = "Shtora-1",
+				Otherwise = "no Shtora-1",
+				Run = p => Countermeasures.Apply(p.Vehicle),
+				SpawnOnly = true,
+			},
+			new ConversionStep<Parts>
+			{
+				What = "Shtora-1 lens glow",
+				Otherwise = "the emitters don't glow while jamming",
+				Run = p => ShtoraGlow.Apply(p.Vehicle),
+				SpawnOnly = true,
+			},
+			new ConversionStep<Parts>
+			{
+				What = "Shtora-1 emitter heat",
+				Otherwise = "the emitters stay cold in thermal sights while jamming",
+				Run = p => ShtoraHeat.Apply(p.Vehicle),
+				SpawnOnly = true,
+			},
+			new ConversionStep<Parts>
+			{
+				What = "T-72M1 Luna out",
+				Otherwise = "the hidden T-72M1 Luna lights the ground in night sights",
+				Run = p => BaseStrip.TakeOutLuna(p.Vehicle, T90AMod.FriendlyName),
+				SpawnOnly = true,
+			},
+			new ConversionStep<Parts>
+			{
+				What = "LOD materials",
+				Otherwise = "a distant T-90A shows the bundle's materials",
+				Run = SyncLods,
+			},
 		};
 
 		internal static void Convert(Vehicle vehicle, bool atSpawn = false)
@@ -250,12 +312,39 @@ namespace T90A
 		// throws leaves the rest of the tank set up.
 		static readonly ConversionStep<Vehicle>[] LateSteps =
 		{
-			new ConversionStep<Vehicle> { What = "voices", Run = v => CrewVoices.Apply(v, FriendlyName) },
-			new ConversionStep<Vehicle> { What = "sight setup", Run = Sights.Apply },
-			new ConversionStep<Vehicle> { What = "commander's station late setup", Run = Commander.LateSetup },
-			new ConversionStep<Vehicle> { What = "module wiring", Run = v => Modules.Wire(v), SpawnOnly = true },
-			new ConversionStep<Vehicle> { What = "thermal heat", Run = ApplyThermalHeat },
-			new ConversionStep<Vehicle> { What = "ammunition self-check", Run = PortAmmo.SelfCheck, SpawnOnly = true },
+			new ConversionStep<Vehicle>
+			{
+				What = "voices",
+				Otherwise = "the crew keeps the T-72M1's German voices",
+				Run = v => CrewVoices.Apply(v, FriendlyName),
+			},
+			new ConversionStep<Vehicle> { What = "sight setup", Otherwise = "the T-72M1's sights stay", Run = Sights.Apply },
+			new ConversionStep<Vehicle>
+			{
+				What = "commander's station late setup",
+				Otherwise = "the Kord's sights can be missing from the views and the AI gunner does not use it",
+				Run = Commander.LateSetup,
+			},
+			new ConversionStep<Vehicle>
+			{
+				What = "module wiring",
+				Otherwise = "hits on the T-90A's own modules do nothing",
+				Run = v => Modules.Wire(v),
+				SpawnOnly = true,
+			},
+			new ConversionStep<Vehicle>
+			{
+				What = "thermal heat",
+				Otherwise = "the T-90A's own parts show cold in thermal sights",
+				Run = ApplyThermalHeat,
+			},
+			new ConversionStep<Vehicle>
+			{
+				What = "ammunition self-check",
+				Otherwise = "a missing round model is not reported",
+				Run = PortAmmo.SelfCheck,
+				SpawnOnly = true,
+			},
 		};
 
 		static void ApplyThermalHeat(Vehicle vehicle)
@@ -275,7 +364,8 @@ namespace T90A
 			DevAfter(vehicle, atSpawn);
 		}
 
-		// Turret-bone space: prefab minus the T-72 ring centre.
+		// Turret-bone space: prefab minus the T-72 ring centre. The faces are measured off War Thunder's model: the rear
+		// lamp's square glass and the turret side boxes' outer faces.
 		static readonly TacticalNumbers.Settings Numbers = new TacticalNumbers.Settings
 		{
 			Mode = T90AMod.NumberPosition,
@@ -285,7 +375,7 @@ namespace T90A
 			BoxNormalR = new Vector3(0.92f, -0.02f, -0.39f),
 			BoxFaceL = new Vector3(-1.278f, 1.827f, -1.558f) - BaseRigT72M1.TurretPivot,
 			BoxNormalL = new Vector3(-0.91f, -0.01f, -0.41f),
-			DigitScale = 1.25f,
+			DigitScale = 1.25f,   // the T-72's 12.4 x 8.2 cm plates made to fill the lamp's 16 x 16 cm window
 		};
 
 		static readonly InteriorMap.Embedded Interior = new InteriorMap.Embedded(

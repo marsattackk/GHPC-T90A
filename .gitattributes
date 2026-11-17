@@ -4,6 +4,9 @@
 # Binary files, never converted.
 *.png binary
 *.jpg binary
+*.gif binary
 *.webp binary
+*.wav binary
 *.bin binary
+*.mesh binary
 *.dll binary

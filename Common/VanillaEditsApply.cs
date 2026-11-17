@@ -21,6 +21,12 @@ namespace T90A.Common
 			IDictionary<string, (Mesh mesh, Transform bone)> reshape,
 			List<string> problems = null)
 		{
+			if (RestRotation == null || Followers.PosShift == null || Followers.RotShift == null)
+			{
+				const string unavailable = "armour edits skipped: a game member they need is missing";
+				problems?.Add(unavailable);
+				return unavailable;
+			}
 			// Through the groups' stored offsets with turret and gun at rest, because the groups lag and the AI may be traversing.
 			var rest = new Dictionary<Transform, Quaternion>();
 			foreach (var platform in root.GetComponentsInChildren<AimablePlatform>(true))
@@ -142,7 +148,7 @@ namespace T90A.Common
 
 			// Last. The edits above find pieces by their collider.
 			foreach (var pieceName in e.Strip)
-				foreach (var piece in Find(pieceName))
+				foreach (var piece in GroupColliders != null ? Find(pieceName) : new List<Transform>())
 				{
 					var cols = piece.GetComponents<Collider>();
 					foreach (var colliderGroup in groups

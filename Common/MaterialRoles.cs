@@ -20,7 +20,7 @@ namespace T90A.Common
 
 		public string ToText()
 		{
-			var builder = new StringBuilder("# material\trole\tvanilla material at spawn\tdonor units (portkit MaterialRoles)\n");
+			var builder = new StringBuilder("# material\trole\tvanilla material at spawn\tdonor units\n");
 			foreach (var entry in Entries)
 				builder
 					.Append(entry.Material)

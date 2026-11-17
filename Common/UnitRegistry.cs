@@ -44,12 +44,15 @@ namespace T90A.Common
 		internal MelonPreferences_Entry<int> AfterMissions;
 
 		internal static CampaignConfig Create(MelonPreferences_Category cfg, string friendlyName, float prevalence, int afterMissions)
+			=> Create(cfg, friendlyName, prevalence, afterMissions, "Soviet");
+
+		internal static CampaignConfig Create(MelonPreferences_Category cfg, string friendlyName, float prevalence, int afterMissions, string side)
 			=> new CampaignConfig
 			{
 				InRoster = cfg.CreateEntry(
 					"Add to campaign roster",
 					true,
-					description: $"Adds the {friendlyName} to the Soviet campaign roster."),
+					description: $"Adds the {friendlyName} to the {side} campaign roster."),
 				Prevalence = cfg.CreateEntry(
 					"Campaign prevalence",
 					prevalence,
@@ -152,7 +155,7 @@ namespace T90A.Common
 				});
 				lookup.AllUnits = units.ToArray();
 				var spawner = UnitSpawner.Instance;
-				if (spawner != null) Reflect.Field(typeof(UnitSpawner), "_prefabLookupCached").SetValue(spawner, null);
+				if (spawner != null) Reflect.Field(typeof(UnitSpawner), "_prefabLookupCached")?.SetValue(spawner, null);
 				MenuListPatch.ClearCache();
 			}
 			return all;
@@ -160,6 +163,7 @@ namespace T90A.Common
 
 		// A campaign save holds no unit list. Each mission draws from AllUnits, so entries can come and go.
 		static readonly HashSet<TheaterUnitMetadata> _added = new HashSet<TheaterUnitMetadata>();
+		static readonly HashSet<string> _notFielded = new HashSet<string>();
 
 		internal static void StartCampaignRoster()
 		{
@@ -195,6 +199,8 @@ namespace T90A.Common
 			}
 
 			foreach (var definition in Units.Where(c => c.Enabled() && c.InCampaign()))
+			{
+				bool fielded = false;
 				foreach (var theater in meta.AllTheaters)
 				{
 					if (theater?.Factions == null) continue;
@@ -205,6 +211,7 @@ namespace T90A.Common
 						var ours = units.FirstOrDefault(m => m != null && m.Key == definition.Key);
 						if (ours != null)
 						{
+							fielded = true;
 							if (_added.Contains(ours))
 							{
 								ours.Prevalence = definition.CampaignPrevalence();
@@ -214,6 +221,7 @@ namespace T90A.Common
 						}
 						var armyUnit = units.FirstOrDefault(m => m != null && m.Key == definition.ArmyFrom());
 						if (armyUnit == null) continue;
+						fielded = true;
 						var template = units.FirstOrDefault(m => m != null && m.Key == definition.BaseUnit())
 							?? armyUnit;
 						var entry = new TheaterUnitMetadata
@@ -233,6 +241,9 @@ namespace T90A.Common
 						faction.AllUnits = units.ToArray();
 					}
 				}
+				if (!fielded && _notFielded.Add(definition.Key))
+					MelonLogger.Msg($"{definition.FriendlyName()}: no campaign side fields the {definition.ArmyFrom()}, so it is not in the campaign roster.");
+			}
 		}
 
 		// The customizer has its own registry reference, not necessarily the one I added to.
@@ -249,6 +260,7 @@ namespace T90A.Common
 
 			static void Prefix(MissionConfigMenuPanel __instance)
 			{
+				if (AllUnits == null) return;
 				var lookup = AllUnits(__instance);
 				if (lookup?.AllUnits == null) return;
 				if (Units.Any(d => d.Enabled()

@@ -38,3 +38,8 @@ field   VehicleSmokeManager   _smokeScreenRequiredCrewPositions      # SmokeLaun
 # ModuleBuilder.cs sets whichever FlammableItem fields the module list's "fuel" entry names. The T-90A's list has no
 # fuel entries, so there are no names to check yet. Add a "field FlammableItem <name>" line for each one a port uses.
 covers  ModuleBuilder.Fuel
+
+# ModuleBuilder.cs WireHook and SwitchOff look up the field of a hit-zone hook table entry (HookDef.Field); the script reads
+# those names from the table itself ("the hit-zone hook table" above), so they are checked there.
+covers  ModuleBuilder.WireHook
+covers  ModuleBuilder.SwitchOff

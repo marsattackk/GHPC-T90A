@@ -4,31 +4,36 @@ using MelonLoader.Utils;
 using T90A.Common;
 using UnityEngine;
 
-[assembly: MelonInfo(typeof(T90A.T90AMod), "T-90A", "0.5.0", "marsattackk")]
+[assembly: MelonInfo(typeof(T90A.T90AMod), "T-90A", "0.5.1", "marsattackk")]
 [assembly: MelonGame("Radian Simulations LLC", "GHPC")]
 
 namespace T90A
 {
+	// Loads the bundle, registers the unit on the T-72M1 prefab and hangs the War Thunder model's HULL / TURRET / GUN on the base
+	// rig's bones (the base's visuals off, paint, real axes). The armour goes on before the axes move; the Kord station, the
+	// modules and Shtora-1 are fitted at spawn, the sights and voices once the unit has started (Conversion.Convert).
 	public partial class T90AMod : MelonMod
 	{
 		internal const string UnitKey = "T90A";
 
-		internal static GameObject Visual;
-		internal static VanillaEdits Edits;
-		internal static MaterialRoles Roles;
-		internal static RigMap Rig;
-		internal static Vector3[] SmokePoints;
+		internal static GameObject Visual;   // the War Thunder model, the bundle's T90A_visual prefab
+		internal static VanillaEdits Edits;   // the T-72M1's pieces switched off or changed (Resources\vanilla_edits.txt)
+		internal static MaterialRoles Roles;   // material roles: the vanilla glass at spawn (Resources\material_roles.txt)
+		internal static RigMap Rig;   // moving parts: hatches, the turret and gun axes (Resources\rig_map.txt)
+		internal static Vector3[] SmokePoints;   // the smoke tubes' launch points (Resources\smoke_points.txt)
 
 		internal const string FriendlyName = "T-90A";
-		const string BaseUnit = "T72M1";
+		const string BaseUnit = "T72M1";   // registry key of the vanilla prefab "T72M1" (crew, interior, damage model, running gear)
 		// The T-72M1 is NVA in GHPC, so the army comes off the T-80B.
 		const string ArmyFrom = "T80B";
+		// 2000 rounds for the PKT (Russian Wikipedia, «Т-90»; «Описание танка Т-90А», odetievbrony.ru).
 		internal const int CoaxRounds = 2000;
 		internal const string NumberPosition = "rear lamp";
 
 		internal static MelonPreferences_Entry<bool> Enabled;
 		internal static CampaignConfig Campaign;
 		internal static MelonPreferences_Entry<string> Apfsds;
+		internal static MelonPreferences_Entry<bool> ForceApfsds;
 		internal static MelonPreferences_Entry<bool> FireWhenLaid;
 		internal static MelonPreferences_Entry<bool> WeatheredPaint;
 		internal static MelonPreferences_Entry<bool> KordCases;
@@ -39,6 +44,7 @@ namespace T90A
 		internal static MelonPreferences_Entry<bool> ShtoraAutomatic;
 		internal static MelonPreferences_Entry<bool> ShtoraTone;
 		internal static MelonPreferences_Entry<bool> ShtoraJammerAtSpawn;
+		internal static MelonPreferences_Entry<float> ShtoraJamChance;
 		internal static MelonPreferences_Entry<bool> ShtoraPanel;
 		internal static MelonPreferences_Entry<bool> ShtoraPanelAlways;
 
@@ -75,6 +81,10 @@ namespace T90A
 				"APFSDS",
 				"3BM60",
 				description: SettingText.Apfsds);
+			ForceApfsds = cfg.CreateEntry(
+				"Force APFSDS",
+				false,
+				description: SettingText.ForceApfsds);
 			NightSightChoice = cfg.CreateEntry(
 				"Gunner night sight",
 				NightSight.Essa,
@@ -104,6 +114,10 @@ namespace T90A
 				"Shtora-1 jammer on at spawn",
 				true,
 				description: SettingText.ShtoraJammerAtSpawn);
+			ShtoraJamChance = cfg.CreateEntry(
+				"Shtora-1 jam chance",
+				Countermeasures.JamChance,
+				description: SettingText.ShtoraJamChance);
 			ShtoraPanel = cfg.CreateEntry(
 				"Shtora-1 panel on screen",
 				true,

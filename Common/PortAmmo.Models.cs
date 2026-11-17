@@ -165,7 +165,7 @@ namespace T90A.Common
 
 		static void ApplyRackTnt(GameObject model, Round r, AmmoType ammo)
 		{
-			if (!r.RackTntIsFiller) return;
+			if (!r.RackTntIsFiller || ItemTnt == null) return;
 			var items = model.GetComponentsInChildren<FlammableItem>(true).Where(i => i.Explosive).ToList();
 			if (items.Count == 0)
 			{
@@ -180,6 +180,7 @@ namespace T90A.Common
 
 		static void BurstInParent(GHPC.Weapons.AmmoRack rack)
 		{
+			if (RackRoom == null) return;
 			var room = RackRoom(rack);
 			var parent = room != null ? room.Parent : null;
 			var cluster = rack.Flammables;

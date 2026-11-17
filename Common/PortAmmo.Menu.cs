@@ -56,6 +56,8 @@ namespace T90A.Common
 		static readonly AccessTools.FieldRef<MissionConfigMenuPanel, UnitPrefabLookupScriptable> AllUnits =
 			Reflect.FieldRefAccess<MissionConfigMenuPanel, UnitPrefabLookupScriptable>("_allUnitsScriptable");
 
+		static bool Prepare() => AllSets != null && AllUnits != null;
+
 		static void Postfix(MissionConfigMenuPanel __instance, string __0, ref List<AmmoLogisticsScriptable> __result, ref List<int> __1)
 		{
 			string unitKey = __0;
@@ -86,6 +88,8 @@ namespace T90A.Common
 			Reflect.FieldRefAccess<MissionConfigMenuPanel, List<GameObject>>("_ammoDataObjects");
 		static readonly AccessTools.FieldRef<MissionConfigAmmoSelectionEntry, TextMeshProUGUI> Label =
 			Reflect.FieldRefAccess<MissionConfigAmmoSelectionEntry, TextMeshProUGUI>("_label");
+
+		static bool Prepare() => Entries != null && Label != null;
 
 		static void Postfix(MissionConfigMenuPanel __instance, AmmoLogisticsScriptable __1)
 		{
@@ -132,12 +136,19 @@ namespace T90A.Common
 	internal static class AmmoCampaignUnlockPatch
 	{
 		// GHPC only honours BlockUntilMissionsCompleted for units. SelectAmmoType ignores it.
-		static void Prefix(AmmoReplacementOrder __instance, bool __2)
+		static bool Prefix(AmmoReplacementOrder __instance, bool __2, ref AmmoClipCodexScriptable __3, ref AmmoClipCodexScriptable __result)
 		{
 			bool isCampaignMode = __2;
-			if (!isCampaignMode || PortAmmo.ApfsdsSet == null || __instance != PortAmmo.ApfsdsSet.AmmoLogistics) return;
+			if (!isCampaignMode || PortAmmo.ApfsdsSet == null || __instance != PortAmmo.ApfsdsSet.AmmoLogistics) return true;
+			if (PortAmmo.S.ForceApfsds?.Invoke() == true)
+			{
+				__result = PortAmmo.DefaultApfsds(warn: true);
+				__3 = null;
+				return false;
+			}
 			int done = CampaignSaveState.ActiveSaveData?.TotalMissionsCompleted ?? 0;
 			foreach (var option in __instance.AmmoOptions) option.AllowInCampaign = done >= option.BlockUntilMissionsCompleted;
+			return true;
 		}
 	}
 }

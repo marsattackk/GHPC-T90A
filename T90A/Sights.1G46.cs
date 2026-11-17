@@ -11,10 +11,12 @@ using UnityEngine;
 
 namespace T90A
 {
-	// 1G46 reticle and zoom steps. Positions in mrad off Fig. 9 at 12x, the 0-08 chevron (8.378 mrad) as the scale,
-	// origin at the chevron tip.
+	// 1G46 reticle and zoom steps. Positions in mrad off figure 9, «Вид поля зрения прицела», of «Комплекс управления
+	// огнем 1А45» (odetievbrony.ru) at 12x, the 0-08 chevron (8.378 mrad) as the scale, origin at the chevron tip. The
+	// strokes' shapes are the game's own 1G42's.
 	internal static partial class Sight1G46
 	{
+		// 20 to 4.5 deg, the 1G46's 2.7-12x (Suvorov, «Т-90»). The real zoom is smooth; the seven stops between are mine.
 		internal static readonly float[] ZoomFovs = { 20f, 16.6f, 13.8f, 11.4f, 9.5f, 7.9f, 6.5f, 5.4f, 4.5f };
 
 		internal static readonly string ApfsdsAmmo = "ammo_3BM32";
@@ -22,6 +24,8 @@ namespace T90A
 		internal static readonly string HeatAmmo = "ammo_3BK14M";
 		internal static readonly string CoaxAmmo = "ammo_762x54R";
 
+		// Off the figure: the range-input bar's height, the vertical stroke's end and where each scale stands. Its legend
+		// gives the lead step (0-02), the Б scale's 200 m divisions and the stadia's 2.5 m target; its П scale ends at 14.
 		const float Thick = 0.1571f;
 		const float TopThick = 0.2094f;
 		const float Lead = 2.094f;
@@ -82,6 +86,8 @@ namespace T90A
 			plane.elements.Add(bore);
 			plane.elements.Add(moving);
 
+			// The chevron; the range-input bar across the whole 4.5 deg field at 12x; the vertical stroke from under the tip
+			// down to the strip, or 1 mrad past the 1400 m coax mark if that's lower (-30.1 if the ballistics can't be read).
 			var chevron = Group(bore, "Chevron", 0f, 0f);
 			chevron.elements.Add(Line(chevron, 0.75f, -1.55f, 294.97f, 3.6652f));
 			chevron.elements.Add(Line(chevron, -0.7461f, -1.5504f, 65.03f, 3.6652f));
@@ -116,6 +122,8 @@ namespace T90A
 		{
 			var group = Group(parent, "range-MG", 0f, 0f);
 			var ballistic = Ballistic(group, coax, 0f, 0f);
+			// The figure's coax scale: 100 m divisions to 1400 m, numbered in hundreds every 200, П by the 800; the marks'
+			// lengths and places measured off it.
 			int[] ranges = { 200, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400 };
 			foreach (int range in ranges)
 			{
@@ -135,6 +143,7 @@ namespace T90A
 		static ReticleTree.Angular StadiaScale(ReticleTree.Angular parent, ReticleTree.Text font)
 		{
 			var group = Group(parent, "Stadia", 0f, 0f);
+			// The figure's stadia for a 2.5 m target, 800 to 2800 m in 200 m divisions, its bar and marks measured off it.
 			float left = StadiaX800 - 0.3f;
 			float right = StadiaX800 + 5 * StadiaXPer400 + 0.5f;
 			group.elements.Add(Line(group, (left + right) / 2f, StadiaBaseY, 0f, right - left, 0.1309f));
@@ -159,6 +168,7 @@ namespace T90A
 		static ReticleTree.Angular CoaxParallaxCurve(ReticleTree.Angular parent, ReticleTree.Text font)
 		{
 			var angularGroup = Group(parent, "Coax parallax", 0f, 0f);
+			// The figure's dashed coax line for short range with its 2, 1 and 0,5 marks, slope and places measured off it.
 			Func<float, float> lineY = x => -2.84f - 0.38f * (x - 0.69f);
 			float angle = Mathf.Atan(-0.38f) * Mathf.Rad2Deg;
 
@@ -177,6 +187,7 @@ namespace T90A
 
 		static ReticleTree.Angular InfoBlockMarks(ReticleTree.Angular parent)
 		{
+			// The "= | =" marks right of the chevron, measured off the figure.
 			var angularGroup = Group(parent, "Info block marks", 11.3f, 2.7f);
 			angularGroup.elements.Add(Line(angularGroup, -1.6f, 0.4f, 0f, 2.0f));
 			angularGroup.elements.Add(Line(angularGroup, -1.6f, -0.4f, 0f, 2.0f));
@@ -188,6 +199,8 @@ namespace T90A
 
 		static ReticleTree.Angular LeadMarks(ReticleTree.Angular parent)
 		{
+			// The lead scales: 0-02 a division out to ±0-16, a small chevron every 0-08 («Цена одного малого деления 0-02,
+			// общий диапазон ±0-16»); the bar over the chevron spans the two 0-02 marks.
 			var angularGroup = Group(parent, "Horizontal", 0f, 0f);
 			angularGroup.elements.Add(Line(angularGroup, 0f, 0f, 0f, 2f * Lead));
 			for (int side = -1; side <= 1; side += 2)
@@ -208,6 +221,7 @@ namespace T90A
 
 		static ReticleTree.Angular BScale(ReticleTree.Angular parent, AmmoCodexScriptable apfsds, ReticleTree.Text font)
 		{
+			// The Б scale: 200 m a division, numbered in hundreds every 400, slanting as the figure draws it.
 			var group = Group(parent, "range-B", BScaleX, TopY);
 			Glyph(group, 'Б', -1.3f, -2.4f, 1.6f);
 			var ballistic = Ballistic(group, apfsds, 0f, 0f);
@@ -226,6 +240,7 @@ namespace T90A
 		static ReticleTree.Angular VerticalScale(ReticleTree.Angular parent, string name, float x, string letter,
 			AmmoCodexScriptable ammo, ReticleTree.Text font)
 		{
+			// The О and Н scales: 100 m a division, numbered in hundreds every 400 on alternate sides, as on the figure.
 			var group = Group(parent, name, x, TopY);
 			group.elements.Add(Label(group, font, letter, 0f, -2.6311f, 12f));
 			var ballistic = Ballistic(group, ammo, 0f, 0f);
@@ -339,7 +354,7 @@ namespace T90A
 		{
 			FieldInfo fontField = Reflect.Field(typeof(ReticleTree.Text), "font");
 			List<ReticleTree.Text> labels = AllOf<ReticleTree.Text>(host).ToList();
-			ReticleTree.Text etched = labels.FirstOrDefault(label =>
+			ReticleTree.Text etched = fontField == null ? null : labels.FirstOrDefault(label =>
 				fontField.GetValue(label) is UnityEngine.Object font && font != null && font.name.StartsWith("TPD_Etch"));
 			return etched ?? labels.First();
 		}

@@ -38,7 +38,7 @@ namespace T90A
 		static readonly Vector3 WtCaseChute = new Vector3(0.612f, 2.505f, -0.090f);
 		internal static Vector3 CaseChute
 			=> Trunnion + Quaternion.AngleAxis(-GunLevelDeg, Vector3.right) * (WtCaseChute - Trunnion);
-		static readonly Vector3 CaseChuteDir = new Vector3(0.10f, -0.08f, 1f);
+		static readonly Vector3 CaseChuteDir = new Vector3(0.10f, -0.08f, 1f);   // forward, a little right and down: my guess
 		internal static readonly KordBelt.Settings BeltSettings = new KordBelt.Settings
 		{
 			Prefix = "T90A_",
@@ -149,6 +149,11 @@ namespace T90A
 		{
 			var donor = Donor.Get(T90AMod.FriendlyName);
 			if (donor == null) return null;
+			if (SlotReparent == null)
+			{
+				DonorParts.WarnOnce("Kord", "T-90A Kord (ZPU): not fitted, the game's camera slots could not be set up.");
+				return null;
+			}
 			var root = vehicle.transform;
 			var turret = root.Find("---MESH---/HULL/TURRET");
 			var cupolaBone = turret?.Find("CUPOLA");
@@ -406,7 +411,7 @@ namespace T90A
 				Weapon = weapon,
 				FCS = fit.Fcs,
 				PreAimWeapon = WeaponSystemRole.MainGun,
-				PreAimAngleThreshold = 3f
+				PreAimAngleThreshold = 3f   // the game's default
 			};
 			var platforms = new[] { fit.Cupola, fit.Elev };
 			var tknSlot = fit.Tkn?.slot;

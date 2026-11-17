@@ -26,14 +26,19 @@ namespace T90A.Common
 				return;
 			}
 
+			var chassisField = Reflect.Field(typeof(CrewVoiceHandler), "_chassis");
+			var reloadTypeField = Reflect.Field(typeof(CrewVoiceHandler), "_reloadType");
+			var unitHandlerField = Reflect.Field(typeof(Unit), "_crewVoiceHandler");
+			if (chassisField == null || reloadTypeField == null || unitHandlerField == null) return;
+
 			var voice = Object.Instantiate(source, vehicle.transform);
 			voice.name = $"RU Tank Voice ({tag})";
 			voice.transform.localPosition = Vector3.zero;
 			voice.transform.localRotation = Quaternion.identity;
 			var handler = voice.GetComponent<CrewVoiceHandler>();
-			Reflect.Field(typeof(CrewVoiceHandler), "_chassis").SetValue(handler, vehicle.Chassis as NwhChassis);
-			Reflect.Field(typeof(CrewVoiceHandler), "_reloadType").SetValue(handler, CrewVoiceHandler.ReloaderType.AutoLoaderAZ);
-			Reflect.Field(typeof(Unit), "_crewVoiceHandler").SetValue(vehicle, handler);
+			chassisField.SetValue(handler, vehicle.Chassis as NwhChassis);
+			reloadTypeField.SetValue(handler, CrewVoiceHandler.ReloaderType.AutoLoaderAZ);
+			unitHandlerField.SetValue(vehicle, handler);
 			voice.SetActive(true);
 			if (german != null) german.gameObject.SetActive(false);
 		}

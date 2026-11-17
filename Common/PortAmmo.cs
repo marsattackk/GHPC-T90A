@@ -49,6 +49,8 @@ namespace T90A.Common
 		}
 #pragma warning restore CS0649
 
+		// Fields a tank never sets keep their defaults here: another tank sets them (CS0649 is off for this declaration only).
+#pragma warning disable CS0649
 		internal sealed class Mix
 		{
 			public int Apfsds;
@@ -58,6 +60,7 @@ namespace T90A.Common
 			public int[] Extra = new int[0];
 			internal int Sum => Apfsds + Heat + He + Missile + Extra.Sum();
 		}
+#pragma warning restore CS0649
 
 		// Fields a tank never sets keep their defaults here: another tank sets them (CS0649 is off for this declaration only).
 #pragma warning disable CS0649
@@ -69,6 +72,7 @@ namespace T90A.Common
 			public string SourceUnit = "T80B";
 			public Round[] Apfsds = new Round[0];
 			public Func<string> DefaultApfsds;
+			public Func<bool> ForceApfsds;
 			public string ApfsdsListName;
 			public string MenuSuffix;
 			public string FixedHeat = "clip_3BK18M";
@@ -285,6 +289,8 @@ namespace T90A.Common
 	internal static class TandemEraPatch
 	{
 		static readonly AccessTools.FieldRef<LiveRound, bool> Sacrificed = Reflect.FieldRefAccess<LiveRound, bool>("_sacrificedWarhead");
+
+		static bool Prepare() => Sacrificed != null;
 
 		// Never throw out of a penCheck patch: the round fails every frame after, and in its first frame no new round flies.
 		static void Prefix(LiveRound __instance, Collider __0)

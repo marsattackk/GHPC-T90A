@@ -117,6 +117,18 @@ foreach ($path in $texts.Keys) {
 	}
 }
 
+# A setting made in shared code (Common\) is this tank's only when a tank file uses the class that makes it: Common\ is the
+# same files in every repo, and a tank without, say, armour presets never creates "Armour preset".
+$tankText = ($texts.Keys | Where-Object { $_ -notlike 'Common\*' } | ForEach-Object { $texts[$_] }) -join "`n"
+foreach ($name in @($settings.Keys)) {
+	$setting = $settings[$name]
+	if ($setting.Path -notlike 'Common\*') { continue }
+	# Any class the file declares (the entry may sit under a nested one, like UpdateCheck's Result), matched case for case: a
+	# nested class "Pair" is not the word "pair" in a comment.
+	$classes = [regex]::Matches($texts[$setting.Path], '\bclass\s+(\w+)') | ForEach-Object { $_.Groups[1].Value }
+	if ($classes -and -not ($classes | Where-Object { $tankText -cmatch "\b$([regex]::Escape($_))\b" })) { $settings.Remove($name) }
+}
+
 # The rows of the Markdown table under the header line that starts with $header, as arrays of cells.
 function Get-Rows([string]$file, [string]$header) {
 	$lines = [IO.File]::ReadAllLines((Join-Path $repo $file))
@@ -166,12 +178,12 @@ foreach ($name in $settings.Keys) {
 			$resolved += $key
 			# "Armour preset" is mentioned by the string, by a name like ArmourPreset (its text in SettingText), or by the class that makes the entry.
 			$flat = ($texts[$key] -replace '[^A-Za-z0-9]', '').ToLowerInvariant()
-			$mentions = $flat.Contains((($name -replace '[^A-Za-z0-9]', '').ToLowerInvariant())) -or ($class -and $texts[$key] -match ('\b' + [regex]::Escape($class) + '\b'))
+			$mentions = $flat.Contains((($name -replace '[^A-Za-z0-9]', '').ToLowerInvariant())) -or ($class -and $texts[$key] -cmatch ('\b' + [regex]::Escape($class) + '\b'))
 			if (-not $mentions) { $problems.Add("MAINTAINING.md: `"$name`" names $file, which doesn't mention the setting or $class.") }
 		}
 		# A setting made in shared code (Common\) is set up by a tank file: said as a note, not a failure.
 		if ($path -like 'Common\*' -and $class) {
-			$callers = @($texts.Keys | Where-Object { $_ -like 'T90A\*' -and $texts[$_] -match ('\b' + [regex]::Escape($class) + '\.') })
+			$callers = @($texts.Keys | Where-Object { $_ -like 'T90A\*' -and $texts[$_] -cmatch ('\b' + [regex]::Escape($class) + '\.') })
 			if ($callers.Count -gt 0 -and -not ($resolved | Where-Object { $callers -contains $_ })) {
 				$notes.Add("MAINTAINING.md: `"$name`" is made in $path ($class) and set up in $($callers -join ', '); the row names only $($files -join ', ').")
 			}

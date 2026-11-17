@@ -145,6 +145,11 @@ namespace T90A.Common
 						problems.Add($"'{module.Name}': no collider group '{module.Group}' on the unit; not built");
 						continue;
 					}
+					if (DcHealth == null || DcThreshold == null || DcChildren == null)
+					{
+						problems.Add($"'{module.Name}': GHPC DestructibleComponent._health/_damageThreshold/_children missing; not built");
+						continue;
+					}
 					var holder = new GameObject($"{label} module {module.Id}");
 					// Set up inactive: Awake copies _health into _fullHealth, else it keeps the default 10.
 					holder.SetActive(false);
@@ -211,19 +216,19 @@ namespace T90A.Common
 					zone.SetName(module.Name);
 					DcHealth.SetValue(zone, module.Health);
 					DcThreshold.SetValue(zone, module.Threshold);
-					DcPressure.SetValue(zone, module.Pressure);
+					DcPressure?.SetValue(zone, module.Pressure);
 					DcChildren.SetValue(zone, new List<DC>());
 					if (module.Armour != null)
 					{
 						var uniformArmor = holder.AddComponent<UniformArmor>();
-						ArmourName.SetValue(uniformArmor, module.Name);
+						ArmourName?.SetValue(uniformArmor, module.Name);
 						uniformArmor.ThicknessListed = UniformArmor.ThicknessMode.RHAE;
 						uniformArmor.PrimarySabotRha = module.Armour.Ke;
 						uniformArmor.PrimaryHeatRha = module.Armour.Ce;
 						uniformArmor.AngleMatters = module.Armour.AngleMatters;
-						ArmourRicochet.SetValue(uniformArmor, module.Armour.Ricochet);
-						ArmourNormalizes.SetValue(uniformArmor, module.Armour.Normalizes);
-						ArmourShatter.SetValue(uniformArmor, module.Armour.Shatter);
+						ArmourRicochet?.SetValue(uniformArmor, module.Armour.Ricochet);
+						ArmourNormalizes?.SetValue(uniformArmor, module.Armour.Normalizes);
+						ArmourShatter?.SetValue(uniformArmor, module.Armour.Shatter);
 					}
 					if (look.template != null && !module.NoXray)
 					{
@@ -402,8 +407,8 @@ namespace T90A.Common
 			if (h.Name == "Module.Stabiliser")
 			{
 				var fcs = main?.FCS ?? throw new InvalidOperationException("no main FCS");
-				var mounts = fcs.Mounts.Where(mount => mount != null).ToArray();
-				var was = mounts.Select(mount => mount.Stabilized).ToArray();
+				var mounts = fcs.Mounts.Where(x => x != null).ToArray();
+				var was = mounts.Select(x => x.Stabilized).ToArray();
 				dc.Destroyed += _ =>
 				{
 					foreach (var mount in mounts) mount.Stabilized = false;
@@ -414,7 +419,7 @@ namespace T90A.Common
 						if (mounts[i].PowerEnabled) mounts[i].Stabilized = was[i];
 				};
 				set.Lines.Add((dc, "Stabiliser destroyed"));
-				return $"stabiliser of {string.Join(", ", mounts.Select(mount => "'" + mount.Name + "'"))}";
+				return $"stabiliser of {string.Join(", ", mounts.Select(x => "'" + x.Name + "'"))}";
 			}
 			if (h.Name == "Module.SmokeTube")
 			{
@@ -442,7 +447,7 @@ namespace T90A.Common
 			if (!Hooks.TryGetValue(h.Name, out var def)) throw new InvalidOperationException("unknown hook " + h.Name);
 			var owner = Owner(vehicle, main, def.Owner, h.Target)
 				?? throw new InvalidOperationException($"no {def.Owner.Name} '{h.Target ?? "-"}'");
-			var field = def.Owner.GetField(def.Field, Any);
+			var field = Reflect.Field(def.Owner, def.Field) ?? throw new MissingFieldException(def.Owner.Name, def.Field);
 			string fieldNote;
 			if (field.FieldType.IsArray)
 			{
@@ -474,7 +479,7 @@ namespace T90A.Common
 
 		static bool Subscribe(DC dc, string evt, object owner, string method)
 		{
-			var eventInfo = typeof(DC).GetEvent(evt);
+			var eventInfo = typeof(DC).GetEvent(evt) ?? throw new MissingMemberException(typeof(DC).Name, evt);
 			var methodInfo = owner.GetType().GetMethod(method, Any) ?? throw new MissingMethodException(owner.GetType().Name, method);
 			var backing = (Delegate)typeof(DC).GetField(evt, Any)?.GetValue(dc);
 			if (backing != null && backing.GetInvocationList().Any(h => h.Target == owner && h.Method == methodInfo))
@@ -488,25 +493,23 @@ namespace T90A.Common
 			foreach (var def in Hooks.Values)
 				foreach (var owner in all.SelectMany(p => p.GetComponentsInChildren(def.Owner, true)).Distinct())
 				{
-					var field = def.Owner.GetField(def.Field, Any);
-					if (field.FieldType.IsArray)
+					var field = Reflect.Field(def.Owner, def.Field);
+					if (field != null && field.FieldType.IsArray)
 						field.SetValue(owner, ((DC[])field.GetValue(owner) ?? new DC[0]).Where(z => z != old).ToArray());
-					else if (field.GetValue(owner) as DC == old) field.SetValue(owner, null);
+					else if (field != null && field.GetValue(owner) as DC == old) field.SetValue(owner, null);
 					foreach (var (evt, method) in def.Handlers)
 					{
 						var methodInfo = owner.GetType().GetMethod(method, Any);
-						if (methodInfo != null)
-							typeof(DC)
-								.GetEvent(evt)
-								.RemoveEventHandler(
-									old,
-									Delegate.CreateDelegate(typeof(DC).GetEvent(evt).EventHandlerType, owner, methodInfo));
+						var eventInfo = typeof(DC).GetEvent(evt);
+						if (methodInfo != null && eventInfo != null)
+							eventInfo.RemoveEventHandler(old, Delegate.CreateDelegate(eventInfo.EventHandlerType, owner, methodInfo));
 					}
 				}
-			foreach (var col in old.GetComponents<Collider>())
-				foreach (var colliderGroup in all.SelectMany(part =>
-					part.GetComponentsInChildren<RaycastColliderGroup>(true)))
-					((List<Collider>)GroupColliders.GetValue(colliderGroup)).Remove(col);
+			if (GroupColliders != null)
+				foreach (var col in old.GetComponents<Collider>())
+					foreach (var colliderGroup in all.SelectMany(part =>
+						part.GetComponentsInChildren<RaycastColliderGroup>(true)))
+						((List<Collider>)GroupColliders.GetValue(colliderGroup)).Remove(col);
 			old.Hidden = true;
 			if (old.GetComponent<IArmor>() == null && old.transform.childCount == 0) old.gameObject.SetActive(false);
 			else foreach (var col in old.GetComponents<Collider>()) UnityEngine.Object.Destroy(col);
@@ -549,6 +552,7 @@ namespace T90A.Common
 
 		static void AddStatus(Vehicle vehicle, ModuleSet set)
 		{
+			if (UnitStatuses == null) return;
 			var statuses = (IDamageStatus[])UnitStatuses.GetValue(vehicle) ?? new IDamageStatus[0];
 			if (!statuses.Contains(set)) UnitStatuses.SetValue(vehicle, statuses.Concat(new IDamageStatus[] { set }).ToArray());
 		}

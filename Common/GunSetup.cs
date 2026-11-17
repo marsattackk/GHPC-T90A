@@ -152,7 +152,8 @@ namespace T90A.Common
 			var feed = vehicle.GetComponent<WeaponsManager>()?.Weapons[0].Weapon?.Feed;
 			if (feed?.ClipReloadStages == null) return;
 			var dur = Reflect.Field(typeof(AmmoFeed.ReloadStage), "Duration");
-			float total = feed.ClipReloadStages.Sum(stage => (float)dur.GetValue(stage));
+			if (dur == null) return;
+			float total = feed.ClipReloadStages.Sum(x => (float)dur.GetValue(x));
 			if (total <= 0f) return;
 			float k = s.AutoloaderCycle / total;
 			foreach (var stage in feed.ClipReloadStages) dur.SetValue(stage, (float)dur.GetValue(stage) * k);
@@ -187,6 +188,7 @@ namespace T90A.Common
 
 			static void Postfix(AmmoFeed __instance, bool __state)
 			{
+				if (LockedIn == null || StageDuration == null || TotalTime == null) return;
 				if (__state || !__instance.Reloading) return;
 				var reloadByType = __instance.GetComponent<ReloadByType>();
 				if (reloadByType == null || __instance.ClipReloadStages == null) return;
@@ -194,7 +196,7 @@ namespace T90A.Common
 				bool same = __instance.LoadedClipType != null && queued != null && __instance.LoadedClipType.Equals(queued);
 				float target = same ? reloadByType.Same : reloadByType.Change;
 				var car = __instance.Carousel;
-				if (car != null && car.IsRotatingNow)
+				if (car != null && CarouselGoal != null && car.IsRotatingNow)
 				{
 					var angles = car.RotationTransform.localEulerAngles;
 					car.RotationTransform.localEulerAngles = new Vector3(angles.x, (float)CarouselGoal.GetValue(car), angles.z);
@@ -221,6 +223,7 @@ namespace T90A.Common
 			weaponsManager.Weapons[0].Name = s.GunName;
 			var gun = weaponsManager.Weapons[0].Weapon;
 			var codexField = Reflect.Field(typeof(WeaponSystem), "CodexEntry");
+			if (codexField == null) return;
 			var codex = gun != null ? (WeaponSystemCodexScriptable)codexField.GetValue(gun) : null;
 			if (codex == null || codex == _codex) return;
 			if (_codex == null)

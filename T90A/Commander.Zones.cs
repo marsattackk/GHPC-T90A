@@ -154,7 +154,7 @@ namespace T90A
 				if (armor != null)
 				{
 					armor.Unit = _vehicle;
-					ArmorName.SetValue(armor, dcName);
+					ArmorName?.SetValue(armor, dcName);
 				}
 				var component = zoneObject.GetComponent<DC>();
 				component.SetName(dcName);

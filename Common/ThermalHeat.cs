@@ -29,6 +29,7 @@ namespace T90A.Common
 
 		internal static HeatSource AddSource(GameObject go, float heat)
 		{
+			if (Serialized == null) return null;
 			var heatSource = go.GetComponent<HeatSource>() ?? go.AddComponent<HeatSource>();
 			Serialized.SetValue(heatSource, heat);
 			return heatSource;
@@ -36,6 +37,7 @@ namespace T90A.Common
 
 		internal static void Apply(Transform unit, IEnumerable<Transform> parts, string tag, IDictionary<string, float> overrides = null)
 		{
+			if (Serialized == null || Current == null || Held == null) return;
 			var ownParts = parts.Where(p => p != null).ToList();
 			float baseHeat = BaseHeat(unit, ownParts);
 			foreach (var part in ownParts)

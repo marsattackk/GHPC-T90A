@@ -209,7 +209,7 @@ namespace T90A.Common
 			tracks.leftTrackRenderer = left;
 			tracks.rightTrackRenderer = right;
 			tracks.uvDirection = uv;
-			if (LeftMat != null && LeftMat(tracks) != null)
+			if (LeftMat != null && RightMat != null && LeftMat(tracks) != null)
 			{
 				LeftMat(tracks) = left.material;
 				RightMat(tracks) = right.material;

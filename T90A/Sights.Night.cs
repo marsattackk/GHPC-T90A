@@ -18,12 +18,16 @@ namespace T90A
 		internal const string Essa = "ESSA";
 		internal const string BuranM = "Buran-M";
 
+		// Fields 9 x 6.75 and 3 x 2.25 deg, 1.5 x 1.125 with the electronic zoom (the ESSA's technical description,
+		// odetievbrony.ru); 576 lines, the Catherine FC camera's picture (Russian Wikipedia, «Катрин-ФС»).
 		const float EssaWide = 6.75f;
 		const float EssaNarrow = 2.25f;
 		const float EssaElectronic = 1.125f;
 		const int EssaHeight = 576;
 		// 754 across a 4:3 picture, stretched over a 16:9 screen.
 		const int EssaWidth = 1005;
+		// The ESSA's mirror travels -10 / +20 deg and 7.5 deg either side (the same technical description); Russian
+		// Wikipedia's «Т-90» gives -10 / +20 for both the ESSA and the Buran-M.
 		static readonly Vector2 EssaElevationLimits = new Vector2(-10f, 20f);
 		const float EssaAzimuth = 7.5f;
 		static readonly Vector2 BuranElevationLimits = new Vector2(-10f, 20f);
@@ -73,12 +77,14 @@ namespace T90A
 				Readout = MonitorEdges,
 				Monitor = true,
 				Crt = true,
+				// One streak per detector: the camera scans a 288 x 4 array (glavcom.blogspot.com, «Технологии в
+				// танкостроении: СУО, прицелы»). Their strength and the 12 s they take to wander are set by eye.
 				ScanStreaks = EssaScanStreaks,
 				ScanRows = EssaHeight / 2,
 				ScanDriftSeconds = 12f,
 			});
 
-		const float EssaScanStreaks = 0.27f;
+		const float EssaScanStreaks = 0.27f;   // set by eye
 
 		// GHPC won't draw a dark reticle over a thermal picture, so the cross is a screen item.
 		static void EssaMarks(UsableOptic o)
@@ -98,7 +104,7 @@ namespace T90A
 				Range = "range",
 				RangePrefix = $"<mspace={mono}em>",
 				RangeSuffix = "</mspace>",
-				RangeQuantize = 5,
+				RangeQuantize = 5,   // 5 m steps, as the T-80B's 1G42 readout
 				Ready = "ready",
 				Ammo = "ammo",
 				AmmoText = SightReadout.Cyrillic,

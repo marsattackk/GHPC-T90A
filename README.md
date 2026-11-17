@@ -18,8 +18,8 @@ and they all work fine installed together.
 1. Get [MelonLoader](https://github.com/LavaGang/MelonLoader/releases) (0.7.3 or newer) into GHPC if you don't have it
    already. No other mod is needed.
 2. Download `T90A_<version>.zip` from [Releases](../../releases/latest).
-3. Copy the `Mods` folder from the zip into the game folder, the one with `GHPC.exe` in it (Steam: right-click GHPC >
-   Manage > Browse local files). You should end up with:
+3. Copy the `Mods` folder from the zip into the game's `Bin` folder, the one with `GHPC.exe` in it (Steam: right-click GHPC >
+   Manage > Browse local files, then open `Bin`). `MelonLoader` and `UserData` are in there too. You should end up with:
    ```
    Mods\T90A.dll
    Mods\T90A\t90a
@@ -216,6 +216,7 @@ before editing it.
 | `Campaign prevalence` | how common it is (1 = as common as a typical tank) | 0.5 |
 | `Campaign unlock after missions` | number | 2 |
 | `APFSDS` | `"3BM42"` / `"3BM60"`, where the game doesn't pick one itself | 3BM60 |
+| `Force APFSDS` | true: the campaign gives every T-90A the `APFSDS` round instead of drawing one from its ammo supply | false |
 | `Gunner night sight` | `"ESSA"` / `"Buran-M"` | ESSA |
 | `ESSA electronic zoom` | true / false | true |
 | `Fire only when the gun is laid` | true: after a lase the gun waits until it's at the elevation the computer set. false: fires any time, but a shot while it's still climbing falls short | true |
@@ -224,6 +225,7 @@ before editing it.
 | `Shtora-1 automatic screens` | false: the warning only, and you fire the screen from the vehicle menu or with the smoke key | true |
 | `Shtora-1 alarm tone` | false: the panel's lamps only | true |
 | `Shtora-1 jammer on at spawn` | false: off until you switch it on (AI crews still do in a fight) | true |
+| `Shtora-1 jam chance` | 0 to 1, how often the jammer throws off a wire-guided missile fired from in front of the gun | 0.6 |
 | `Shtora-1 panel on screen` | false: no panel, the tone only | true |
 | `Shtora-1 panel always on screen` | true: on screen the whole time you're in the T-90A | false |
 | `Kord spent cases` | false: no cases, the belt still feeds | true |

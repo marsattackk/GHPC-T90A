@@ -10,8 +10,18 @@ namespace T90A
 		// The jammer and the screens each have their own try, so one that throws leaves the other fitted.
 		static readonly ConversionStep<Vehicle>[] Steps =
 		{
-			new ConversionStep<Vehicle> { What = "Shtora-1 jammer", Run = FitJammer },
-			new ConversionStep<Vehicle> { What = "Shtora-1 screens", Run = FitScreens },
+			new ConversionStep<Vehicle>
+			{
+				What = "Shtora-1 jammer",
+				Otherwise = "no jammer: guided missiles keep their lock",
+				Run = FitJammer,
+			},
+			new ConversionStep<Vehicle>
+			{
+				What = "Shtora-1 screens",
+				Otherwise = "no laser warning, panel or screening grenades",
+				Run = FitScreens,
+			},
 		};
 
 		internal static void Apply(Vehicle vehicle)
@@ -26,6 +36,7 @@ namespace T90A
 		{
 			var jammer = Jammer.Copy();
 			jammer.OnAtSpawn = T90AMod.ShtoraJammerAtSpawn.Value;
+			jammer.BreakChance = Mathf.Clamp01(T90AMod.ShtoraJamChance.Value);
 			DevPreview(jammer);
 			Shtora.Apply(vehicle, jammer);
 		}
@@ -41,14 +52,19 @@ namespace T90A
 			ShtoraScreen.Apply(vehicle, screens);
 		}
 
+		// 0.6 is the chance it breaks a MILAN's or a HOT's guidance (btvt.info, «Комплекс оптико-электронного подавления «Штора-1»»);
+		// I use it for every missile on the list. The default of the "Shtora-1 jam chance" setting.
+		internal const float JamChance = 0.6f;
+
 		static readonly Shtora.Settings Jammer = new Shtora.Settings
 		{
 			Tag = T90AMod.FriendlyName,
 			EmitterLeft = "shtora_l",
 			EmitterRight = "shtora_r",
+			// ±20 deg of the bore across and 4.5 deg high, which I read as ±2.25 (btvt.info, «Основной боевой танк Т-90»).
 			SectorAz = 20f,
 			SectorEl = 2.25f,
-			BreakChance = 0.6f,
+			BreakChance = JamChance,
 			Relock = new Vector2(0.3f, 0.7f),   // no source says where the lock comes back. This and the jitter are mine
 			JitterDeg = 30f,
 			Missiles = new[] { "BGM-71", "HOT", "MILAN", "9M111", "9M113", "9M112", "9M17", "9M114" },

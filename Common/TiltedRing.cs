@@ -38,6 +38,7 @@ namespace T90A.Common
 
 		internal static bool Apply(GHPC.Vehicle.Vehicle vehicle, Quaternion tilt, string tag = "tilted ring")
 		{
+			if (Orig == null || Stowed == null) return false;
 			var root = vehicle.transform;
 			var hull = RigBones.Hull(root);
 			var turret = hull != null ? RigBones.Turret(root) : null;

@@ -33,7 +33,10 @@ namespace T90A.Common
 
 		internal abstract class Station : MonoBehaviour
 		{
+			// Fields a tank never sets keep their defaults here: another tank sets them (CS0649 is off for this declaration only).
+#pragma warning disable CS0649
 			internal WeaponSystemInfo Info;
+#pragma warning restore CS0649
 			internal abstract IEnumerable<CameraSlot> Sights { get; }
 
 			internal virtual IEnumerable<CameraSlot> WeaponSights => Sights;
@@ -128,6 +131,8 @@ namespace T90A.Common
 			internal int Removed, Scrubbed;
 		}
 
+		// Fields a tank never sets keep their defaults here: another tank sets them (CS0649 is off for this declaration only).
+#pragma warning disable CS0649
 		internal sealed class GunSettings
 		{
 			public string Name;
@@ -137,9 +142,12 @@ namespace T90A.Common
 			public int B32PerTracer;
 			public string BeltName = "12.7mm B-32 / BZT-44";
 		}
+#pragma warning restore CS0649
 
 		internal static Gun CloneGun(Donor d, Transform holder, GunSettings s, string tag)
 		{
+			if (StageDuration == null || RackClipTypes == null || RackInitialCounts == null) return null;
+			if (UnitPlatforms == null || UnitStatuses == null) return null;
 			var gun = new Gun();
 			gun.Go = Object.Instantiate(d.Weapon.gameObject, holder, false);
 			gun.Go.name = s.Name;
@@ -154,7 +162,7 @@ namespace T90A.Common
 			}
 			gun.Scrubbed = Scrub(gun.Go, d.Root);
 			gun.Weapon.DamageName = s.DamageName;
-			gun.DonorCycle = gun.Feed.RoundCycleStages.Sum(stage => (float)StageDuration.GetValue(stage));
+			gun.DonorCycle = gun.Feed.RoundCycleStages.Sum(x => (float)StageDuration.GetValue(x));
 			gun.Cycle = 60f / s.RoundsPerMinute;
 			// The weapon takes its rate from the feed's stages in Awake.
 			ScaleStages(gun.Feed, gun.Cycle);
@@ -170,7 +178,7 @@ namespace T90A.Common
 		}
 
 		internal static float StagesSum(IEnumerable<AmmoFeed.ReloadStage> stages)
-			=> stages.Sum(s => (float)StageDuration.GetValue(s));
+			=> StageDuration == null ? 0f : stages.Sum(s => (float)StageDuration.GetValue(s));
 
 		internal static void SetRate(WeaponSystem w, float roundsPerMinute)
 		{
@@ -187,7 +195,7 @@ namespace T90A.Common
 					StageDuration.SetValue(stage, (float)StageDuration.GetValue(stage) * cycle / now);
 		}
 
-		internal static string InitialCountsText(AmmoRack r) => string.Join("/", (int[])RackInitialCounts.GetValue(r) ?? new int[0]);
+		internal static string InitialCountsText(AmmoRack r) => string.Join("/", (int[])RackInitialCounts?.GetValue(r) ?? new int[0]);
 
 		internal static (GameObject fcsGo, FireControlSystem fcs, GameObject opticGo, int removed, int scrubbed) CloneFcs(
 			Donor d,
@@ -251,6 +259,7 @@ namespace T90A.Common
 			IEnumerable<Component> reporters,
 			IEnumerable<CameraSlot> sights)
 		{
+			if (UnitPlatforms == null || UnitStatuses == null) return new IDamageStatus[0];
 			wm.Weapons = wm.Weapons.Concat(new[] { info }).ToArray();
 			UnitPlatforms.SetValue(vehicle, (vehicle.AimablePlatforms ?? new AimablePlatform[0]).Concat(platforms).ToArray());
 			var statuses = (IDamageStatus[])UnitStatuses.GetValue(vehicle) ?? new IDamageStatus[0];
@@ -261,7 +270,7 @@ namespace T90A.Common
 				.ToArray();
 			UnitStatuses.SetValue(vehicle, statuses.Concat(ours).ToArray());
 			// Empty means every slot under the unit. Append to it and ours are the only sights left.
-			if (vehicle.DesignatedCameraSlots != null && vehicle.DesignatedCameraSlots.Length > 0)
+			if (UnitSlots != null && vehicle.DesignatedCameraSlots != null && vehicle.DesignatedCameraSlots.Length > 0)
 				UnitSlots.SetValue(vehicle, vehicle.DesignatedCameraSlots.Concat(sights.Where(s => s != null)).ToArray());
 			return ours;
 		}
@@ -275,7 +284,10 @@ namespace T90A.Common
 		{
 			var slots = vehicle.DesignatedCameraSlots;
 			var missing = st.Sights.Where(s => s != null && (slots == null || !slots.Contains(s))).ToArray();
-			if (slots != null && slots.Length > 0 && missing.Length > 0) UnitSlots.SetValue(vehicle, slots.Concat(missing).ToArray());
+			if (UnitSlots != null && slots != null && slots.Length > 0 && missing.Length > 0)
+			{
+				UnitSlots.SetValue(vehicle, slots.Concat(missing).ToArray());
+			}
 			var crew = vehicle.GetComponent<CrewManager>();
 			if (crew?.CrewMembers == null || st.Info == null) return;
 			foreach (var member in crew.CrewMembers)
@@ -354,6 +366,11 @@ namespace T90A.Common
 		[HarmonyPatch(typeof(CameraManager), "ToggleCameraSlotSet")]
 		static class SlotSetPatch
 		{
+			static bool Prepare() => FixedSlotsField != null
+				&& FreeSlotsField != null
+				&& InteriorIndexField != null
+				&& ExteriorIndexField != null;
+
 			static void Prefix(CameraManager __instance)
 			{
 				bool goingIn = __instance.ExteriorMode;
@@ -378,6 +395,8 @@ namespace T90A.Common
 		[HarmonyPatch(typeof(CameraManager), "ResetTempAttach")]
 		static class TempAttachPatch
 		{
+			static bool Prepare() => ValidSlotsField != null && InteriorIndexField != null && ExteriorIndexField != null;
+
 			static void Prefix(CameraManager __instance)
 			{
 				var valid = (List<CameraSlot>)ValidSlotsField.GetValue(__instance);

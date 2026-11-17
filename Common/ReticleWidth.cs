@@ -10,9 +10,10 @@ namespace T90A.Common
 	// field of view.
 	internal class ReticleWidth : MonoBehaviour
 	{
-		const float Exponent = 0.6f;
+		const float DefaultExponent = 0.6f;
 
 		UsableOptic _optic;
+		float _exponent;
 		ReticleSO _reticle;
 		List<ReticleTree.Line> _lines;
 		float _narrowFov;
@@ -22,7 +23,7 @@ namespace T90A.Common
 		static readonly Dictionary<ReticleSO, float> Held = new Dictionary<ReticleSO, float>();
 		static readonly List<ReticleWidth> All = new List<ReticleWidth>();
 
-		internal static void Attach(UsableOptic optic)
+		internal static void Attach(UsableOptic optic, float exponent = DefaultExponent)
 		{
 			if (optic.GetComponent<ReticleWidth>() != null) return;
 			All.RemoveAll(i => i == null);
@@ -30,10 +31,9 @@ namespace T90A.Common
 			var reticleWidth = optic.gameObject.AddComponent<ReticleWidth>();
 			All.Add(reticleWidth);
 			reticleWidth._optic = optic;
-			reticleWidth._reticle = optic.reticleMesh.reticleSO;
+			reticleWidth._exponent = exponent;
 			reticleWidth._narrowFov = new[] { optic.slot.DefaultFov }.Concat(optic.slot.OtherFovs ?? new float[0]).Min();
-			reticleWidth._lines = AllLines(reticleWidth._reticle).ToList();
-			foreach (var line in reticleWidth._lines) if (!_base.ContainsKey(line)) _base[line] = line.thickness.MRADS;
+			reticleWidth.Bind(optic.reticleMesh.reticleSO);
 			optic.slot.ZoomChanged += reticleWidth.Refresh;
 			optic.slot.ActiveChanged += reticleWidth.OnActive;
 			reticleWidth.Refresh();
@@ -49,13 +49,22 @@ namespace T90A.Common
 			}
 		}
 
+		void Bind(ReticleSO reticle)
+		{
+			_reticle = reticle;
+			_lines = AllLines(reticle).ToList();
+			foreach (var line in _lines) if (!_base.ContainsKey(line)) _base[line] = line.thickness.MRADS;
+			_applied = -1f;
+		}
+
 		void OnActive(bool now) { if (now) Refresh(); }
 
-		void Refresh()
+		internal void Refresh()
 		{
-			if (_optic == null || _optic.reticleMesh.reticleSO != _reticle) return;
+			if (_optic == null || _optic.reticleMesh == null || _optic.reticleMesh.reticleSO == null) return;
+			if (_optic.reticleMesh.reticleSO != _reticle) Bind(_optic.reticleMesh.reticleSO);
 			float fov = _optic.slot.CurrentFov;
-			float k = Mathf.Pow(Mathf.Max(1f, fov / Mathf.Max(0.1f, _narrowFov)), Exponent);
+			float k = Mathf.Pow(Mathf.Max(1f, fov / Mathf.Max(0.1f, _narrowFov)), _exponent);
 			if (Mathf.Abs(k - _applied) >= 0.01f && ReticleMeshes.Smr != null)
 			{
 				Hold(_reticle, _lines, k);

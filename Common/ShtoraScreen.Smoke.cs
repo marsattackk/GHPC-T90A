@@ -33,7 +33,7 @@ namespace T90A.Common
 
 		static GameObject Grenade3D17(GameObject basePrefab, Settings s)
 		{
-			if (basePrefab == null) return null;
+			if (basePrefab == null || FuseField == null || EffectField == null) return null;
 			if (Made.TryGetValue(basePrefab, out var done) && done != null) return done;
 			if (Made.ContainsValue(basePrefab)) return basePrefab;
 			try

@@ -12,6 +12,8 @@ namespace T90A.Common
 			var meshFilter = cover.GetComponent<MeshFilter>();
 			var meshRenderer = cover.GetComponent<MeshRenderer>();
 			if (meshFilter == null || meshRenderer == null || meshFilter.sharedMesh == null) return null;
+			var restField = Reflect.Field(typeof(AimablePlatform), "_originalLocalRotation");
+			if (restField == null) return null;
 			var mesh = Object.Instantiate(meshFilter.sharedMesh);
 			mesh.name = meshFilter.sharedMesh.name + " (skinned)";
 			var vertices = mesh.vertices;
@@ -28,7 +30,7 @@ namespace T90A.Common
 			// The gun can already be elevated here, bind at rest.
 			var plat = root.GetComponentsInChildren<AimablePlatform>(true).FirstOrDefault(c => c.Transform == gun);
 			var restRot = plat != null
-				? (Quaternion)Reflect.Field(typeof(AimablePlatform), "_originalLocalRotation").GetValue(plat)
+				? (Quaternion)restField.GetValue(plat)
 				: gun.localRotation;
 			var gunRestInTurret = gun.parent == turret
 				? Matrix4x4.TRS(gun.localPosition, restRot, gun.localScale)

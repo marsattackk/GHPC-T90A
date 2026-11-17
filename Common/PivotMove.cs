@@ -32,8 +32,8 @@ namespace T90A.Common
 			var orig = Reflect.Field(typeof(AimablePlatform), "_originalLocalRotation");
 			var gunPlat = plats.FirstOrDefault(p => p.Transform == gun);
 			var turretPlat = plats.FirstOrDefault(p => p.Transform == turret);
-			var gunRest = gunPlat != null ? (Quaternion)orig.GetValue(gunPlat) : gun.localRotation;
-			var turretRest = turretPlat != null ? (Quaternion)orig.GetValue(turretPlat) : turret.localRotation;
+			var gunRest = gunPlat != null && orig != null ? (Quaternion)orig.GetValue(gunPlat) : gun.localRotation;
+			var turretRest = turretPlat != null && orig != null ? (Quaternion)orig.GetValue(turretPlat) : turret.localRotation;
 			// Rest pose first. The AI may already have turned the turret.
 			turret.localRotation = turretRest;
 			gun.localRotation = gunRest;
@@ -61,7 +61,7 @@ namespace T90A.Common
 						.Select(kept => (kept, kept.position, kept.rotation)).ToList();
 					string Kid(Transform child)
 						=> $"{child.name} [{string.Join(", ", child.GetComponents<Component>().Where(c => c != null && !(c is Transform)).Select(x => x.GetType().Name))}]";
-					var moved = muzzle.Cast<Transform>().Where(c => stay.All(saved => saved.kept != c)).Select(Kid).ToList();
+					var moved = muzzle.Cast<Transform>().Where(c => stay.All(x => x.kept != c)).Select(Kid).ToList();
 					muzzle.position = root.TransformPoint(s.NewMuzzle.Value);
 					foreach (var (child, position, rotation) in stay) child.SetPositionAndRotation(position, rotation);
 					var now = root.InverseTransformPoint(muzzle.position);

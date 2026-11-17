@@ -142,7 +142,7 @@ namespace T90A.Common
 					vis.name = prefix + gear.Group;
 					count++;
 				}
-				log.Add($"running gear: {count} of {map.GearParts.Length} War Thunder parts on their rig bones"
+				log.Add($"running gear: {count} of {map.GearParts.Length} model parts on their rig bones"
 					+ (miss.Count > 0 ? $"; NOT FOUND: {string.Join(", ", miss)}" : ""));
 			}
 			else log.Add("running gear: the base vehicle's");

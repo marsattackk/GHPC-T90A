@@ -194,6 +194,12 @@ namespace T90A.Common
 								problems.Add($"'{fields[1]}': unknown material '{entry.Material}', left out");
 								continue;
 							}
+							if (entry.Variable ? VariableType == null : UMaterial == null)
+							{
+								string armourClass = entry.Variable ? "VariableArmor" : "UniformArmor";
+								problems.Add($"'{fields[1]}': GHPC {armourClass}._armorType not found, left out");
+								continue;
+							}
 							piece.name = fields[1];
 							Setup(piece.gameObject, entry, codex, vehicle, tag);
 							Followers.PlaceOnBone(piece, bone, target);
@@ -218,6 +224,7 @@ namespace T90A.Common
 		static readonly AccessTools.FieldRef<UniformArmor, bool> UIsEra = Reflect.FieldRefAccess<UniformArmor, bool>("_isEra");
 		static readonly AccessTools.FieldRef<UniformArmor, bool> UIsSlat = Reflect.FieldRefAccess<UniformArmor, bool>("_isSlatArmor");
 		static readonly AccessTools.FieldRef<UniformArmor, bool> UNoDecals = Reflect.FieldRefAccess<UniformArmor, bool>("_noImpactDecals");
+		static readonly System.Reflection.FieldInfo VariableType = Reflect.Field(typeof(VariableArmor), "_armorType");
 
 		static void Setup(GameObject go, DmArmour.Entry e, ArmorCodexScriptable codex, Vehicle vehicle, string tag)
 		{
@@ -231,17 +238,17 @@ namespace T90A.Common
 			{
 				var armor = go.AddComponent<VariableArmor>();
 				armor.SetName(e.Name);
-				Reflect.Field(typeof(VariableArmor), "_armorType").SetValue(armor, codex);
+				VariableType.SetValue(armor, codex);
 				armor.Unit = vehicle;
 			}
 			else
 			{
 				var armor = go.AddComponent<UniformArmor>();
-				UName(armor) = e.Name;
+				if (UName != null) UName(armor) = e.Name;
 				UMaterial(armor) = codex;
-				UIsEra(armor) = e.Era;
-				UIsSlat(armor) = e.Slat;
-				UNoDecals(armor) = e.Era;
+				if (UIsEra != null) UIsEra(armor) = e.Era;
+				if (UIsSlat != null) UIsSlat(armor) = e.Slat;
+				if (UNoDecals != null) UNoDecals(armor) = e.Era;
 				armor.ThicknessListed = UniformArmor.ThicknessMode.RHAE;
 				armor.PrimarySabotRha = e.Ke;
 				armor.PrimaryHeatRha = e.Ce;

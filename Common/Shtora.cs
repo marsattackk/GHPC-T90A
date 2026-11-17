@@ -17,6 +17,8 @@ namespace T90A.Common
 	// ShtoraScreen.
 	internal static class Shtora
 	{
+		// Fields a tank never sets keep their defaults here: another tank sets them (CS0649 is off for this declaration only).
+#pragma warning disable CS0649
 		internal sealed class Settings
 		{
 			public string Tag;
@@ -30,6 +32,7 @@ namespace T90A.Common
 			public bool OnAtSpawn;
 			internal Settings Copy() => (Settings)MemberwiseClone();
 		}
+#pragma warning restore CS0649
 
 		internal sealed class Station : MonoBehaviour
 		{
@@ -326,7 +329,7 @@ namespace T90A.Common
 				flight = new Flight { Launch = r.transform.position, Noise = Draw() * 100f };
 				Flights[r] = flight;
 				if (Flights.Count > 64)
-					foreach (var staleRound in Flights.Keys.Where(round => round == null || round.IsDestroyed).ToList())
+					foreach (var staleRound in Flights.Keys.Where(x => x == null || x.IsDestroyed).ToList())
 						Flights.Remove(staleRound);
 			}
 			flight.Seen = r.TimeTraveled;

@@ -34,8 +34,11 @@ player's log tells you which build they ran. The version comes from `MelonInfo` 
 `tests\` covers the bits that don't need the game: the reticle files' expression language, the reticle JSON, MiniJson,
 `dm_armour` parsing, the bundle text numbers, version comparison, the settings migrations, the fire gate, the aim clamp
 and the Shtora sector. It compiles those files straight out of `Common\` with stand-ins for MelonLoader, so it runs
-without GHPC and GitHub Actions runs it on every push. CI never builds the mod itself, because that needs the game's
-DLLs, so build it against your own copy and run `tools\check-game.ps1` before a pull request.
+without GHPC and GitHub Actions runs it on every push. It also reads what ships in `Resources\`: `ShippedTextTests.cs`
+takes `dm_armour.txt` and fails on a line that doesn't read, a mode or material the damage model doesn't know, or a
+piece count other than the one at its top (change `Pieces` there when you add or remove a piece on purpose), and
+`ShippedReticleTests.cs` does the reticles. CI never builds the mod itself, because that needs the game's DLLs, so build
+it against your own copy and run `tools\check-game.ps1` before a pull request.
 
 ```
 dotnet test tests
@@ -75,8 +78,8 @@ docs\       game-updates.md, bundle.md, reticles.md and shared-features.md for y
 `T90A\` is small, one file per job. `Mod.cs` is the entry point: the settings, the data load and the unit's
 registration, with the settings' descriptions in `SettingText.cs`. `Conversion.cs` does the converting, calling the
 rest: `Armour`, `Firepower` (rounds, counts, gun settings), `Drive`, `Countermeasures` (Shtora-1), and the
-commander's station in `Commander.cs` with `Commander.Seat.cs`, `Commander.Sight.cs` and `Commander.Zones.cs`. The
-sights come a moment later from `Sights.cs`, with `Sights.1G46.cs`, `Sights.Night.cs` and `Sights.Readout.cs`;
+commander's station in `Commander.cs` with `Commander.Seat.cs`, `Commander.Sight.cs` (the TKN-4S), `Commander.Avtomat.cs`
+(its Avtomat mode), `Commander.Readout.cs` (its indicator strip) and `Commander.Zones.cs`. The sights come a moment later from `Sights.cs`, with `Sights.1G46.cs`, `Sights.Night.cs` and `Sights.Readout.cs`;
 `Reticles.cs` is the shared reticle handle.
 
 `tools\verify-release.ps1` rebuilds a tag and compares it with a release DLL or zip (the last step of Releasing).
@@ -163,12 +166,13 @@ this table says where each one lives. `tools\check-settings.ps1` checks both tab
 | `Enabled` | `Mod.cs` | everything, off means the mod does nothing |
 | `Add to campaign roster`, `Campaign prevalence`, `Campaign unlock after missions` | `Common\UnitRegistry.cs` (`CampaignConfig`), set up in `T90A\Mod.cs` | the campaign roster, re-read at each mission load |
 | `APFSDS` | `Mod.cs` | `Firepower`, the default round where the game doesn't pick one |
+| `Force APFSDS` | `Mod.cs` | `Firepower` (`ForceApfsds`): the campaign's roll gives the `APFSDS` round |
 | `Gunner night sight` | `Mod.cs` | `NightSight` (`ESSA` or `Buran-M`) |
 | `ESSA electronic zoom` | `Mod.cs` | `NightSight` |
 | `Fire only when the gun is laid` | `Mod.cs` | `Sights`, which hands it to `GunnerFcs` as the firing permission |
 | `Weathered paint` | `Common\PaintFinish.cs`, set up in `T90A\Mod.cs` and `T90A\Conversion.cs` | `Conversion` (the paint step) |
 | `Shtora-1` | `Mod.cs` | `Countermeasures`, off skips the jammer and the screens |
-| `Shtora-1 automatic screens`, `Shtora-1 alarm tone`, `Shtora-1 jammer on at spawn`, `Shtora-1 panel on screen`, `Shtora-1 panel always on screen` | `Mod.cs` | copied into the `Jammer` and `Screens` settings in `Countermeasures.cs` |
+| `Shtora-1 automatic screens`, `Shtora-1 alarm tone`, `Shtora-1 jammer on at spawn`, `Shtora-1 jam chance`, `Shtora-1 panel on screen`, `Shtora-1 panel always on screen` | `Mod.cs` | copied into the `Jammer` and `Screens` settings in `Countermeasures.cs` |
 | `Kord spent cases` | `Mod.cs` | `Commander` |
 | `ERA destruction effects` | `Mod.cs` | `EraBricks.Look` |
 | `Armour preset` | `T90A\Armour.cs` (`Common\ArmourPresets.cs`, text in `SettingText.cs`) | `Armour` (`game-scale` or `source-only` numbers) |

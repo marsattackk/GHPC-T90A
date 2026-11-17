@@ -188,6 +188,7 @@ SHA-256 of `Mods/T90A/t90a` in each release zip. When a release changes the bund
 | 0.4.3 | `46e7f122d1630e7afcf82df6e7adcfeee631cb8fd7edfdd31489be4ac855e8e6` |
 | 0.4.4 | `18d41763d99896ec7c815f0e64bc04512cd2edc766a6f985655d436259af86d1` |
 | 0.5.0 | `e17c1c3c6aa23478b6f3474847a62aa0b6541e91b7c6893a255825ca3376e963` |
+| 0.5.1 | `e8ee068d0e7e88414a02288fac136a54405ddae264bd9dfb04935bcb2dc58d1d` |
 
 0.1.0 and 0.4.2 are missing because my saved zips for those don't match what GitHub serves.
 

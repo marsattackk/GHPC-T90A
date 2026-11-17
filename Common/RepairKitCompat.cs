@@ -100,7 +100,7 @@ namespace T90A.Common
 			// Neither GHPC nor RepairKit ever repairs the radio or the missile guidance.
 			var objs = ModuleBuilder.UnitObjects(v);
 			foreach (var guidance in objs.SelectMany(r => r.GetComponentsInChildren<MissileGuidanceUnit>(true)).Distinct())
-				if (guidance.Damaged && healed.Contains(guidance.GuidanceComponent))
+				if (GuidanceDamagedSet != null && guidance.Damaged && healed.Contains(guidance.GuidanceComponent))
 					GuidanceDamagedSet.Invoke(guidance, new object[] { false });
 			foreach (var radio in objs.SelectMany(r => r.GetComponentsInChildren<Radio>(true)).Distinct())
 				if (!radio.enabled && healed.Contains(RadioZone?.GetValue(radio) as DC)) radio.enabled = true;

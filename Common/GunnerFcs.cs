@@ -37,6 +37,7 @@ namespace T90A.Common
 			public Func<bool> FireWhenLaid;
 			public bool GateStaysOnGun;
 			public bool ManualMode = true;
+			public bool LeadLikeM1;
 		}
 #pragma warning restore CS0649
 
@@ -108,6 +109,7 @@ namespace T90A.Common
 					if (!Sights.TryGetValue(__instance, out var optics)) return;
 					var mode = __instance.CurrentStabMode;
 					if (mode != StabilizationMode.Vector && mode != StabilizationMode.None) return;
+					if (mode == StabilizationMode.None && SetAim == null) return;
 					UsableOptic activeOptic = null;
 					foreach (var optic in optics)
 						if (optic != null && optic.slot != null && optic.slot.IsActive)
@@ -165,14 +167,14 @@ namespace T90A.Common
 			fcs.RefreshAimOnAmmoChange = true;
 
 			fcs.RecordTraverseRateBuffer = true;
-			fcs.TraverseBufferSeconds = 1f;
+			fcs.TraverseBufferSeconds = s.LeadLikeM1 ? 0.5f : 1f;
 			fcs.DynamicLead = true;
 			fcs.InertialCompensation = false;
 			SetPrivate(fcs, "PointStabAffectsLead", false);
 			SetPrivate(fcs, "InertiaLeadIncludesVertical", false);
 			SetPrivate(fcs, "_counterMotionLeadAlwaysOn", false);
-			SetPrivate(fcs, "_autoDumpViaPalmSwitches", false);
-			SetPrivate(fcs, "_horizontalLeadOnly", true);
+			SetPrivate(fcs, "_autoDumpViaPalmSwitches", s.LeadLikeM1);
+			SetPrivate(fcs, "_horizontalLeadOnly", !s.LeadLikeM1);
 			SetPrivate(fcs, "_useSeparateLead", false);
 
 			if (s.FireGateAngle >= 0f) fcs.FireGateAngle = s.FireGateAngle;
@@ -234,6 +236,7 @@ namespace T90A.Common
 		// GHPC's DegreesOffset gate reads 0 outside the drive's stabilised mode and when the goal is clipped to the barrel:
 		// the gun fires wherever it is. Measure the lay yourself.
 		// Range 0 crept up by hull jitter froze the gun: the goal became range x aim, a vector Unity takes for zero.
+		// It creeps before the port registers the fire control too: put back any range under NoRange, not only one leaving 0.
 		internal static class NoRangeDeltaD
 		{
 			internal static readonly HashSet<FireControlSystem> Fcs = new HashSet<FireControlSystem>();
@@ -242,13 +245,11 @@ namespace T90A.Common
 			[HarmonyPatch(typeof(FireControlSystem), "Update")]
 			static class Patch
 			{
-				static void Prefix(FireControlSystem __instance, out float __state) => __state = __instance.TargetRange;
-
-				static void Postfix(FireControlSystem __instance, float __state)
+				static void Postfix(FireControlSystem __instance)
 				{
 					try
 					{
-						if (__state != 0f || !Fcs.Contains(__instance) || !__instance.ActiveDeltaD) return;
+						if (!Fcs.Contains(__instance) || !__instance.ActiveDeltaD) return;
 						float range = __instance.TargetRange;
 						if (range > 0f && range < NoRange)
 						{

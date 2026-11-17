@@ -14,6 +14,12 @@ namespace T90A
 			+ " supply override it): 3BM60 Svinets-2 (default; a 2010s round, for T-90As with the long-round autoloader of 2006)"
 			+ " or 3BM42 Mango (the T-90A's stock round at its service entry).";
 
+		internal static readonly string ForceApfsds =
+			"false (default): the campaign picks each T-90A's APFSDS from the army's ammo supply (3BM42 Mango, and from 4 missions on 3BM60"
+			+ " Svinets-2, more often as the logistics score rises). true = every T-90A carries the APFSDS setting's round in the campaign"
+			+ " too. In Instant Action the mission customizer's ammo dropdown still decides."
+			+ AfterChange;
+
 		internal static readonly string NightSight =
 			"ESSA = thermal sight, T-90A from 2006 (default); Buran-M = 3rd-gen image intensifier of the first T-90As (obr. 2004).";
 
@@ -44,6 +50,12 @@ namespace T90A
 		internal static readonly string ShtoraJammerAtSpawn =
 			"true (default): the IR jammer is on from the start. false = off until you switch it on (vehicle menu: Shtora-1), as"
 			+ " the real crew does near a threat; AI crews still switch it on in combat."
+			+ AfterChange;
+
+		internal static readonly string ShtoraJamChance =
+			"Chance, from 0 to 1, that the IR jammer breaks a wire-guided missile's guidance (TOW, HOT, MILAN, Konkurs and the"
+			+ " like). 0.6 (default) is the figure Russian sources give against MILAN and HOT. It only acts on a missile launched"
+			+ " from inside the jammer's sector, 20 deg either side of the gun: one fired from the flank or the rear is never jammed."
 			+ AfterChange;
 
 		internal static readonly string ShtoraPanel =

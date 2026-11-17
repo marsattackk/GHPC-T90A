@@ -16,9 +16,13 @@ namespace T90A.Common
 		internal static readonly AccessTools.FieldRef<LateFollow, Quaternion> RotShift =
 			Reflect.FieldRefAccess<LateFollow, Quaternion>("_localRotShift");
 
+		internal static bool Ready => PosShift != null && RotShift != null;
+
 		internal static void PlaceOnBone(Transform piece, Transform bone, Transform target)
 		{
-			var follow = target.GetComponentsInParent<LateFollow>(true).FirstOrDefault(f => f.FollowTarget == bone);
+			var follow = Ready
+				? target.GetComponentsInParent<LateFollow>(true).FirstOrDefault(f => f.FollowTarget == bone)
+				: null;
 			if (follow == null)
 			{
 				piece.SetParent(bone, false);
@@ -50,6 +54,7 @@ namespace T90A.Common
 
 		internal static int Refollow(Transform root, Transform bone, (Vector3 pos, Quaternion rot) old)
 		{
+			if (!Ready) return 0;
 			var set = On(root, bone);
 			var oldM = Matrix4x4.TRS(old.pos, old.rot, bone.lossyScale);
 			foreach (var follower in set)
@@ -71,6 +76,7 @@ namespace T90A.Common
 
 		internal static bool Synced(params Transform[] bones)
 		{
+			if (!Ready) return true;
 			var list = bones.Where(b => b != null).ToList();
 			foreach (var follower in Object.FindObjectsByType<LateFollow>(FindObjectsSortMode.None))
 				if (list.Contains(follower.FollowTarget)

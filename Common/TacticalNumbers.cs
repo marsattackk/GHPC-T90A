@@ -78,7 +78,7 @@ namespace T90A.Common
 			};
 			if (groups.Any(i => i.Count == 0)) return "";
 			var centres = groups
-				.Select(indexGroup => indexGroup.Aggregate(Vector3.zero, (t, i) => t + vertices[i]) / indexGroup.Count)
+				.Select(ig => ig.Aggregate(Vector3.zero, (t, i) => t + vertices[i]) / ig.Count)
 				.ToArray();
 			float vanilla = Vector3.Distance(centres[0], centres[1]);
 			var mid = (centres[0] + centres[1]) * 0.5f;

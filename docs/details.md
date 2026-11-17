@@ -149,6 +149,72 @@ the clean factory finish on the right.
 - The Shtora panel's lamp layout is inferred from the heads' sectors, and its mode knob is only drawn. Where the
   jammer's lock comes back after a jam, and how far its false commands wander, are my own numbers.
 - The War Thunder model has no set-off ERA brick, so the blown-open look (off by default) is a best guess.
+- The round mix (22 APFSDS, 8 HEAT, 8 HE-Frag and 4 Invar) and how the carousel's 22 split (12 / 4 / 4 and two Invars)
+  are mine, because nobody publishes a standard load. Only the 42 rounds and the 22 in the carousel are sourced.
+- In the campaign the 3BM60 only turns up after four missions, at a quarter of the 3BM42's rate, and less when
+  logistics go badly. Those numbers are mine; nothing says how common it was.
+- The darts' penetration at the muzzle is worked out so each meets the maker's figure at 2000 m (230 and 300 mm at 60°)
+  in GHPC's model. The 3BM42 keeps the game's 3BM32 drag, because nothing gives its velocity loss. The 3BM60's flight
+  mass isn't published, so it gets the 4.5 kg of its core from one Russian list, with the drag set for that list's
+  3.5 % loss per 1000 m.
+- GHPC flies a missile at one speed, so the Invar does 284 m/s all the way, which gets it to 5000 m in the real 17.6 s.
+  It blows itself up 0.3 s later, my margin.
+- The gun's -6°13′ / +13°47′ over the nose are the T-72A manual's. The only figure I found for the T-90A, one
+  compilation's -7° / +20°, looks like the sights' limits.
+- The autoloader keeps the game's T-72M1 timing, about 7.2 s a round. The T-90's own is 6.5 s at best, 8 s for the
+  missile.
+- The gearbox is the T-72A manual's, with the final drive worked out so each gear gives that manual's speed at 2000 rpm,
+  and the reverse raised 8 % because the game's tracks run fast. The up-shift at 1900 rpm is mine: the game won't shift
+  any later than that.
+- The 1G46 zooms in nine steps from 20° to 4.5°. The real one zooms smoothly from 2.7 to 12x.
+- The 1G46's and the ESSA's views sit where the T-72M1's sights are, on the gun, not in their heads on the roof. From
+  the heads, at full traverse the view caught the head's own box now and then.
+- The fire gate's 0.1° is the T-80B's 1A33 value, because the 1V528's isn't published.
+- Nothing gives the Buran-M's field of view or look, so the T-80B's TPN-3-49 stands in. Where its head sat isn't known
+  either, so its view is the T-72M1's night sight's.
+- The TKN-4S's 7.8° day field is measured off the photo; Suvorov's table says 7°. The Kord's range keys stop at
+  1600 m, where the manual's figure ends the scale I read as the Kord's.
+- The jammer breaks guidance 6 times in 10 on every missile it works on. That's the published figure for MILAN and HOT.
+  No source names the Shturm among them; I put it on the list with the other missiles guided from the launcher. The
+  beam's 4.5° height I read as ±2.25°.
+- The screens hold for 15 s after your own shot, the middle of the 12 to 18 s the sources give. An AI tank lases you
+  again every 10 s while you're its target, and one blinded by a cloud judges range like the game's T-55 and T-62,
+  give or take 10 %. Those are my settings.
+
+**Sources**
+
+These are the ones the numbers above and in the code lean on. The armour's own are on [armour.md](armour.md).
+
+- Russian Wikipedia, [Т-90](https://ru.wikipedia.org/wiki/Т-90) (rounds, PKT belts, autoloader time, night sight
+  limits), [Катрин-ФС](https://ru.wikipedia.org/wiki/Катрин-ФС), [Рефлекс (ПТРК)](https://ru.wikipedia.org/wiki/Рефлекс_(ПТРК))
+  and [Корд (пулемёт)](https://ru.wikipedia.org/wiki/Корд_(пулемёт)).
+- S. Suvorov, «Т-90. Первый серийный российский танк» (book): the V-92S2, 1G46 and TKN-4S tables, the Kord's Avtomat
+  mode and its sector.
+- btvt.narod.ru, [«Основной боевой танк Т-90А»](https://btvt.narod.ru/4/t-90a/t-90A.htm), and btvt.info,
+  [«Основной боевой танк Т-90»](https://btvt.info/1inservice/t-90_v_strou.htm).
+- vpk.name, [«Основной боевой танк Т-90 "Владимир"»](https://vpk.name/library/f/tank-t-90.html).
+- [«Танк Т-72А. Техническое описание и инструкция по эксплуатации»](https://www.military-references.com/wp-content/uploads/books/tanks/ussr/t-72/%D0%A2%D0%B0%D0%BD%D0%BA_%D0%A2-72%D0%90_%D0%A2%D0%B5%D1%85%D0%BD%D0%B8%D1%87%D0%B5%D1%81%D0%BA%D0%BE%D0%B5_%D0%BE%D0%BF%D0%B8%D1%81%D0%B0%D0%BD%D0%B8%D0%B5_%D0%B8_%D0%B8%D0%BD%D1%81%D1%82%D1%80%D1%83%D0%BA%D1%86%D0%B8%D1%8F_%D0%BF%D0%BE_%D1%8D%D0%BA%D1%81%D0%BF%D0%BB%D1%83%D0%B0%D1%82%D0%B0%D1%86%D0%B8%D0%B8_%D0%9A%D0%BD%D0%B8%D0%B3%D0%B0_1_1986.pdf),
+  book 1 (1986): the gearbox, the speeds, the gun's limits; and btvt.narod.ru's
+  [«Основной боевой танк Т-72Б»](https://btvt.narod.ru/4/t-72B.htm) for where the spares go.
+- Patent [RU 2421679](https://patents.google.com/patent/RU2421679C1/ru), the elevation drive.
+- odetievbrony.ru's manual excerpts: [«Комплекс управления огнем 1А45»](https://odetievbrony.ru/viewtopic.php?id=457)
+  (the laser, figure 9 the 1G46 reticle is measured off), [«Прицел 1Г46»](https://odetievbrony.ru/viewtopic.php?id=447),
+  [«Прицельно-наблюдательный комплекс ПНК-4С»](https://odetievbrony.ru/viewtopic.php?id=460), the
+  [ESSA's technical description](https://odetievbrony.ru/viewtopic.php?id=475) and
+  [«Описание танка Т-90А»](https://odetievbrony.ru/viewtopic.php?id=347).
+- Главком's blog, [«Технологии в танкостроении: СУО, прицелы»](http://glavcom.blogspot.com/2020/06/tehnologii-v-tankostroeniisuopriceli.html)
+  and the NIMI brochure pages in
+  [«Технологии в танкостроении. БПС»](https://glavcom.blogspot.com/2020/04/apfsdsbps3bm42mango3bm60svinec.html).
+- [Interfax, 2019](https://www.interfax.ru/russia/666390) (Rostec on «Свинец-2»), btvt.info's
+  [«Боекомплект танков Т-64/72/80/90. БОПС»](https://btvt.info/3attackdefensemobility/bps.htm) and
+  [«Комплекс управляемого вооружения 9К119М «Рефлекс-М»»](https://btvt.info/3attackdefensemobility/tyr125.htm), and
+  Rosoboronexport's [3УБК20 page](https://web.archive.org/web/20260831074331/http://roe.ru/production/land-forces/ammunition-sv/rounds/3ubk20/?theme=theme-green)
+  on the Internet Archive.
+- vimpel-v.com, [«12,7 мм пулемет "КОРД"»](https://vimpel-v.com/small_arms/kkp/4098-127-mm-pulemet-kord.html) (the belt,
+  the case chute).
+- btvt.info, [«Комплекс оптико-электронного подавления «Штора-1»»](https://btvt.info/3attackdefensemobility/koep.htm).
+- In English: Thales' [Catherine-FC datasheet](https://pdfcoffee.com/catherine-fc-compact-thermal-imager-9-pdf-free.html)
+  (a copy) and V. Fofanov's [«2A46M Autoloader: T-72 model»](http://fofanov.free.fr/Tanks/EQP/al-72.html).
 
 ## What it shares with my T-90M
 
