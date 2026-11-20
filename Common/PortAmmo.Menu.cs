@@ -32,7 +32,8 @@ namespace T90A.Common
 			clips.Remove(Heat);
 			var sets = new List<AmmoLogisticsScriptable>();
 			preferred = new List<int>();
-			foreach (var set in new[] { ApfsdsSet }.Concat(vanilla ?? new AmmoLogisticsScriptable[0]))
+			bool random = ApfsdsMenuSet != null;
+			foreach (var set in new[] { random ? ApfsdsMenuSet : ApfsdsSet }.Concat(vanilla ?? new AmmoLogisticsScriptable[0]))
 			{
 				var options = set?.AmmoLogistics?.AmmoOptions;
 				if (options == null || sets.Contains(set)) continue;
@@ -40,7 +41,7 @@ namespace T90A.Common
 					if (options[j] != null && clips.Contains(options[j].AmmoType))
 					{
 						sets.Add(set);
-						preferred.Add(j);
+						preferred.Add(random && set == ApfsdsMenuSet && RandomWanted() ? options.Length - 1 : j);
 						break;
 					}
 			}
@@ -95,7 +96,7 @@ namespace T90A.Common
 		{
 			var ammoLogisticsScriptable = __1;
 			if (ammoLogisticsScriptable == null
-				|| ammoLogisticsScriptable != PortAmmo.ApfsdsSet
+				|| (ammoLogisticsScriptable != PortAmmo.ApfsdsSet && ammoLogisticsScriptable != PortAmmo.ApfsdsMenuSet)
 				|| string.IsNullOrEmpty(PortAmmo.S?.MenuSuffix))
 				return;
 			var entry = Entries(__instance)?.LastOrDefault()?.GetComponent<MissionConfigAmmoSelectionEntry>();
@@ -126,6 +127,7 @@ namespace T90A.Common
 			if (PortAmmo.ApfsdsSet == null || !IsPort(__instance)) return __exception;
 			var clips = __instance.LoadedAmmoList?.AmmoClips;
 			int slot = PortAmmo.RestoreFixedHeat(clips);
+			PortAmmo.RollRandomApfsds(__instance);
 			return __exception;
 		}
 

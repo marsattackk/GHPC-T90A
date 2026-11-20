@@ -115,6 +115,7 @@ namespace T90A.Common
 			internal readonly List<(DC dc, string text)> Lines = new List<(DC, string)>();
 			internal readonly Dictionary<DC, VehicleSmokeManager.SmokeSlot> Tubes = new Dictionary<DC, VehicleSmokeManager.SmokeSlot>();
 			internal bool Wired;
+			internal readonly HashSet<ModuleSpec.Module> WiredModules = new HashSet<ModuleSpec.Module>();
 			int TubesLost => Tubes.Keys.Count(t => t != null && t.IsDestroyed);
 			public bool Damaged => Lines.Any(l => l.dc != null && l.dc.IsDestroyed) || TubesLost > 0;
 			public string DamageStatus
@@ -133,7 +134,7 @@ namespace T90A.Common
 			var set = vehicle.gameObject.GetComponent<ModuleSet>() ?? vehicle.gameObject.AddComponent<ModuleSet>();
 			set.Spec = spec;
 			set.Label = label;
-			var look = Look(root);
+			var look = LookOf(vehicle);
 			foreach (var module in spec.Modules)
 			{
 				if (module.Existing || (take != null && !take(module)) || set.Built.Any(b => b.m == module)) continue;
@@ -254,6 +255,13 @@ namespace T90A.Common
 			var follower = root
 				.GetComponentsInChildren<LateFollow>(true)
 				.FirstOrDefault(c => RigBones.IsColliderGroup(c.name, name) && c.FollowTarget != null);
+			if (follower == null)
+				follower = root
+					.GetComponentsInChildren<LateFollowTarget>(true)
+					.SelectMany(f => f.LateFollowers)
+					.FirstOrDefault(c => c != null
+						&& RigBones.IsColliderGroup(c.name, name)
+						&& c.FollowTarget != null);
 			if (follower == null) return (null, null);
 			return (follower.transform.Find("AAR") ?? follower.transform, follower.FollowTarget);
 		}
@@ -294,6 +302,18 @@ namespace T90A.Common
 			meshRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
 		}
 
+		static (AarVisual template, Material material, int layer, bool enabled) LookOf(Vehicle vehicle)
+		{
+			var look = Look(vehicle.transform);
+			if (look.template != null) return look;
+			foreach (var part in UnitObjects(vehicle).Skip(1))
+			{
+				look = Look(part);
+				if (look.template != null) return look;
+			}
+			return (null, null, 8, false);
+		}
+
 		static (AarVisual template, Material material, int layer, bool enabled) Look(Transform root)
 		{
 			foreach (var zone in root.GetComponentsInChildren<DC>(true))
@@ -311,23 +331,28 @@ namespace T90A.Common
 		internal static string Wire(Vehicle vehicle, List<string> problems)
 		{
 			var set = vehicle.GetComponent<ModuleSet>();
-			if (set == null || set.Wired) return "";
+			if (set == null) return "";
+			var pending = set.Built.Where(b => !set.WiredModules.Contains(b.m)).ToList();
+			if (set.Wired && pending.Count == 0) return "";
+			bool first = !set.Wired;
 			set.Wired = true;
+			foreach (var (wiredModule, _) in pending) set.WiredModules.Add(wiredModule);
 			var label = set.Label;
 			var all = UnitObjects(vehicle);
 			var zones = all.SelectMany(p => p.GetComponentsInChildren<DC>(true)).Distinct().ToList();
 			var lines = new List<string>();
 
 			var main = MainWeapon(vehicle);
-			foreach (var pair in set.Spec.PlatformNames)
-			{
-				var platform = Platform(main, pair.Key);
-				if (platform != null) platform.Name = pair.Value;
-				else problems.Add($"platform '{pair.Key}' not found (name '{pair.Value}' not set)");
-			}
+			if (first)
+				foreach (var pair in set.Spec.PlatformNames)
+				{
+					var platform = Platform(main, pair.Key);
+					if (platform != null) platform.Name = pair.Value;
+					else problems.Add($"platform '{pair.Key}' not found (name '{pair.Value}' not set)");
+				}
 
 			var replaced = new HashSet<DC>();
-			foreach (var (replacing, builtZone) in set.Built)
+			foreach (var (replacing, builtZone) in pending)
 				foreach (var oldName in replacing.Replaces)
 				{
 					var old = zones.FirstOrDefault(c => c.Name == oldName
@@ -342,7 +367,7 @@ namespace T90A.Common
 				}
 			foreach (var old in replaced) SwitchOff(vehicle, all, old);
 
-			foreach (var (builtModule, zone) in set.Built)
+			foreach (var (builtModule, zone) in pending)
 			{
 				var notes = new List<string>();
 				foreach (var hook in builtModule.Hooks)
@@ -364,7 +389,7 @@ namespace T90A.Common
 						? $"; replaces {string.Join(", ", builtModule.Replaces.Select(r => "'" + r + "'"))}"
 						: ""));
 			}
-			foreach (var module in set.Spec.Modules.Where(c => c.Existing))
+			foreach (var module in set.Spec.Modules.Where(c => first && c.Existing))
 			{
 				var existingZone = zones.FirstOrDefault(c => c.Name == module.Name);
 				if (existingZone == null) problems.Add($"existing module '{module.Name}' not found");
@@ -486,6 +511,40 @@ namespace T90A.Common
 				return false;
 			eventInfo.AddEventHandler(dc, Delegate.CreateDelegate(eventInfo.EventHandlerType, owner, methodInfo));
 			return true;
+		}
+
+		internal static string Retire(Vehicle vehicle, IEnumerable<string> ids, List<string> problems)
+		{
+			var set = vehicle.GetComponent<ModuleSet>();
+			var wanted = ids.ToList();
+			if (set == null)
+			{
+				if (wanted.Count > 0) problems.Add($"modules to switch off ({string.Join(", ", wanted)}): none are built on this unit");
+				return "no modules built, none switched off";
+			}
+			var all = UnitObjects(vehicle);
+			int off = 0;
+			foreach (string id in wanted)
+			{
+				var found = set.Built.Where(b => b.m.Id == id).ToList();
+				if (found.Count == 0)
+				{
+					problems.Add($"module '{id}' to switch off is not built on this unit");
+					continue;
+				}
+				foreach (var entry in found)
+				{
+					set.Built.Remove(entry);
+					set.WiredModules.Remove(entry.m);
+					set.Lines.RemoveAll(l => l.dc == entry.dc);
+					set.Tubes.Remove(entry.dc);
+					if (entry.dc == null) continue;
+					SwitchOff(vehicle, all, entry.dc);
+					entry.dc.gameObject.SetActive(false);
+					off++;
+				}
+			}
+			return $"{off} of {wanted.Count} normal modules switched off";
 		}
 
 		static void SwitchOff(Vehicle vehicle, List<Transform> all, DC old)

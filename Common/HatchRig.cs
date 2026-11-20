@@ -60,7 +60,7 @@ namespace T90A.Common
 			return part;
 		}
 
-		internal static List<string> Apply(Transform root, RigMap map, string prefix, string tag)
+		internal static List<string> Apply(Transform root, RigMap map, string prefix, string tag, bool placed = false)
 		{
 			var log = new List<string>();
 			if (map == null)
@@ -102,7 +102,8 @@ namespace T90A.Common
 				var parent = part.Transform.parent;
 				var hinge = new GameObject($"{prefix}{hatch.Group} hinge").transform;
 				hinge.SetParent(parent, false);
-				hinge.SetPositionAndRotation(root.TransformPoint(hatch.Hinge), root.rotation);
+				if (placed) hinge.SetPositionAndRotation(lid.position, lid.rotation);
+				else hinge.SetPositionAndRotation(root.TransformPoint(hatch.Hinge), root.rotation);
 				var swing = new GameObject($"{prefix}{hatch.Group} swing").transform;
 				swing.SetParent(hinge, false);
 				lid.SetParent(swing, true);
@@ -145,7 +146,7 @@ namespace T90A.Common
 				log.Add($"running gear: {count} of {map.GearParts.Length} model parts on their rig bones"
 					+ (miss.Count > 0 ? $"; NOT FOUND: {string.Join(", ", miss)}" : ""));
 			}
-			else log.Add("running gear: the base vehicle's");
+			else if (!placed) log.Add("running gear: the base vehicle's");
 			foreach (var whip in map.Whips)
 			{
 				var vis = Find(whip.Group);
@@ -168,12 +169,16 @@ namespace T90A.Common
 					continue;
 				}
 				vis.name = prefix + flap.Group;
-				flaps.Add(Flap(root, vis, flap, prefix, out var jiggle));
+				flaps.Add(Flap(root, vis, flap, prefix, placed, out var jiggle));
 				if (jiggle == null) continue;
 				if (kicks == null)
 				{
-					kicks = root.gameObject.AddComponent<FlapKicks>();
-					kicks.Tag = tag;
+					kicks = root.GetComponent<FlapKicks>();
+					if (kicks == null)
+					{
+						kicks = root.gameObject.AddComponent<FlapKicks>();
+						kicks.Tag = tag;
+					}
 				}
 				kicks.Flaps.Add(jiggle);
 			}
@@ -282,14 +287,16 @@ namespace T90A.Common
 			return ends * S(depth / Mathf.Max(ramp, 1e-4f));
 		}
 
-		static string Flap(Transform root, Transform vis, RigMap.Flap f, string prefix, out Jiggle jiggle)
+		static string Flap(Transform root, Transform vis, RigMap.Flap f, string prefix, bool placed, out Jiggle jiggle)
 		{
 			jiggle = null;
 			var meshFilter = vis.GetComponent<MeshFilter>();
 			var meshRenderer = vis.GetComponent<MeshRenderer>();
 			if (meshFilter == null || meshRenderer == null || meshFilter.sharedMesh == null) return $"{f.Group} no mesh, drawn rigid";
-			var along = vis.InverseTransformDirection(root.TransformDirection(f.B - f.A)).normalized;
-			var up = Vector3.ProjectOnPlane(vis.InverseTransformDirection(root.up), along).normalized;
+			var along = placed
+				? (f.B - f.A).normalized
+				: vis.InverseTransformDirection(root.TransformDirection(f.B - f.A)).normalized;
+			var up = Vector3.ProjectOnPlane(placed ? Vector3.up : vis.InverseTransformDirection(root.up), along).normalized;
 			float half = 0.5f * (f.B - f.A).magnitude;
 			var foot = new GameObject($"{prefix}{f.Group} foot").transform;
 			foot.SetParent(vis.parent, false);

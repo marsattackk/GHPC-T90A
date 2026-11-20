@@ -4,7 +4,7 @@ using MelonLoader.Utils;
 using T90A.Common;
 using UnityEngine;
 
-[assembly: MelonInfo(typeof(T90A.T90AMod), "T-90A", "0.5.1", "marsattackk")]
+[assembly: MelonInfo(typeof(T90A.T90AMod), "T-90A", "0.5.2", "marsattackk")]
 [assembly: MelonGame("Radian Simulations LLC", "GHPC")]
 
 namespace T90A
@@ -34,6 +34,10 @@ namespace T90A
 		internal static CampaignConfig Campaign;
 		internal static MelonPreferences_Entry<string> Apfsds;
 		internal static MelonPreferences_Entry<bool> ForceApfsds;
+		internal static MelonPreferences_Entry<bool> RandomApfsds;
+		internal static MelonPreferences_Entry<string> ApfsdsPool;
+		internal static MelonPreferences_Entry<string> AmmunitionLoad;
+		internal static MelonPreferences_Entry<string> EmptyRacks;
 		internal static MelonPreferences_Entry<bool> FireWhenLaid;
 		internal static MelonPreferences_Entry<bool> WeatheredPaint;
 		internal static MelonPreferences_Entry<bool> KordCases;
@@ -85,6 +89,22 @@ namespace T90A
 				"Force APFSDS",
 				false,
 				description: SettingText.ForceApfsds);
+			RandomApfsds = cfg.CreateEntry(
+				"Random APFSDS",
+				false,
+				description: SettingText.RandomApfsds);
+			ApfsdsPool = cfg.CreateEntry(
+				"APFSDS pool",
+				"",
+				description: SettingText.ApfsdsPool);
+			AmmunitionLoad = cfg.CreateEntry(
+				"Ammunition load",
+				"Full",
+				description: SettingText.AmmunitionLoad);
+			EmptyRacks = cfg.CreateEntry(
+				"Empty racks",
+				"",
+				description: SettingText.EmptyRacks);
 			NightSightChoice = cfg.CreateEntry(
 				"Gunner night sight",
 				NightSight.Essa,

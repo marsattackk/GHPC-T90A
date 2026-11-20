@@ -146,7 +146,8 @@ namespace T90A.Common
 
 		internal static int Apply(Vehicle vehicle, GameObject prefab, DmArmour values, string tag, List<string> problems, StringBuilder table =
 			null,
-			(string group, string bone, string colliders)[] groups = null)
+			(string group, string bone, string colliders)[] groups = null,
+			System.Func<string, Vector3> boneOffset = null)
 		{
 			if (prefab == null || values == null)
 			{
@@ -169,6 +170,7 @@ namespace T90A.Common
 						problems.Add($"{group}: no rig bone / collider group, {groupRoot.childCount} piece(s) left out");
 						continue;
 					}
+					var offset = boneOffset != null ? boneOffset(group) : Vector3.zero;
 					foreach (var piece in groupRoot.Cast<Transform>().ToList())
 					{
 						string[] fields = piece.name.Split('|');
@@ -185,7 +187,7 @@ namespace T90A.Common
 							{
 								piece.name = fields[1];
 								Xray(piece.gameObject, entry, tag);
-								Followers.PlaceOnBone(piece, bone, target);
+								Followers.PlaceOnBone(piece, bone, target, offset);
 								continue;
 							}
 							var codex = Codex(entry, tag);
@@ -202,7 +204,7 @@ namespace T90A.Common
 							}
 							piece.name = fields[1];
 							Setup(piece.gameObject, entry, codex, vehicle, tag);
-							Followers.PlaceOnBone(piece, bone, target);
+							Followers.PlaceOnBone(piece, bone, target, offset);
 							count++;
 							table?.AppendLine($"  {group,-6} {fields[1],-30} {entry.Name,-42} {entry.Mode,-9} {(entry.Variable ? $"KE x{entry.Ke:0.000}/mm HEAT x{entry.Ce:0.000}/mm" : $"KE {entry.Ke,4:0} mm HEAT {entry.Ce,4:0} mm")}"
 								+ $"{(entry.Era ? $" (after {entry.KeAfter:0}/{entry.CeAfter:0})" : "")}{(!entry.Variable && entry.AngleMatters ? " angled" : "")}{(entry.Slat ? " slat" : "")} {entry.Material}{(entry.Xray.Length > 0 ? " x-ray " + entry.Xray : "")}  [{entry.Source}]");

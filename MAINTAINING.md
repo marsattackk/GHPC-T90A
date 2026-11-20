@@ -167,6 +167,8 @@ this table says where each one lives. `tools\check-settings.ps1` checks both tab
 | `Add to campaign roster`, `Campaign prevalence`, `Campaign unlock after missions` | `Common\UnitRegistry.cs` (`CampaignConfig`), set up in `T90A\Mod.cs` | the campaign roster, re-read at each mission load |
 | `APFSDS` | `Mod.cs` | `Firepower`, the default round where the game doesn't pick one |
 | `Force APFSDS` | `Mod.cs` | `Firepower` (`ForceApfsds`): the campaign's roll gives the `APFSDS` round |
+| `Random APFSDS`, `APFSDS pool` | `Mod.cs` | `Firepower` (`RandomApfsds`, `ApfsdsPool`): each tank rolls its own APFSDS outside the campaign |
+| `Ammunition load`, `Empty racks` | `Mod.cs` | `Firepower` (`LoadPreset`, `EmptyRacks`, the racks' names and `LoadPresets`): racks left empty at spawn |
 | `Gunner night sight` | `Mod.cs` | `NightSight` (`ESSA` or `Buran-M`) |
 | `ESSA electronic zoom` | `Mod.cs` | `NightSight` |
 | `Fire only when the gun is laid` | `Mod.cs` | `Sights`, which hands it to `GunnerFcs` as the firing permission |

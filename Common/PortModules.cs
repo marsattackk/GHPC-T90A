@@ -58,8 +58,34 @@ namespace T90A.Common
 				spec,
 				_tag,
 				problems,
-				m => !later.Any(l => string.Equals(l, m.Group, StringComparison.OrdinalIgnoreCase)));
+				m => m.Kit == null
+					&& !later.Any(l => string.Equals(l, m.Group, StringComparison.OrdinalIgnoreCase)));
 			if (problems.Count > 0) MelonLogger.Warning($"{_tag} modules: " + string.Join("; ", problems));
+		}
+
+		internal void BuildKit(Vehicle vehicle, string kit)
+		{
+			var spec = Spec;
+			if (spec == null) return;
+			if (!spec.Modules.Any(m => string.Equals(m.Kit, kit, StringComparison.OrdinalIgnoreCase))) return;
+			var problems = new List<string>();
+			ModuleBuilder.Build(
+				vehicle,
+				spec,
+				_tag,
+				problems,
+				m => string.Equals(m.Kit, kit, StringComparison.OrdinalIgnoreCase));
+			var set = vehicle.GetComponent<ModuleBuilder.ModuleSet>();
+			if (set != null && set.Wired) Wire(vehicle);
+			if (problems.Count > 0) MelonLogger.Warning($"{_tag} modules ({kit} kit): " + string.Join("; ", problems));
+		}
+
+		internal string HideModules(Vehicle vehicle, IEnumerable<string> ids)
+		{
+			var problems = new List<string>();
+			string note = ModuleBuilder.Retire(vehicle, ids, problems);
+			if (problems.Count > 0) MelonLogger.Warning($"{_tag} modules (kit): " + string.Join("; ", problems));
+			return note;
 		}
 
 		internal void BuildOn(Vehicle vehicle, string group, Transform follow)
@@ -74,7 +100,8 @@ namespace T90A.Common
 				spec,
 				_tag,
 				problems,
-				m => string.Equals(m.Group, group, StringComparison.OrdinalIgnoreCase));
+				m => m.Kit == null
+					&& string.Equals(m.Group, group, StringComparison.OrdinalIgnoreCase));
 			if (problems.Count > 0) MelonLogger.Warning($"{_tag} modules: " + string.Join("; ", problems));
 		}
 

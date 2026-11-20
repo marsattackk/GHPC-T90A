@@ -20,6 +20,28 @@ namespace T90A
 			+ " too. In Instant Action the mission customizer's ammo dropdown still decides."
 			+ AfterChange;
 
+		internal static readonly string RandomApfsds =
+			"false (default): each T-90A carries the APFSDS setting's round where the game does not choose one. true = each T-90A"
+			+ " rolls its own APFSDS from APFSDS pool in Instant Action and scripted missions, and the mission customizer's ammo"
+			+ " dropdown starts on Random (a round picked there still decides). The campaign keeps its own ammo supply."
+			+ AfterChange;
+
+		internal static readonly string ApfsdsPool =
+			"The rounds Random APFSDS rolls from, as name:weight, comma separated (3BM42, 3BM60; \"3BM42:3, 3BM60:1\" rolls 3BM42"
+			+ " three times as often as 3BM60; a name without a weight counts 1). Empty (default): every APFSDS at its campaign"
+			+ " weight."
+			+ AfterChange;
+
+		internal static readonly string AmmunitionLoad =
+			"How much ammunition each T-90A carries: Full (default, 42 rounds) or Autoloader (only the 22 in the autoloader, 2 of"
+			+ " them missiles). Fewer rounds aboard, fewer to set off when the hull is hit. Applies to every T-90A, friend and foe."
+			+ AfterChange;
+
+		internal static readonly string EmptyRacks =
+			"Racks left empty, by name, comma separated (hull: every rack outside the autoloader); when set it replaces Ammunition"
+			+ " load. The autoloader is always loaded. Empty (default): Ammunition load decides."
+			+ AfterChange;
+
 		internal static readonly string NightSight =
 			"ESSA = thermal sight, T-90A from 2006 (default); Buran-M = 3rd-gen image intensifier of the first T-90As (obr. 2004).";
 

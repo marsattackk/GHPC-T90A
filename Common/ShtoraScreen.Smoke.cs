@@ -4,6 +4,7 @@ using GHPC.Effects;
 using GHPC.Equipment;
 using GHPC.Utility;
 using GHPC.Weaponry;
+using HarmonyLib;
 using MelonLoader;
 using UnityEngine;
 
@@ -59,6 +60,7 @@ namespace T90A.Common
 					whiteEffect.name = $"Smoke 3D17 aerosol ({s.Tag}, from {white.name})";
 					TuneWhite(whiteEffect, s, burstH, made);
 					EffectField.SetValue(gren, whiteEffect);
+					Fits[whiteEffect] = new CloudFit { Built = burstH, Bottom = s.CloudBottomHeight };
 				}
 				else if (effect != null)
 				{
@@ -125,6 +127,7 @@ namespace T90A.Common
 						if (wind.enabled) wind.multiplier = 1f;
 					}
 					EffectField.SetValue(gren, effectClone);
+					Fits[effectClone] = new CloudFit { Built = burstH, Bottom = s.CloudBottomHeight };
 				}
 				Made[basePrefab] = grenadeModel;
 				return grenadeModel;
@@ -207,6 +210,59 @@ namespace T90A.Common
 							? $", {particles.transform.localPosition.y:+0.0;-0.0} m"
 							: ""));
 				}
+			}
+		}
+
+		// The cloud is built for a burst high over flat ground; each burst moves it to the grenade's real height over the ground.
+		sealed class CloudFit
+		{
+			public float Built;
+			public float Bottom;
+		}
+
+		static readonly Dictionary<GameObject, CloudFit> Fits = new Dictionary<GameObject, CloudFit>();
+
+		internal static float HeightOverGround(Vector3 at, float built)
+		{
+			int terrain = 1 << CodeUtils.LAYER_INDEX_TERRAIN;
+			if (!Physics.Raycast(at + Vector3.up * 2f, Vector3.down, out var hit, 500f, terrain)) return built;
+			return Mathf.Clamp(at.y - hit.point.y, 0f, 2f * built);
+		}
+
+		static void FitCloud(GameObject cloud, CloudFit fit, float height)
+		{
+			float raise = fit.Built - height;
+			if (Mathf.Abs(raise) < 0.1f) return;
+			foreach (var particles in cloud.GetComponentsInChildren<ParticleSystem>(true))
+			{
+				if (particles.name == "Smoke Bottom") particles.transform.localPosition += Vector3.up * raise;
+				else if (particles.name == "Smoke Top") particles.transform.localPosition += Vector3.up * (raise * 0.5f);
+				else if (particles.GetComponent<BurstOnStart>() != null)
+				{
+					var shape = particles.shape;
+					float column = Mathf.Max(height, 0.5f);
+					shape.scale = new Vector3(shape.scale.x, column, shape.scale.z);
+					shape.position = new Vector3(0f, -column / 2f, 0f);
+				}
+			}
+		}
+
+		[HarmonyPatch(typeof(BasicGrenadeExplosionBehaviour), nameof(BasicGrenadeExplosionBehaviour.Explode))]
+		static class BurstPatch
+		{
+			static bool Prefix(Grenade grenade, string soundPath, GameObject effectPrefab)
+			{
+				if (grenade == null || effectPrefab == null || !Fits.TryGetValue(effectPrefab, out var fit)) return true;
+				var at = grenade.transform.position;
+				var cloud = UnityEngine.Object.Instantiate(effectPrefab, at, Quaternion.identity);
+				try
+				{
+					float height = HeightOverGround(at, fit.Built);
+					FitCloud(cloud, fit, height);
+				}
+				catch (Exception exception) { PatchGuard.Failed("Shtora 3D17 cloud fitted to its burst", exception); }
+				if (!string.IsNullOrEmpty(soundPath)) GHPC.Audio.FmodGenericAudioManager.PlayOneShotWithCameraSoundDelay(soundPath, at);
+				return false;
 			}
 		}
 

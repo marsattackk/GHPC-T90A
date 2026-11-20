@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection;
 using GHPC;
 using GHPC.Mission;
+using GHPC.Vehicle;
 using GHPC.Weaponry;
 using GHPC.Weapons;
 using HarmonyLib;
@@ -42,6 +43,7 @@ namespace T90A.Common
 		internal sealed class Rack
 		{
 			public int Index;
+			public string Name;
 			public Mix Counts;
 			public int[] MissileSlots = new int[0];
 			public bool NoRestockInto;
@@ -83,6 +85,13 @@ namespace T90A.Common
 			public Mix TotalCounts;
 			public Rack[] Racks = new Rack[0];
 			public bool DropOtherRacks = false;
+			public string OtherRacksName;
+			public string AutoloaderRack = "autoloader";
+			public Dictionary<string, string[]> LoadPresets;
+			public Func<string> LoadPreset;
+			public Func<string> EmptyRacks;
+			public Func<bool> RandomApfsds;
+			public Func<string> ApfsdsPool;
 			public Vector3 GuidancePosition;
 			public string GuidanceName = "guidance computer", BeamName = "guidance beam";
 			public bool BeamOnBaseUnit;
@@ -100,6 +109,8 @@ namespace T90A.Common
 		internal static AmmoClipCodexScriptable Missile;
 		internal static readonly List<AmmoClipCodexScriptable> Extras = new List<AmmoClipCodexScriptable>();
 		internal static AmmoLogisticsScriptable ApfsdsSet;
+		internal static AmmoLogisticsScriptable ApfsdsMenuSet;
+		internal static AmmoClipCodexScriptable RandomStandIn;
 		static bool _built;
 
 		static readonly List<Object> created = new List<Object>();
@@ -153,6 +164,11 @@ namespace T90A.Common
 			Extras.Clear();
 			foreach (var round in S.Extra) Extras.Add(MakeClip(round, SourceOf(round), ModelOfRound(round)));
 			ApfsdsSet = MakeApfsdsSet();
+			if (RandomPossible)
+			{
+				RandomStandIn = MakeRandomStandIn();
+				ApfsdsMenuSet = MakeApfsdsMenuSet();
+			}
 			_built = true;
 			return true;
 		}
@@ -189,6 +205,120 @@ namespace T90A.Common
 			};
 			created.Add(set);
 			return set;
+		}
+
+		internal static bool RandomPossible => S != null && S.RandomApfsds != null && S.Apfsds.Length >= 2;
+
+		// GHPC compares clips by the rounds they hold (AmmoClip.Equals), never by the clip's name. A stand-in holding no round
+		// would equal the HEAT stand-in (and every other port's): the customizer's Random entry replaced the HEAT slot too.
+		// So it holds one round of its own, a copy of the first APFSDS (valid figures for GHPC's firing table) under a name
+		// no other round has.
+		static AmmoClipCodexScriptable MakeRandomStandIn()
+		{
+			string name = $"Random ({S.Tag})";
+			var source = Apfsds[S.Apfsds[0].Id].ClipType.MinimalPattern[0].AmmoType;
+			var ammo = new AmmoType();
+			foreach (var field in typeof(AmmoType).GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+				if (!field.IsLiteral && !field.IsInitOnly) field.SetValue(ammo, field.GetValue(source));
+			ammo.Name = name;
+			var codex = ScriptableObject.CreateInstance<AmmoCodexScriptable>();
+			codex.name = $"ammo_{S.Prefix}_random";
+			codex.hideFlags = HideFlags.DontUnloadUnusedAsset;
+			codex.AmmoType = ammo;
+			var standIn = ScriptableObject.CreateInstance<AmmoClipCodexScriptable>();
+			standIn.name = $"clip_{S.Prefix}_random";
+			standIn.hideFlags = HideFlags.DontUnloadUnusedAsset;
+			standIn.ClipType = new AmmoType.AmmoClip { Name = name, Capacity = 1, MinimalPattern = new[] { codex } };
+			created.Add(codex);
+			created.Add(standIn);
+			return standIn;
+		}
+
+		// ApfsdsSet never holds the stand-in: the campaign's factions get that one, and GHPC rolls it for real rounds only.
+		static AmmoLogisticsScriptable MakeApfsdsMenuSet()
+		{
+			var set = ScriptableObject.CreateInstance<AmmoLogisticsScriptable>();
+			set.name = $"ammo_logistics_{S.Prefix}_apfsds_menu";
+			set.hideFlags = HideFlags.DontUnloadUnusedAsset;
+			var options = ApfsdsSet.AmmoLogistics.AmmoOptions.Select(o => new AmmoReplacementOrder.AmmoTypeLogistics
+			{
+				AmmoType = o.AmmoType,
+				Prevalence = o.Prevalence,
+				BlockUntilMissionsCompleted = o.BlockUntilMissionsCompleted,
+				LogisticsModifierCurve = o.LogisticsModifierCurve,
+				AllowInCampaign = o.AllowInCampaign,
+			}).ToList();
+			options.Add(new AmmoReplacementOrder.AmmoTypeLogistics
+			{
+				AmmoType = RandomStandIn,
+				Prevalence = 0f,
+				BlockUntilMissionsCompleted = 0,
+				LogisticsModifierCurve = AnimationCurve.Constant(0f, 1f, 1f),
+				AllowInCampaign = false,
+			});
+			set.AmmoLogistics = new AmmoReplacementOrder { Name = S.ApfsdsListName, AmmoOptions = options.ToArray() };
+			created.Add(set);
+			return set;
+		}
+
+		static string Effective(Func<string> setting, string flagName, Func<string, string> fromFlag)
+		{
+			string value = setting?.Invoke();
+			return value;
+		}
+
+		internal static bool RandomWanted()
+		{
+			if (!RandomPossible) return false;
+			bool wanted = S.RandomApfsds();
+			return wanted;
+		}
+
+		internal const int MissileColumn = 3;
+
+		static int[] ToVector(Mix mix)
+		{
+			var vector = new int[4 + S.Extra.Length];
+			vector[0] = mix.Apfsds;
+			vector[1] = mix.Heat;
+			vector[2] = mix.He;
+			vector[MissileColumn] = mix.Missile;
+			for (int i = 0; i < S.Extra.Length && i < mix.Extra.Length; i++) vector[4 + i] = mix.Extra[i];
+			return vector;
+		}
+
+		static Mix ToMix(int[] vector)
+		{
+			var mix = new Mix { Apfsds = vector[0], Heat = vector[1], He = vector[2], Missile = vector[MissileColumn] };
+			mix.Extra = new int[S.Extra.Length];
+			for (int i = 0; i < mix.Extra.Length; i++) mix.Extra[i] = vector[4 + i];
+			return mix;
+		}
+
+		static readonly System.Random Roller = new System.Random(Environment.TickCount);
+		static readonly HashSet<string> PoolWarned = new HashSet<string>();
+
+		static AmmoClipCodexScriptable RollApfsds(Vehicle vehicle)
+		{
+			var ids = S.Apfsds.Select(r => r.Id).ToArray();
+			string spelled = Effective(S.ApfsdsPool, "apfsdspool", g => g.Replace('+', ',').Replace('=', ':'));
+			var pool = PortAmmoPool.Parse(spelled, ids, out string warning);
+			if (warning != null && PoolWarned.Add(warning)) MelonLogger.Warning($"{S.Tag}: {warning}");
+			pool = pool ?? PortAmmoPool.Default(ids, S.Apfsds.Select(r => r.Prevalence).ToArray());
+			string id = PortAmmoPool.Pick(pool, Roller);
+			return Apfsds[id];
+		}
+
+		internal static void RollRandomApfsds(LoadoutManager loadoutManager)
+		{
+			var clips = loadoutManager?.LoadedAmmoList?.AmmoClips;
+			if (RandomStandIn == null || clips == null || clips.Length == 0) return;
+			var vehicle = loadoutManager.GetComponent<Vehicle>();
+			if (ReferenceEquals(clips[0], RandomStandIn))
+			{
+				clips[0] = RollApfsds(vehicle);
+				RegisterAllBallistics.Invoke(loadoutManager, null);
+			}
 		}
 
 		// Clips match by value, so it holds no round to equal no option. Reusing the vanilla ClipType still matched.
@@ -271,6 +401,49 @@ namespace T90A.Common
 		static readonly HashSet<string> UnplacedWarned = new HashSet<string>();
 
 		internal sealed class NoRestockInto : MonoBehaviour { }
+
+		internal sealed class EmptiedRack : MonoBehaviour
+		{
+			internal Vehicle Owner;
+		}
+
+		static readonly HashSet<string> LoadWarned = new HashSet<string>();
+
+		static PortAmmoLoad.Result ResolveLoad(
+			LoadoutManager loadoutManager,
+			List<int> keptIndexes,
+			out string choice)
+		{
+			choice = null;
+			if (S.LoadPresets == null) return null;
+			var rows = keptIndexes.Select(index =>
+			{
+				var rack = S.Racks.FirstOrDefault(c => c.Index == index);
+				return rack != null
+					? new PortAmmoLoad.Row
+					{
+						Name = rack.Name,
+						Counts = rack.Counts != null ? ToVector(rack.Counts) : null,
+						MissileSlots = rack.MissileSlots.Length
+					}
+					: new PortAmmoLoad.Row { Name = S.OtherRacksName };
+			}).ToList();
+			string preset = Effective(S.LoadPreset, "loadpreset", g => g.Replace('+', ' '));
+			string emptyRacks = Effective(S.EmptyRacks, "emptyracks", g => g.Replace('+', ','));
+			var result = PortAmmoLoad.Resolve(
+				rows,
+				ToVector(S.TotalCounts),
+				MissileColumn,
+				S.AutoloaderRack,
+				S.LoadPresets,
+				preset,
+				emptyRacks,
+				S.Tag);
+			foreach (string warning in result.Warnings)
+				if (LoadWarned.Add(warning)) MelonLogger.Warning(warning);
+			choice = result.Choice;
+			return result;
+		}
 
 		[HarmonyPatch(typeof(LoadoutManager), "RackHasRestockSpace", new[] { typeof(LoadoutManager.RackLoadout) })]
 		static class RestockTargetPatch

@@ -38,6 +38,7 @@ namespace T90A.Common
 		public sealed class Module
 		{
 			public string Id, Kind, Name, Group, Status;
+			public string Kit;
 			public List<Hook> Hooks = new List<Hook>();
 			public List<Box> Boxes = new List<Box>();
 			public float Health, Threshold, Pressure;
@@ -106,6 +107,7 @@ namespace T90A.Common
 					Name = Str(moduleJson, "name", "unnamed module"),
 					Group = Str(moduleJson, "group", "HULL"),
 					Status = Str(moduleJson, "status", null),
+					Kit = Str(moduleJson, "kit", null),
 					Health = Num(moduleJson, "health", 10f),
 					Threshold = Num(moduleJson, "threshold", 0f),
 					Pressure = Num(moduleJson, "pressure", 0.5f),

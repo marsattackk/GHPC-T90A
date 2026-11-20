@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using T90A.Common;
 using UnityEngine;
 
@@ -94,6 +95,10 @@ namespace T90A
 			},
 			DefaultApfsds = () => T90AMod.Apfsds.Value,
 			ForceApfsds = () => T90AMod.ForceApfsds.Value,
+			RandomApfsds = () => T90AMod.RandomApfsds.Value,
+			ApfsdsPool = () => T90AMod.ApfsdsPool.Value,
+			LoadPreset = () => T90AMod.AmmunitionLoad.Value,
+			EmptyRacks = () => T90AMod.EmptyRacks.Value,
 			ApfsdsListName = "125mm APFSDS (T-90A)",
 			MenuSuffix = " (T-90A)",
 			FixedHeat = "clip_3BK18M",
@@ -122,11 +127,22 @@ namespace T90A
 			EraDefeating = new[] { "9M119M Invar" },
 			TotalCounts = Counts,
 			// Two Invars in the carousel and two in the hull's rear rack: my placement.
+			// The racks' names are the words the player types in Empty racks. The carousel is "autoloader"; the hull's rear
+			// rack and every other T-72M1 rack (GHPC fills those with its own share-out) are "hull".
 			Racks = new[]
 			{
-				new PortAmmo.Rack { Index = 0, Counts = CarouselCountsWithMissile, MissileSlots = new[] { 21, 20 } },
-				new PortAmmo.Rack { Index = 2, MissileSlots = new[] { 10, 9 } },
+				new PortAmmo.Rack
+				{
+					Index = 0,
+					Name = "autoloader",
+					Counts = CarouselCountsWithMissile,
+					MissileSlots = new[] { 21, 20 },
+				},
+				new PortAmmo.Rack { Index = 2, Name = "hull", MissileSlots = new[] { 10, 9 } },
 			},
+			OtherRacksName = "hull",
+			// Ammunition load "Autoloader" leaves the hull racks empty.
+			LoadPresets = new Dictionary<string, string[]> { { "Autoloader", new[] { "hull" } } },
 			GuidancePosition = new Vector3(-0.727f, 0.4631f, -5.7249f),   // the T-72M1 gunner's sight, from the fire control's parent
 			GuidanceName = "T90A guidance computer",
 			BeamName = "T90A 1G46 guidance beam",

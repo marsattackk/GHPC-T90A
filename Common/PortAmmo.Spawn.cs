@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using GHPC;
+using GHPC.Mission;
 using GHPC.Vehicle;
 using GHPC.Weapons;
 using MelonLoader;
@@ -18,16 +19,39 @@ namespace T90A.Common
 			var loadoutManager = vehicle.GetComponent<LoadoutManager>();
 			if (loadoutManager == null) return;
 			var weapon = vehicle.GetComponent<WeaponsManager>().Weapons[0].Weapon;
-			var list = PortList(loadoutManager.LoadedAmmoList.AmmoClips, DefaultApfsds(warn: true));
+			// Outside the campaign a tank set to roll its own round rolls it here, so slot 0 always holds a real round while the
+			// tank's parts are built (sights read it for their range scales). A round the mission customizer names replaces it
+			// in GHPC's logistics; the customizer's Random entry is rolled after them (AmmoCampaignPatch).
+			var first = RandomWanted() && !DynamicMissionComposer.CampaignMode ? RollApfsds(vehicle) : DefaultApfsds(warn: true);
+			var list = PortList(loadoutManager.LoadedAmmoList.AmmoClips, first);
 			if (Missile != null && weapon.GuidanceUnit == null && (FeedMissileGuidance == null || FeedGuidanceStopped == null))
 				list.Remove(Missile);
 			loadoutManager.LoadedAmmoList.AmmoClips = list.ToArray();
-			loadoutManager.TotalAmmoCounts = Columns(S.TotalCounts, list, "the load");
+			var keptIndexes = Enumerable.Range(0, loadoutManager.RackLoadouts.Length)
+				.Where(i => !S.DropOtherRacks || S.Racks.Any(c => c.Index == i))
+				.ToList();
+			var load = ResolveLoad(loadoutManager, keptIndexes, out string loadChoice);
+			var emptied = new HashSet<int>();
+			if (load != null)
+				for (int i = 0; i < keptIndexes.Count; i++)
+					if (load.Emptied[i]) emptied.Add(keptIndexes[i]);
+			var total = load != null && emptied.Count > 0 ? ToMix(load.Total) : S.TotalCounts;
+			loadoutManager.TotalAmmoCounts = Columns(total, list, "the load");
 			int missile = Missile != null ? list.IndexOf(Missile) : -1;
 			var kept = new List<LoadoutManager.RackLoadout>();
 			for (int i = 0; i < loadoutManager.RackLoadouts.Length; i++)
 			{
 				var rackLoadout = loadoutManager.RackLoadouts[i];
+				if (emptied.Contains(i))
+				{
+					if (rackLoadout.Rack != null)
+					{
+						var marker = rackLoadout.Rack.GetComponent<EmptiedRack>();
+						if (marker == null) marker = rackLoadout.Rack.gameObject.AddComponent<EmptiedRack>();
+						marker.Owner = vehicle;
+					}
+					continue;
+				}
 				var rack = S.Racks.FirstOrDefault(c => c.Index == i);
 				if (rack == null)
 				{
@@ -50,6 +74,12 @@ namespace T90A.Common
 						", ",
 						loadoutManager.RackLoadouts.Except(kept).Select(l => l.Rack != null ? l.Rack.name : "?"))
 				: "";
+			if (loadChoice != null)
+				dropped += "; ammunition load " + loadChoice + (emptied.Count > 0
+					? " (emptied: " + string.Join(
+						", ",
+						emptied.Select(i => loadoutManager.RackLoadouts[i].Rack?.name ?? "?")) + ")"
+					: "");
 			var all = loadoutManager.RackLoadouts;
 			if (S.DropOtherRacks)
 				kept = kept.OrderBy(l => Array.FindIndex(S.Racks, r => r.Index == Array.IndexOf(all, l))).ToList();
@@ -89,7 +119,9 @@ namespace T90A.Common
 			}
 			int expected = S.SingleRound ? 1 : (S.NoBaseHe ? 2 : 3) + (Missile != null ? 1 : 0) + Extras.Count;
 			if (clips.Length != expected) problems.Add($"ammo list has {clips.Length} entries, expected {expected}");
-			if (clips.Length > 0 && !Apfsds.Values.Any(a => ReferenceEquals(a, clips[0])))
+			if (clips.Length > 0 && RandomStandIn != null && ReferenceEquals(clips[0], RandomStandIn))
+				problems.Add("APFSDS slot still holds the Random stand-in");
+			else if (clips.Length > 0 && !Apfsds.Values.Any(a => ReferenceEquals(a, clips[0])))
 				problems.Add($"APFSDS slot holds '{clips[0]?.ClipType?.Name}'");
 			if (!S.SingleRound && clips.Length > 1 && !ReferenceEquals(clips[1], Heat))
 				problems.Add($"HEAT slot holds '{clips[1]?.ClipType?.Name}'");

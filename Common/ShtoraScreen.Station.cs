@@ -51,15 +51,7 @@ namespace T90A.Common
 				if (SlotsField == null || PrefabField == null) return "the game's smoke launcher fields are missing: no screens";
 				Slots = SlotsField.GetValue(Smoke) as VehicleSmokeManager.SmokeSlot[];
 				if (Slots == null) return "no smoke slots: no screens";
-				var fwdRef = ForwardRefField?.GetValue(Smoke) as Transform;
-				if (fwdRef == null) fwdRef = _turret;
-				SlotAz = Slots.Select(slot =>
-				{
-					var axis = slot.DisplayMesh != null ? slot.DisplayMesh.transform.forward : fwdRef.forward;
-					var flat = Vector3.ProjectOnPlane(axis, fwdRef.up);
-					return Vector3.SignedAngle(Vector3.ProjectOnPlane(fwdRef.forward, fwdRef.up), flat, fwdRef.up);
-				}).ToArray();
-				for (int i = 0; i < Slots.Length; i++) Slots[i].Angle = SlotAz[i];
+				Aim();
 				LaunchAngleField?.SetValue(Smoke, s.LaunchAngle);
 				DistanceField?.SetValue(Smoke, new Vector2(LandingFor(s.Distance.x, s), LandingFor(s.Distance.y, s)));
 				var basePrefab = PrefabField.GetValue(Smoke) as GameObject;
@@ -72,6 +64,22 @@ namespace T90A.Common
 				}
 				if (grenade != null) PrefabField.SetValue(Smoke, grenade);
 				return $"{Slots.Length} tubes at {s.LaunchAngle:0} deg to {s.Distance.x:0}-{s.Distance.y:0} m, azimuths [{string.Join(", ", SlotAz.Select(a => a.ToString("+0;-0")))}] deg; grenade {(grenade != null ? grenade.name : "the base vehicle's (copy failed)")}";
+			}
+
+			// Call again after anything moves the launch points or their caps: the grenades follow the caps' axes.
+			internal string Aim()
+			{
+				if (Slots == null || Smoke == null) return "no screens: nothing to aim";
+				var fwdRef = ForwardRefField?.GetValue(Smoke) as Transform;
+				if (fwdRef == null) fwdRef = _turret;
+				SlotAz = Slots.Select(slot =>
+				{
+					var axis = slot.DisplayMesh != null ? slot.DisplayMesh.transform.forward : fwdRef.forward;
+					var flat = Vector3.ProjectOnPlane(axis, fwdRef.up);
+					return Vector3.SignedAngle(Vector3.ProjectOnPlane(fwdRef.forward, fwdRef.up), flat, fwdRef.up);
+				}).ToArray();
+				for (int i = 0; i < Slots.Length; i++) Slots[i].Angle = SlotAz[i];
+				return $"{Slots.Length} tubes aimed along their caps: [{string.Join(", ", SlotAz.Select(a => a.ToString("+0;-0")))}] deg";
 			}
 
 			internal Vector3 TurretPoint => _turret != null ? _turret.position + _turret.up * 0.5f

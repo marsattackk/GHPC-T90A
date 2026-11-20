@@ -217,6 +217,10 @@ before editing it.
 | `Campaign unlock after missions` | number | 2 |
 | `APFSDS` | `"3BM42"` / `"3BM60"`, where the game doesn't pick one itself | 3BM60 |
 | `Force APFSDS` | true: the campaign gives every T-90A the `APFSDS` round instead of drawing one from its ammo supply | false |
+| `Random APFSDS` | true: each T-90A rolls its own APFSDS from `APFSDS pool` in Instant Action and scripted missions, and the mission customizer's ammo dropdown starts on Random; the campaign keeps its own ammo supply | false |
+| `APFSDS pool` | the rounds `Random APFSDS` rolls from, as name:weight (`"3BM42:3, 3BM60:1"`); empty: every APFSDS at its campaign weight | `""` |
+| `Ammunition load` | `"Full"` / `"Autoloader"` (only the 22 rounds of the autoloader, 2 of them missiles), on every T-90A, friend and foe | Full |
+| `Empty racks` | racks to leave empty, comma separated (`"hull"`); replaces `Ammunition load`; the autoloader is always loaded | `""` |
 | `Gunner night sight` | `"ESSA"` / `"Buran-M"` | ESSA |
 | `ESSA electronic zoom` | true / false | true |
 | `Fire only when the gun is laid` | true: after a lase the gun waits until it's at the elevation the computer set. false: fires any time, but a shot while it's still climbing falls short | true |

@@ -18,7 +18,7 @@ namespace T90A.Common
 
 		internal static bool Ready => PosShift != null && RotShift != null;
 
-		internal static void PlaceOnBone(Transform piece, Transform bone, Transform target)
+		internal static void PlaceOnBone(Transform piece, Transform bone, Transform target, Vector3 offsetInBone = default)
 		{
 			var follow = Ready
 				? target.GetComponentsInParent<LateFollow>(true).FirstOrDefault(f => f.FollowTarget == bone)
@@ -26,7 +26,7 @@ namespace T90A.Common
 			if (follow == null)
 			{
 				piece.SetParent(bone, false);
-				piece.localPosition = Vector3.zero;
+				piece.localPosition = offsetInBone;
 				piece.localRotation = Quaternion.identity;
 				piece.localScale = Vector3.one;
 				piece.SetParent(target, true);
@@ -36,7 +36,7 @@ namespace T90A.Common
 			var followerToTarget = follow.transform.worldToLocalMatrix * target.localToWorldMatrix;
 			var boneInTarget = (boneToFollower * followerToTarget).inverse;
 			piece.SetParent(target, false);
-			piece.localPosition = boneInTarget.MultiplyPoint3x4(Vector3.zero);
+			piece.localPosition = boneInTarget.MultiplyPoint3x4(offsetInBone);
 			piece.localRotation = boneInTarget.rotation;
 			piece.localScale = Vector3.one;
 		}

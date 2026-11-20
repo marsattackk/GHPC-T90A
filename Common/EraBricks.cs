@@ -37,6 +37,32 @@ namespace T90A.Common
 			}
 		}
 
+		internal static void AddLinks(IEnumerable<(string Piece, string Container)> links)
+		{
+			foreach (var (piece, container) in links) _links[piece] = container;
+		}
+
+		internal const string KitRootPrefix = "KIT_";
+		static readonly HashSet<Transform> _retired = new HashSet<Transform>();
+
+		internal static void Retire(Transform brick)
+		{
+			if (brick != null) _retired.Add(brick);
+		}
+
+		internal static void Relink(Transform vehicleRoot)
+		{
+			if (vehicleRoot != null) _linked.Remove(vehicleRoot);
+		}
+
+		static bool OffKitObject(Transform part)
+		{
+			if (part.gameObject.activeInHierarchy) return false;
+			for (var parent = part.parent; parent != null; parent = parent.parent)
+				if (parent.name.StartsWith(KitRootPrefix, StringComparison.Ordinal)) return true;
+			return false;
+		}
+
 		internal const string GoneAsset = "era_gone";
 		internal const string GoneArmourPrefix = "box_";
 		static readonly Dictionary<string, string[]> _gone = new Dictionary<string, string[]>();
@@ -77,6 +103,7 @@ namespace T90A.Common
 		{
 			UnityKeys.Prune(_ours);
 			_linked.RemoveWhere(p => p == null);
+			_retired.RemoveWhere(p => p == null);
 			UnityKeys.Prune(_goneBy);
 			_done.RemoveWhere(p => p == null);
 			_quietMates.RemoveWhere(p => p == null);
@@ -87,6 +114,18 @@ namespace T90A.Common
 			Version++;
 			if (vehicleRoot != null && vehicleRoot.GetComponent<EraWatch>() == null) vehicleRoot.gameObject.AddComponent<EraWatch>();
 			if (!_patched) Patch();
+		}
+
+		internal static void Unregister(UniformArmor armour)
+		{
+			if (armour == null) return;
+			_ours.Remove(armour);
+			_lidOf.Remove(armour);
+			_sootOf.Remove(armour);
+			_done.Remove(armour);
+			_quietMates.Remove(armour);
+			_roundOf.Remove(armour);
+			Version++;
 		}
 
 		static readonly HashSet<UniformArmor> _done = new HashSet<UniformArmor>();
@@ -177,6 +216,7 @@ namespace T90A.Common
 			foreach (var meshFilter in root.GetComponentsInChildren<MeshFilter>(true))
 			{
 				if (meshFilter.sharedMesh == null || meshFilter.name.EndsWith(OpenSuffix) || meshFilter.transform.parent == null) continue;
+				if (_retired.Contains(meshFilter.transform) || OffKitObject(meshFilter.transform)) continue;
 				var open = meshFilter.transform.parent.Find(meshFilter.name + OpenSuffix);
 				if (open == null || open.GetComponent<Renderer>() == null || meshFilter.GetComponent<Renderer>() == null) continue;
 				var bounds = meshFilter.sharedMesh.bounds;
