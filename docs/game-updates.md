@@ -156,6 +156,19 @@ The rest, which no script reads:
   the T-80B's list. All three HEAT rounds are copies of `clip_3BK18M`. The 3BK31's ERA cost goes through
   `LiveRound.RhaPenetrationOverride`, and built-in ERA is told apart by the armour's name (Kontakt-5, Relikt): if
   another mod renames its blocks, 3BK29M treats them as add-on.
+- **3BK31's second jet** (`Common\SplitCharge.cs`): a postfix on `LiveRound.logHit` (reads `_jetActive`,
+  `_jetStartPoint`, sets `_armed`) launches it as a child round, and a postfix on `AarController.createShotTrace` (its
+  `_shotTraces`) draws it as a jet. If `logHit` goes, 3BK31 is back to one jet. If the trace list goes, the second jet
+  shows as fragment lines.
+- **Tandem look** (`Common\TandemLook.cs`): `LiveRound.doImpactVFX` and `ParticleEffectsManager.CreateImpactEffectOfType`
+  hold back a tandem round's impact effect for the precursor's pop (`_fusedStatus`, `_materialHit`, `HeatJet`), and
+  `LiveRound.logHit` adds the precursor's recap line, coloured through `ShotTraceVisual.jetColor`. If those move, the
+  rounds just look like plain HEAT again.
+- **HEAT fragments** (`Common\BehindArmour.cs`): a postfix on `LiveRound.getSpallMaxAngle` widens the cone of the
+  tank's own HEAT off the first hull or turret plate it holes (up to 80°, full on 50 mm or more), and a prefix and
+  postfix on `LiveRound.penCheck` (`_jetActive`, `_jetStartPoint`, `_penetrationLevel`, `createSpall`) give 3BK31's
+  second jet the fragments GHPC skips for it. If they go, a strong jet holes a tank cleanly and throws most of its
+  fragments out the far side again.
 - **Fonts and materials**: `Soviet7SegmentFont SDF`, fonts starting `TPD_Etch`, `Standard (FLIR)`, and
   `see-through teal gray` for the x-ray (no log line if that one goes).
 - **Scenes and input**: the menu scenes in `MenuScenes.cs`, `TR01_showcase`, and the buttons `Toggle Night Sight` and

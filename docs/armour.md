@@ -88,7 +88,12 @@ Fired in game straight at the front (ERA on, turret straight and turned 17°):
 | 3BM42 at the upper glacis | stopped inside the glacis | goes through |
 | 3BM42 at the turret cheek | stopped by the cheek | stopped by the turret |
 | 3BK18M HEAT at the turret cheek | stopped in the cheek packages | stopped by the turret |
+| 3BK29M HEAT at the turret cheek | stopped by the cheek | goes into the turret |
+| 3BK31 HEAT at the turret cheek | stopped by the cheek | stopped by the turret |
 | 9M119M Invar at the turret cheek | stopped by the cheek | depends on where it lands |
+| 3BK31 HEAT at the upper glacis | stopped inside the glacis | goes through |
+| 3BM42 at the upper glacis, its ERA gone | through, about 35 mm left | goes through (it has no ERA) |
+| 3BK31 HEAT at the upper glacis, its ERA gone | goes through | goes through |
 
 ## Weak spots
 

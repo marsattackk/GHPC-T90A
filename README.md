@@ -139,9 +139,9 @@ tracer, and the spent cases pile up on the roof until you brake hard. AI T-90As 
 It doesn't shoot anything down. It messes with how the other guy aims, and using it well is mostly about where your gun
 points.
 
-- The two red lamps either side of the gun are an IR jammer. A TOW, HOT, MILAN, Fagot, Konkurs, Kobra or Shturm coming
-  in within 20° of where your gun points goes wide about 6 times in 10, wire or radio link alike. Point the gun at the
-  launcher. Each lamp can be shot off.
+- The two red lamps either side of the gun are an IR jammer. A TOW, HOT, MILAN, Fagot, Konkurs, Kobra, Falanga or
+  Shturm coming in within 20° of where your gun points goes wide about 6 times in 10, wire or radio link alike. Point
+  the gun at the launcher. Each lamp can be shot off.
 - Get lased and the commander's panel pops up bottom right with a tone and a lamp for the direction. The lamps go by
   the turret, not the hull.
 - Lased from in front of the turret, it fires a 3D17 grenade between you and the shooter by itself. The cloud builds in
@@ -160,8 +160,9 @@ each part works is in [docs/screens.md](docs/screens.md).
 ![Hit x-ray from above: crew, ammo and the cheek plate packages](docs/images/xray_inside.jpg)
 
 From the front, above the ring, it's strong. Each cheek of the welded turret holds 19 packages of reflecting plates, and
-with Kontakt-5 on top the cheeks and the upper glacis stop 3BM42, 3BK18M HEAT and the Invar. The glacis still does once
-its ERA has gone. A brick only goes off for something worth it, so a PKT burst won't strip it the way it would in
+with Kontakt-5 on top the cheeks and the upper glacis stop 3BM42, all three HEAT rounds and the Invar. Once the glacis
+ERA has gone, the bare plate still stops 3BK18M, 3BK29M and the Invar, but a 3BM42 or a 3BK31 gets through. A brick
+only goes off for something worth it, so a PKT burst won't strip it the way it would in
 vanilla GHPC.
 
 Straight from the front, in mm of steel, without ERA:

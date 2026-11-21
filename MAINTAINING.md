@@ -33,10 +33,11 @@ player's log tells you which build they ran. The version comes from `MelonInfo` 
 
 `tests\` covers the bits that don't need the game: the reticle files' expression language, the reticle JSON, MiniJson,
 `dm_armour` parsing, the bundle text numbers, version comparison, the settings migrations, the fire gate, the aim clamp
-and the Shtora sector. It compiles those files straight out of `Common\` with stand-ins for MelonLoader, so it runs
-without GHPC and GitHub Actions runs it on every push. It also reads what ships in `Resources\`: `ShippedTextTests.cs`
-takes `dm_armour.txt` and fails on a line that doesn't read, a mode or material the damage model doesn't know, or a
-piece count other than the one at its top (change `Pieces` there when you add or remove a piece on purpose), and
+and the Shtora sector, and that each jammer lamp is a module with a box. It compiles those files straight out of
+`Common\` with stand-ins for MelonLoader, so it runs without GHPC and GitHub Actions runs it on every push. It also
+reads what ships in `Resources\`: `ShippedTextTests.cs` takes `dm_armour.txt` and fails on a line that doesn't read,
+a mode or material the damage model doesn't know, or a piece count other than the one at its top (change `Pieces`
+there when you add or remove a piece on purpose), and
 `ShippedReticleTests.cs` does the reticles. CI never builds the mod itself, because that needs the game's DLLs, so build
 it against your own copy and run `tools\check-game.ps1` before a pull request.
 

@@ -92,8 +92,8 @@ still drawn where they are on the real reticle.
   the left wall and on the turret's rotating floor, each group in its own rack. The places are roughly where the T-72B's
   manual puts them. How they lie and the racks' shapes are a best guess.
 - The 3BM60 has its own longer rod and sabot. The Invar is its own missile with the 9Kh949 charge instead of the game's
-  Kobra, and each has the right stencils. They're made from the game's own round models, so they don't look out of
-  place next to the vanilla shells.
+  Kobra, and the 3BK29M and 3BK31 have warheads of their own. Each has the right stencils. They're made from the
+  game's own round models, so they don't look out of place next to the vanilla shells.
 
 ## The paint
 
