@@ -1,5 +1,5 @@
-// Common\ is code my GHPC mods share, stamped whole into this repo (Common\STAMP.txt lists the
-// SHA-256 of every file, computed with CRLF read as LF). This test fails, naming the file, when a Common file was edited here.
+// Common\ is code my GHPC mods share, stamped whole into this repo (Common\STAMP.txt lists the SHA-256 of every file,
+// computed with CRLF read as LF). This test fails when a Common file was edited here, naming it with its new hash.
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -12,8 +12,9 @@ namespace T90A.Tests
 {
 	public class CommonSealTests
 	{
-		const string Why = "Common is code shared by my GHPC mods and stamped into each repo, so it is never edited here. To change it, "
-			+ "open an issue or a pull request on this repo describing the change; I apply it to the shared copy and stamp every mod again.";
+		const string Why = "Common is code shared by my GHPC mods and stamped into each repo. For a change to this repo, open an issue or "
+			+ "a pull request describing it and I make it in the shared copy. In a fork of your own, put the new SHA-256 on the file's "
+			+ "line in Common\\STAMP.txt.";
 
 		static string CommonFolder()
 		{
@@ -53,11 +54,19 @@ namespace T90A.Tests
 			foreach (var pair in sealedFiles.OrderBy(p => p.Key, StringComparer.Ordinal))
 			{
 				var path = Path.Combine(folder, pair.Key);
-				if (!File.Exists(path)) problems.Add("Common\\" + pair.Key + " is stamped but missing");
-				else if (Sha256(path) != pair.Value) problems.Add("Common\\" + pair.Key + " differs from the stamp");
+				if (!File.Exists(path))
+				{
+					problems.Add("Common\\" + pair.Key + " is stamped but missing");
+					continue;
+				}
+				var now = Sha256(path);
+				if (now != pair.Value) problems.Add("Common\\" + pair.Key + " differs from the stamp (SHA-256 now " + now + ")");
 			}
 			foreach (var path in Directory.GetFiles(folder, "*.cs"))
-				if (!sealedFiles.ContainsKey(Path.GetFileName(path))) problems.Add("Common\\" + Path.GetFileName(path) + " is not in the stamp");
+			{
+				var name = Path.GetFileName(path);
+				if (!sealedFiles.ContainsKey(name)) problems.Add("Common\\" + name + " is not in the stamp (SHA-256 " + Sha256(path) + ")");
+			}
 			Assert.True(problems.Count == 0, string.Join("; ", problems) + ". " + Why);
 		}
 	}

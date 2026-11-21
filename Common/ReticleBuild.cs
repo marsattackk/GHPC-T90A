@@ -373,7 +373,7 @@ namespace T90A.Common
 		internal static TMP_FontAsset Font(string name)
 		{
 			if (Fonts.TryGetValue(name, out var font) && font != null) return font;
-			// Loaded fonts only, one that lives in a vehicle bundle turns up with its vehicle.
+			// Loaded fonts only (one that lives in a vehicle bundle turns up with its vehicle).
 			font = Resources.FindObjectsOfTypeAll<TMP_FontAsset>().FirstOrDefault(a => a.name == name)
 				?? Resources.LoadAll<TMP_FontAsset>("").FirstOrDefault(a => a.name == name);
 			if (font != null) Fonts[name] = font;

@@ -12,10 +12,10 @@ using UnityEngine;
 
 namespace T90A
 {
-	//! The Shtora-1 emitters warming up in thermal sights. Each draws about 500 W. The lens window soaks up the visible part
-	//! of the xenon light and warms in minutes, and the 30 kg box takes the rest of the heat and warms over twenty.
-	//! Thin copies of the turret's own surface over each emitter, shown only in thermal, carry the heat. While cold they
-	//! draw exactly like the turret, so nothing shows until the lamp has run.
+	// The Shtora-1 emitters warming up in thermal sights. Each draws about 500 W. The lens window soaks up the visible part
+	// of the xenon light and warms in minutes, and the 30 kg box takes the rest of the heat and warms over twenty.
+	// Thin copies of the turret's own surface over each emitter, shown only in thermal, carry the heat. While cold they
+	// draw exactly like the turret, so nothing shows until the lamp has run.
 	internal sealed class ShtoraHeat : MonoBehaviour
 	{
 		const string VehicleShader = "GHPC/VehicleShader";
@@ -29,12 +29,12 @@ namespace T90A
 		const float BoxRise = 25f;
 		const float BoxSeconds = 1200f;
 
-		//! GHPC/VehicleShader never reads _FLIR_Emission. Its thermal pass adds heat for scorch, spread by _PaintMask's green,
-		//! so the box's copy gets a mask that's all green and its heat goes in as _ScorchAmount. Red and blue (camo, snow) stay
-		//! 0, as the T-90A's own material has them. Below 0.09 the scorch adds nothing and it's saturated by 0.12.
-		//! The value goes on each box's own material: a property block's _ScorchAmount did nothing once the turret's
-		//! HeatSource had put a block of its own on the copy.
-		//! Measured in the gunner's thermal sight against the lens copy: heat over the vehicle's own -> _ScorchAmount.
+		// GHPC/VehicleShader never reads _FLIR_Emission. Its thermal pass adds heat for scorch, spread by _PaintMask's green,
+		// so the box's copy gets a mask that's all green and its heat goes in as _ScorchAmount. Red and blue (camo, snow) stay
+		// 0, as the T-90A's own material has them. Below 0.09 the scorch adds nothing and it's saturated by 0.12.
+		// The value goes on each box's own material: a property block's _ScorchAmount did nothing once the turret's
+		// HeatSource had put a block of its own on the copy.
+		// Measured in the gunner's thermal sight against the lens copy: heat over the vehicle's own -> _ScorchAmount.
 		static readonly (float heat, float scorch)[] ScorchForHeat =
 		{
 			(0f, 0.088f),
@@ -121,7 +121,7 @@ namespace T90A
 			}
 			if (_turret == null || CameraManager.Instance == null || CameraManager.Instance.CurrentLightMode != NightVisionType.Thermal)
 				return;
-			//! the turret's own values, read every frame: its HeatSource sets the glass, and a fire scorches the paint
+			// the turret's own values, read every frame: its HeatSource sets the glass, and a fire scorches the paint
 			_turret.GetPropertyBlock(_block, _lensSlot);
 			float glass = _block.GetFloat(Emission);
 			_turret.GetPropertyBlock(_block, _boxSlot);

@@ -54,7 +54,7 @@ namespace T90A.Tests
 		[Fact]
 		public void Gate_plane_turns_with_the_drive()
 		{
-			// Barrel at yaw 20, right axis (cos 20, 0, -sin 20). The lay raised 1 deg from it reads exactly 1, lowered 0.5 reads 0.5.
+			// Barrel at yaw 20, right axis (cos 20, 0, -sin 20). Raised 1 deg off it, the lay reads exactly 1. Lowered 0.5, it reads 0.5.
 			var forward = Unit(20, 0);
 			var right = new V3((float)Math.Cos(20 * Rad), 0f, (float)-Math.Sin(20 * Rad));
 			var drive = new GunnerFcsMath.Drive(right, forward, false);
@@ -196,7 +196,7 @@ namespace T90A.Tests
 		[Fact]
 		public void Clamp_only_stops_an_aim_already_further_out_from_growing()
 		{
-			// Other code had the aim at 12 deg right, the limit is 7.5, so 12 is allowed. 15 is held at 12. 10 and -3 are left alone.
+			// Other code had the aim at 12 deg right and the limit is 7.5, so 12 is allowed. 15 is held at 12. 10 and -3 are left alone.
 			var grown = Clamp(15, 5, -10, 30, 7.5f, 12);
 			Assert.True(grown.clamped);
 			Near(12, grown.az, "15 to 12", 1e-3);
@@ -224,7 +224,7 @@ namespace T90A.Tests
 			Assert.True(GunnerFcsMath.HasAimLimits(0f, 30f, 0f));
 		}
 
-		// Emitters 2 m up on the turret, the T-90A's sector: 20 deg either side, 2.25 up and down.
+		// Emitters 2 m up on the turret, a Shtora-1 sector: 20 deg either side, 2.25 up and down.
 		static readonly V3 Emitters = new V3(0f, 2f, 0f);
 
 		static (float az, float el) Bearing(V3 offset, V3 forward, V3 turretUp)

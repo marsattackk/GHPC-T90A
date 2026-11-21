@@ -375,9 +375,10 @@ namespace T90A.Common
 		static void Patch()
 		{
 			_patched = true;
+			HarmonyLib.Harmony harmony = null;
 			try
 			{
-				var harmony = new HarmonyLib.Harmony("ghpcmods.erabricks." + typeof(EraBricks).Assembly.GetName().Name);
+				harmony = new HarmonyLib.Harmony("ghpcmods.erabricks." + typeof(EraBricks).Assembly.GetName().Name);
 				var pen = Reflect.Method(
 					typeof(LiveRound),
 					"penCheck",
@@ -395,6 +396,8 @@ namespace T90A.Common
 			}
 			catch (Exception exception)
 			{
+				try { harmony?.UnpatchSelf(); }
+				catch (Exception unpatch) { MelonLogger.Warning($"ERA bricks: taking the patches off failed too ({unpatch.Message})."); }
 				MelonLogger.Warning($"ERA bricks: patching failed ({exception.GetType().Name}: {exception.Message}); bricks behave as in GHPC.");
 			}
 		}

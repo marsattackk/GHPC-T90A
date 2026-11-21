@@ -67,7 +67,7 @@ namespace T90A.Common
 					// Past Initialize I have to do the doubling myself, or it drives at twice the speed.
 					if (initialised && k > 1f) controller.transmission.gearMultiplier *= k;
 				}
-				// Keep it under max rpm, the fuel cut never lets the engine reach it otherwise.
+				// Keep it under max rpm: the fuel cut never lets the engine reach it otherwise.
 				if (s.ShiftUpRpm.HasValue)
 				{
 					log.Add($"shift up {controller.transmission.targetShiftUpRPM:0} -> {s.ShiftUpRpm.Value:0} rpm");

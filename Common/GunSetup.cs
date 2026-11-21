@@ -81,7 +81,7 @@ namespace T90A.Common
 
 		internal static void Apply(Vehicle vehicle, Settings s)
 		{
-			// GHPC re-parents the script containers under the mesh bones at Start, prefab paths are no use.
+			// GHPC re-parents the script containers under the mesh bones at Start, so prefab paths are no use.
 			string turretName = s.TurretPlatform ?? "---TURRET SCRIPTS---";
 			// GHPC re-parents the script containers under the mesh bones at Start. Prefab paths are no use.
 			var traverse = vehicle
@@ -179,7 +179,7 @@ namespace T90A.Common
 		static readonly FieldInfo CarouselGoal = Reflect.Field(typeof(AmmoCarousel), "_goalLocalRotation");
 		static readonly MethodInfo TotalTime = Reflect.Method(typeof(AmmoFeed), "CalculateTotalTime");
 
-		// The carousel goes straight to its slot: the source's cycle already holds the conveyor's search, travel would count twice.
+		// The carousel goes straight to its slot: the source's cycle already holds the conveyor's search, and travel would count twice.
 		[HarmonyPatch(typeof(AmmoFeed), nameof(AmmoFeed.FeedNewClip))]
 		static class ReloadByTypePatch
 		{

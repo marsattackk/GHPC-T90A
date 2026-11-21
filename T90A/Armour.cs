@@ -7,8 +7,8 @@ using UnityEngine;
 
 namespace T90A
 {
-	// Loads the armour pieces and their numbers from the bundle, switches off the T-72M1 pieces War Thunder's model
-	// replaces, and scales the cheeks and glacis filling down for source-only.
+	// The armour shapes come from the bundle and their numbers from Resources\dm_armour.txt. Switches off the T-72M1 pieces
+	// War Thunder's model replaces, and scales the cheeks and glacis filling down for source-only.
 	internal static partial class Armour
 	{
 		internal static GameObject Prefab;
@@ -62,7 +62,7 @@ namespace T90A
 		}
 
 		// "Armour preset" source-only: cheeks 575 / 750 and glacis 500 / 650 without ERA, against the game-scale 690 / 820 and
-		// 550 / 750 the bundle's values are calibrated to. Only the calibrated fillings change, each by one KE and one HEAT
+		// 550 / 750 dm_armour.txt is calibrated to. Only the calibrated fillings change, each by one KE and one HEAT
 		// factor, the ratio of the filling that gives the source-only figures to the one that gives the game-scale figures.
 		static readonly string[] GlacisFilling = { "composite_armor_hull_01_dm", "turret_04_top_dm", "turret_05_front_dm" };
 		// Cheek packages: the filling for 575 / 750 over the one for 690 / 820.

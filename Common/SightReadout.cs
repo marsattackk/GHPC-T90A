@@ -137,11 +137,17 @@ namespace T90A.Common
 				bool lit = Time.time >= _laserDarkUntil;
 				if (_laser.activeSelf != lit) _laser.SetActive(lit);
 			}
-			foreach (var (lamp, test) in _lit)
+			for (int i = 0; i < _lit.Count; i++)
 			{
-				bool active = false;
+				var (lamp, test) = _lit[i];
+				bool active;
 				try { active = test(); }
-				catch { }
+				catch (Exception exception)
+				{
+					PatchGuard.Failed("Sight readout lamp", exception);
+					_lit.RemoveAt(i--);
+					active = false;
+				}
 				if (lamp != null && lamp.activeSelf != active) lamp.SetActive(active);
 			}
 		}

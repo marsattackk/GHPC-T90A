@@ -39,7 +39,7 @@ field   VehicleSmokeManager   _smokeScreenRequiredCrewPositions      # SmokeLaun
 # fuel entries, so there are no names to check yet. Add a "field FlammableItem <name>" line for each one a port uses.
 covers  ModuleBuilder.Fuel
 
-# ModuleBuilder.cs WireHook and SwitchOff look up the field of a hit-zone hook table entry (HookDef.Field); the script reads
+# ModuleBuilder.cs WireHook and SwitchOff look up the field of a hit-zone hook table entry (HookDef.Field). The script reads
 # those names from the table itself ("the hit-zone hook table" above), so they are checked there.
 covers  ModuleBuilder.WireHook
 covers  ModuleBuilder.SwitchOff

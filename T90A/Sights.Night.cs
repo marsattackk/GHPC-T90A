@@ -19,20 +19,35 @@ namespace T90A
 		internal const string BuranM = "Buran-M";
 
 		// Fields 9 x 6.75 and 3 x 2.25 deg, 1.5 x 1.125 with the electronic zoom (the ESSA's technical description,
-		// odetievbrony.ru); 576 lines, the Catherine FC camera's picture (Russian Wikipedia, «Катрин-ФС»).
+		// odetievbrony.ru). The Catherine FC camera gives 576 lines (Russian Wikipedia, «Катрин-ФС»).
 		const float EssaWide = 6.75f;
 		const float EssaNarrow = 2.25f;
 		const float EssaElectronic = 1.125f;
 		const int EssaHeight = 576;
 		// 754 across a 4:3 picture, stretched over a 16:9 screen.
 		const int EssaWidth = 1005;
-		// The ESSA's mirror travels -10 / +20 deg and 7.5 deg either side (the same technical description); Russian
+		// The ESSA's mirror travels -10 / +20 deg and 7.5 deg either side (the same technical description), and Russian
 		// Wikipedia's «Т-90» gives -10 / +20 for both the ESSA and the Buran-M.
 		static readonly Vector2 EssaElevationLimits = new Vector2(-10f, 20f);
 		const float EssaAzimuth = 7.5f;
 		static readonly Vector2 BuranElevationLimits = new Vector2(-10f, 20f);
 
-		internal static string Choice => T90AMod.NightSightChoice.Value == BuranM ? BuranM : Essa;
+		static bool _unknownWarned;
+
+		internal static string Choice
+		{
+			get
+			{
+				string value = (T90AMod.NightSightChoice.Value ?? "").Trim();
+				if (string.Equals(value, BuranM, System.StringComparison.OrdinalIgnoreCase)) return BuranM;
+				if (!_unknownWarned && !string.Equals(value, Essa, System.StringComparison.OrdinalIgnoreCase))
+				{
+					_unknownWarned = true;
+					MelonLogger.Warning($"T-90A: Gunner night sight \"{value}\" is neither {Essa} nor {BuranM}; fitting the {Essa}.");
+				}
+				return Essa;
+			}
+		}
 
 		internal static void Apply(Vehicle vehicle, UsableOptic day)
 		{

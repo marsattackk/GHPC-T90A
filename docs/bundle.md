@@ -9,7 +9,7 @@ Built with Unity **2022.3.62f2**, the same as GHPC. A bundle has to match the ga
 
 ## What gets loaded
 
-`T90A\Mod.cs` opens the bundle through `BundleAssets` and loads two prefabs by name:
+`T90A\Mod.cs` opens the bundle through `BundleAssets` and loads the model's prefab by name, `Armour.cs` the armour's:
 
 | Asset | Needed | If missing |
 |---|---|---|
@@ -27,7 +27,7 @@ need. Edit these and rebuild the DLL, no Unity involved:
 | `dm_armour` | with `T90A_armor` | warning, the T-72M1's armour stays |
 | `vanilla_edits` | with `T90A_armor` | warning, the T-72M1's armour stays switched on under the T-90A's |
 | `material_roles` | no | warning, glass reads as opaque plastic |
-| `rig_map` | no | warning, hatches and running gear don't move |
+| `rig_map` | no | warning, hatches and running gear don't move, the turret turns on the T-72M1's pivots and the Kord sits level |
 | `era_links` | no | silently, bricks matched by position only |
 | `era_gone` | no | silently, no stowage goes with a brick |
 | `smoke_points` | no | warning, grenades leave from the T-72's tubes |
@@ -76,6 +76,8 @@ Matched with `StartsWith` unless it says exact.
 - `t90a_hatch_inner*` is the inside of the hatch lids. Without it the log says `no hatch underside material found`.
 - Anything on those parts using plain `Standard` is switched to GHPC's `Standard (FLIR)` so it shows in thermal.
 - Names in the first column of `material_roles` are matched exactly.
+- A material whose name ends `headlight_glass_a_under` marks the Shtora lenses on the full-detail turret mesh, which
+  has to be readable. Without it the emitters neither glow nor warm up.
 
 ## `T90A_armor`
 
@@ -138,10 +140,12 @@ The role is only for the log. `-` makes the line a note. Donors are unit keys li
 
 ### `rig_map`
 
-`|` separated, positions in the unit's root space, extra trailing fields ignored, `axes` and `mount` lines ignored.
+`|` separated, positions in the unit's root space, extra trailing fields ignored. `mount` lines are read but the T-90A
+has none and nothing here uses them.
 
 | Line | Fields |
 |---|---|
+| `axes\|turret\|gun\|muzzle\|pitch` | where the turret and the gun turn and the muzzle sits (`x,y,z` each), and the nose-down level in degrees that the turret, seat and Kord sit at |
 | `gear\|mode` | `base` (leave it, the default), `follow` (wheels and tracks follow the suspension) or `port` (park parts on bones) |
 | `follow\|restY\|uvX,uvY\|radius\|rimGap\|riseLimit` | the wheel numbers `GearFollow` needs |
 | `fpart\|id\|node\|kind\|drive\|pivot\|target\|mate` | one moving part, `kind` is `wheel`, `arm`, `rod`, `spin` or `track` (a track's id ends `_l` or `_r`) |
@@ -175,7 +179,8 @@ since it would shift every tube after it.
 
 ## Released bundles
 
-SHA-256 of `Mods/T90A/t90a` in each release zip. When a release changes the bundle, add a row.
+SHA-256 of `Mods/T90A/t90a` in each release zip. Every release gets a row, new bundle or not, in the commit that raises
+the version (Releasing in [MAINTAINING.md](../MAINTAINING.md#releasing)).
 
 | Version | Bundle |
 |---|---|
@@ -190,10 +195,11 @@ SHA-256 of `Mods/T90A/t90a` in each release zip. When a release changes the bund
 | 0.5.0 | `e17c1c3c6aa23478b6f3474847a62aa0b6541e91b7c6893a255825ca3376e963` |
 | 0.5.1 | `e8ee068d0e7e88414a02288fac136a54405ddae264bd9dfb04935bcb2dc58d1d` |
 | 0.5.2 | `ef1e8e75a8753e60017d42240dafa0c9eb0611508ce4e43a8e029f1d582ff5aa` |
+| 0.5.3 | `2d908371ed319505eaf2bccf7ac1475037b197001ceb9595233033c692fab1d1` |
 
 0.1.0 and 0.4.2 are missing because my saved zips for those don't match what GitHub serves.
 
 ```
-Expand-Archive T90A_0.4.4.zip -DestinationPath check
+Expand-Archive T90A_<version>.zip -DestinationPath check
 (Get-FileHash check\Mods\T90A\t90a -Algorithm SHA256).Hash.ToLower()
 ```

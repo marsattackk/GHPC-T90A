@@ -29,19 +29,20 @@ namespace T90A.Common
 			var list = baseList?.Asset as VehicleAmmoListScriptable ?? OwnLoad(baseList);
 			if (list?.AmmoClips == null || list.AmmoClips.Length < (S.SingleRound ? 1 : 3)) return null;
 			var clips = PortList(list.AmmoClips, DefaultApfsds(warn: false));
-			clips.Remove(Heat);
+			if (HeatSet == null) clips.Remove(Heat);
 			var sets = new List<AmmoLogisticsScriptable>();
 			preferred = new List<int>();
-			bool random = ApfsdsMenuSet != null;
-			foreach (var set in new[] { random ? ApfsdsMenuSet : ApfsdsSet }.Concat(vanilla ?? new AmmoLogisticsScriptable[0]))
+			var own = new[] { ApfsdsMenuSet ?? ApfsdsSet, HeatMenuSet ?? HeatSet };
+			foreach (var set in own.Concat(vanilla ?? new AmmoLogisticsScriptable[0]))
 			{
 				var options = set?.AmmoLogistics?.AmmoOptions;
 				if (options == null || sets.Contains(set)) continue;
+				bool startOnRandom = (set == ApfsdsMenuSet && RandomWanted()) || (set == HeatMenuSet && RandomHeatWanted());
 				for (int j = 0; j < options.Length; j++)
 					if (options[j] != null && clips.Contains(options[j].AmmoType))
 					{
 						sets.Add(set);
-						preferred.Add(random && set == ApfsdsMenuSet && RandomWanted() ? options.Length - 1 : j);
+						preferred.Add(startOnRandom ? options.Length - 1 : j);
 						break;
 					}
 			}
@@ -95,9 +96,12 @@ namespace T90A.Common
 		static void Postfix(MissionConfigMenuPanel __instance, AmmoLogisticsScriptable __1)
 		{
 			var ammoLogisticsScriptable = __1;
-			if (ammoLogisticsScriptable == null
-				|| (ammoLogisticsScriptable != PortAmmo.ApfsdsSet && ammoLogisticsScriptable != PortAmmo.ApfsdsMenuSet)
-				|| string.IsNullOrEmpty(PortAmmo.S?.MenuSuffix))
+			bool own = ammoLogisticsScriptable != null
+				&& (ammoLogisticsScriptable == PortAmmo.ApfsdsSet
+					|| ammoLogisticsScriptable == PortAmmo.ApfsdsMenuSet
+					|| ammoLogisticsScriptable == PortAmmo.HeatSet
+					|| ammoLogisticsScriptable == PortAmmo.HeatMenuSet);
+			if (!own || string.IsNullOrEmpty(PortAmmo.S?.MenuSuffix))
 				return;
 			var entry = Entries(__instance)?.LastOrDefault()?.GetComponent<MissionConfigAmmoSelectionEntry>();
 			if (entry == null || entry.AmmoSet != ammoLogisticsScriptable) return;
@@ -114,12 +118,12 @@ namespace T90A.Common
 			if (PortAmmo.ApfsdsSet == null || !IsPort(__instance)) return;
 			PortAmmo.HideFixedHeat(__instance.LoadedAmmoList?.AmmoClips);
 			if (!DynamicMissionComposer.CampaignMode) return;
-			var set = PortAmmo.ApfsdsSet;
-			foreach (var faction in new[] { DynamicMissionLauncher.CurrentFactionBlue, DynamicMissionLauncher.CurrentFactionRed })
-				if (faction != null && (faction.AmmoLogisticsData == null || !faction.AmmoLogisticsData.Contains(set)))
-					faction.AmmoLogisticsData = (faction.AmmoLogisticsData ?? new AmmoLogisticsScriptable[0])
-						.Concat(new[] { set })
-						.ToArray();
+			foreach (var set in new[] { PortAmmo.ApfsdsSet, PortAmmo.HeatSet }.Where(s => s != null))
+				foreach (var faction in new[] { DynamicMissionLauncher.CurrentFactionBlue, DynamicMissionLauncher.CurrentFactionRed })
+					if (faction != null && (faction.AmmoLogisticsData == null || !faction.AmmoLogisticsData.Contains(set)))
+						faction.AmmoLogisticsData = (faction.AmmoLogisticsData ?? new AmmoLogisticsScriptable[0])
+							.Concat(new[] { set })
+							.ToArray();
 		}
 
 		static Exception Finalizer(LoadoutManager __instance, Exception __exception)
@@ -127,7 +131,7 @@ namespace T90A.Common
 			if (PortAmmo.ApfsdsSet == null || !IsPort(__instance)) return __exception;
 			var clips = __instance.LoadedAmmoList?.AmmoClips;
 			int slot = PortAmmo.RestoreFixedHeat(clips);
-			PortAmmo.RollRandomApfsds(__instance);
+			PortAmmo.RollRandomRounds(__instance);
 			return __exception;
 		}
 
@@ -141,15 +145,19 @@ namespace T90A.Common
 		static bool Prefix(AmmoReplacementOrder __instance, bool __2, ref AmmoClipCodexScriptable __3, ref AmmoClipCodexScriptable __result)
 		{
 			bool isCampaignMode = __2;
-			if (!isCampaignMode || PortAmmo.ApfsdsSet == null || __instance != PortAmmo.ApfsdsSet.AmmoLogistics) return true;
-			if (PortAmmo.S.ForceApfsds?.Invoke() == true)
+			bool apfsds = PortAmmo.ApfsdsSet != null && __instance == PortAmmo.ApfsdsSet.AmmoLogistics;
+			bool heat = PortAmmo.HeatSet != null && __instance == PortAmmo.HeatSet.AmmoLogistics;
+			if (!isCampaignMode || (!apfsds && !heat)) return true;
+			if ((apfsds ? PortAmmo.S.ForceApfsds : PortAmmo.S.ForceHeat)?.Invoke() == true)
 			{
-				__result = PortAmmo.DefaultApfsds(warn: true);
+				__result = apfsds ? PortAmmo.DefaultApfsds(warn: true) : PortAmmo.DefaultHeat(warn: true);
 				__3 = null;
 				return false;
 			}
 			int done = CampaignSaveState.ActiveSaveData?.TotalMissionsCompleted ?? 0;
-			foreach (var option in __instance.AmmoOptions) option.AllowInCampaign = done >= option.BlockUntilMissionsCompleted;
+			foreach (var option in __instance.AmmoOptions)
+				option.AllowInCampaign = PortAmmo.RoundOfOption(__instance, option.AmmoType)?.InCampaign != false
+					&& done >= option.BlockUntilMissionsCompleted;
 			return true;
 		}
 	}

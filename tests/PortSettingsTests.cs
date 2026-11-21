@@ -22,7 +22,7 @@ namespace T90A.Tests
 			category.CreateEntry("Enabled", true);
 			category.CreateEntry("Campaign prevalence", 0.1f);
 			category.CreateEntry("Campaign unlock after missions", 2);
-			category.CreateEntry("APFSDS", "3BM60");
+			category.CreateEntry("APFSDS", "3BM22");
 			return category;
 		}
 
@@ -96,7 +96,7 @@ namespace T90A.Tests
 			var t90a = PortSettings.QuotedValues(lines, "T-90A");
 			Assert.Equal("0,3", t90a["Campaign prevalence"]);
 			Assert.Equal("drei", t90a["Campaign unlock after missions"]);
-			Assert.Equal("3BM42", t90a["APFSDS"]);
+			Assert.Equal("3BM15", t90a["APFSDS"]);
 			Assert.False(t90a.ContainsKey("Enabled"));
 			var other = PortSettings.QuotedValues(lines, "T-72M1");
 			Assert.Equal("0,35", other["Campaign prevalence"]);
@@ -121,45 +121,71 @@ namespace T90A.Tests
 		{
 			UseFile(DecimalComma);
 			MelonLogger.Lines.Clear();
-			var category = T90A(("APFSDS", "3BM42"));
-			PortSettings.Finish(category, "0.4.2", SettingsMigration.Default("APFSDS", "0.4.2", "3BM42"));
+			var category = T90A(("APFSDS", "3BM15"));
+			PortSettings.Finish(category, "0.3.0", SettingsMigration.Default("APFSDS", "0.3.0", "3BM15"));
 			Assert.Equal(0.3f, Value<float>(category, "Campaign prevalence"));
 			Assert.Equal(2, Value<int>(category, "Campaign unlock after missions"));
 			Assert.Contains(MelonLogger.Lines, line => line.StartsWith("warning:") && line.Contains("drei"));
-			Assert.Equal("3BM60", Value<string>(category, "APFSDS"));
-			Assert.Equal("0.4.2", Value<string>(category, PortSettings.VersionEntry));
+			Assert.Equal("3BM22", Value<string>(category, "APFSDS"));
+			Assert.Equal("0.3.0", Value<string>(category, PortSettings.VersionEntry));
 		}
 
 		[Fact]
 		public void Finish_leaves_a_setting_written_by_the_version_that_changed_it()
 		{
 			UseFile(DecimalComma);
-			var category = T90A(("APFSDS", "3BM42"), (PortSettings.VersionEntry, "0.4.2"));
-			PortSettings.Finish(category, "0.4.3", SettingsMigration.Default("APFSDS", "0.4.2", "3BM42"));
-			Assert.Equal("3BM42", Value<string>(category, "APFSDS"));
-			Assert.Equal("0.4.3", Value<string>(category, PortSettings.VersionEntry));
+			var category = T90A(("APFSDS", "3BM15"), (PortSettings.VersionEntry, "0.3.0"));
+			PortSettings.Finish(category, "0.3.1", SettingsMigration.Default("APFSDS", "0.3.0", "3BM15"));
+			Assert.Equal("3BM15", Value<string>(category, "APFSDS"));
+			Assert.Equal("0.3.1", Value<string>(category, PortSettings.VersionEntry));
 		}
 
 		[Fact]
 		public void Finish_leaves_a_setting_the_player_changed()
 		{
 			UseFile(DecimalComma);
-			var category = T90A(("APFSDS", "3BM46"));
-			PortSettings.Finish(category, "0.4.2", SettingsMigration.Default("APFSDS", "0.4.2", "3BM42"));
-			Assert.Equal("3BM46", Value<string>(category, "APFSDS"));
+			var category = T90A(("APFSDS", "3BM9"));
+			PortSettings.Finish(category, "0.3.0", SettingsMigration.Default("APFSDS", "0.3.0", "3BM15"));
+			Assert.Equal("3BM9", Value<string>(category, "APFSDS"));
 		}
 
 		[Fact]
 		public void Finish_skips_a_migration_for_a_missing_entry_or_a_bad_version()
 		{
 			UseFile(Repo.At("tests", "data", "no_such_file.cfg"));
-			var category = T90A(("APFSDS", "3BM42"));
+			var category = T90A(("APFSDS", "3BM15"));
 			PortSettings.Finish(
 				category,
-				"0.4.2",
-				SettingsMigration.Default("Gone", "0.4.2", 1f),
-				SettingsMigration.Default("APFSDS", "soon", "3BM42"));
-			Assert.Equal("3BM42", Value<string>(category, "APFSDS"));
+				"0.3.0",
+				SettingsMigration.Default("Gone", "0.3.0", 1f),
+				SettingsMigration.Default("APFSDS", "soon", "3BM15"));
+			Assert.Equal("3BM15", Value<string>(category, "APFSDS"));
+		}
+
+		// A bad version is reported before a missing entry, a missing entry before a wrong type.
+		[Fact]
+		public void Finish_warns_about_a_migration_that_can_never_move_anything()
+		{
+			UseFile(Repo.At("tests", "data", "no_such_file.cfg"));
+			MelonLogger.Lines.Clear();
+			var category = T90A(("Campaign prevalence", 0.25f));
+			PortSettings.Finish(
+				category,
+				"0.3.0",
+				SettingsMigration.Default("Gone", "soon", 1f),
+				SettingsMigration.Default("Gone", "0.3.0", 0.25),
+				SettingsMigration.Default("Campaign prevalence", "0.3.0", 0.25),
+				SettingsMigration.Default("Campaign prevalence", "0.2.0", 0.25f));
+			string start = "warning: T-90A settings: the default change of ";
+			Assert.Equal(
+				new[]
+				{
+					start + "\"Gone\" in soon does nothing: \"soon\" is not a version.",
+					start + "\"Gone\" in 0.3.0 does nothing: no setting has that name.",
+					start + "\"Campaign prevalence\" in 0.3.0 does nothing: the setting holds Single, the rule gives a Double.",
+				},
+				MelonLogger.Lines.Where(line => line.Contains("does nothing")).ToArray());
+			Assert.Equal(0.1f, Value<float>(category, "Campaign prevalence"));
 		}
 
 		[Fact]
@@ -199,12 +225,12 @@ namespace T90A.Tests
 		{
 			UseFile(DecimalComma);
 			MelonLogger.Lines.Clear();
-			var category = T90A(("APFSDS", "3BM42"));
+			var category = T90A(("APFSDS", "3BM15"));
 			PortSettings.Finish(category, "0.4.4");
 			Assert.Equal(0.3f, Value<float>(category, "Campaign prevalence"));
 			Assert.Equal(2, Value<int>(category, "Campaign unlock after missions"));
 			Assert.Contains(MelonLogger.Lines, line => line.StartsWith("warning:") && line.Contains("drei"));
-			Assert.Equal("3BM42", Value<string>(category, "APFSDS"));
+			Assert.Equal("3BM15", Value<string>(category, "APFSDS"));
 			Assert.Equal("0.4.4", Value<string>(category, PortSettings.VersionEntry));
 			Assert.Single(category.Entries, entry => entry.Identifier == PortSettings.VersionEntry);
 		}

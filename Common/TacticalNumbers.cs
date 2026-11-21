@@ -37,7 +37,7 @@ namespace T90A.Common
 				string spacing = "";
 				if (meshFilter != null)
 				{
-					// Not sharedMesh, the number control works on the instance.
+					// Not sharedMesh: the number control works on the instance.
 					spacing = ScaleDigits(meshFilter.mesh, s.DigitScale, s.DigitSpacing, renderer.transform.lossyScale.x);
 				}
 				var centre = meshFilter != null ? renderer.transform.TransformPoint(meshFilter.mesh.bounds.center) : renderer.bounds.center;

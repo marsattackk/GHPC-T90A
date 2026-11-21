@@ -29,12 +29,12 @@ namespace T90A
 		// PZU-7 eye: the top front of the model's sight head. On the model's rod pivot, 3 cm left of the Kord's cradle, the
 		// cradle filled half the view.
 		static readonly Vector3 PzuHead = new Vector3(0.187f, 2.280f, -0.850f);
-		// The gun's nose-down level from the rig map; none when the rig map has no axes, as the turret is not moved then.
+		// The gun's nose-down level from the rig map (none when the rig map has no axes, as the turret is not moved then).
 		static float GunLevelDeg => T90AMod.Rig != null && T90AMod.Rig.HasAxes ? T90AMod.Rig.PitchDeg : 0f;
 		internal static Vector3 Muzzle => Trunnion + Quaternion.AngleAxis(-GunLevelDeg, Vector3.right) * (WtMuzzle - Trunnion);
 		// Spent cases leave forward through the chute on the right of the receiver's front (Vimpel's Kord page). Its mouth
-		// is inferred: just ahead of War Thunder's receiver, inside its right wall, 1.5 cm under the bore; the direction
-		// (cradle frame) is forward, a little out to the right and down, also inferred.
+		// is inferred: just ahead of War Thunder's receiver, inside its right wall, 1.5 cm under the bore. So is the
+		// direction (cradle frame): forward, a little out to the right and down.
 		static readonly Vector3 WtCaseChute = new Vector3(0.612f, 2.505f, -0.090f);
 		internal static Vector3 CaseChute
 			=> Trunnion + Quaternion.AngleAxis(-GunLevelDeg, Vector3.right) * (WtCaseChute - Trunnion);
@@ -93,7 +93,7 @@ namespace T90A
 		// The cupola drive piece's front (prefab z): 2 cm behind the commander's torso as the interior map puts him.
 		const float CupolaDriveFrontZ = -1.36f;
 		// Its outer side and height (prefab, inferred): the turret's right liner stands at x 0.770 from y 1.505 to 1.905 over the
-		// piece's depth, measured from the turret volume's walls; the piece sits 1.5 cm inside it.
+		// piece's depth, measured from the turret volume's walls, with the piece 1.5 cm inside it.
 		const float CupolaDriveOuterX = 0.755f;
 		static readonly Vector2 CupolaDriveY = new Vector2(1.505f, 1.905f);
 
@@ -136,10 +136,18 @@ namespace T90A
 			// Before anything wakes: the drives, gun and sight pick their hit zones up in Awake.
 			fit.Zones = FitZones(vehicle, fit.Donor, fit.CupolaBone, fit.Turret, fit.Cradle, fit.Holder);
 			if (!CloneGun(fit)) return;
-			CloneFireControl(fit);
-			FitDrives(fit);
-			FitPzu7(fit);
-			FitTkn4s(fit);
+			try
+			{
+				CloneFireControl(fit);
+				FitDrives(fit);
+				FitPzu7(fit);
+				FitTkn4s(fit);
+			}
+			catch
+			{
+				Discard(fit);
+				throw;
+			}
 			WakeParts(fit);
 			Register(fit);
 			DevFitted(fit.Scripts.GetComponent<Station>(), fit);
@@ -235,6 +243,14 @@ namespace T90A
 			return true;
 		}
 
+		// A build that throws before the wake takes its clones and the two live drives with it, so nothing half fitted is left
+		// under the vehicle. The Kord's mesh stays on its cradle, at rest.
+		static void Discard(Fit fit)
+		{
+			Object.Destroy(fit.Holder.gameObject);
+			if (fit.Scripts != null) Object.Destroy(fit.Scripts.gameObject);
+		}
+
 		static void CloneFireControl(Fit fit)
 		{
 			// Last under the root: GetComponentInChildren<FireControlSystem>() elsewhere has to find the gunner's first.
@@ -310,7 +326,7 @@ namespace T90A
 			head.SetParent(fit.CupolaBone, false);
 			head.SetPositionAndRotation(fit.World(CommanderSight.Head), fit.CupolaBone.rotation);
 			fit.TknHead = head;
-			// CloneOptic counts into these; nobody reads the totals.
+			// CloneOptic counts into these but nobody reads the totals.
 			int removed = 0;
 			int scrubbed = 0;
 			fit.Tkn = RemoteMg.CloneOptic(donor, donor.CommanderOptic, fit.Holder, ref removed, ref scrubbed);
@@ -487,6 +503,7 @@ namespace T90A
 			return reticle;
 		}
 
+		// After the elevation drive's LateUpdate, or the PZU-7 head lags the cradle by a frame
 		[DefaultExecutionOrder(10)]
 		internal class RodLink : MonoBehaviour
 		{

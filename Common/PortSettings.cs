@@ -33,7 +33,13 @@ namespace T90A.Common
 			{
 				var changed = Parse(migration.ChangedIn);
 				var entry = cfg.GetEntry(migration.Entry);
-				if (changed == null || entry == null || last >= changed || !migration.AtOld(entry)) continue;
+				string broken = migration.Broken(entry, changed);
+				if (broken != null)
+				{
+					Say($"{cfg.DisplayName} settings: the default change of \"{migration.Entry}\" in {migration.ChangedIn} does nothing: {broken}.", true);
+					continue;
+				}
+				if (last >= changed || !migration.AtOld(entry)) continue;
 				string old = entry.GetValueAsString();
 				migration.ToNew(entry);
 				Say(
@@ -186,13 +192,25 @@ namespace T90A.Common
 	internal sealed class SettingsMigration
 	{
 		internal string Entry, ChangedIn;
+		internal Type Kind;
 		internal Func<MelonPreferences_Entry, bool> AtOld;
 		internal Action<MelonPreferences_Entry> ToNew;
 
+		internal string Broken(MelonPreferences_Entry entry, Version changed)
+		{
+			if (changed == null) return $"\"{ChangedIn}\" is not a version";
+			if (entry == null) return "no setting has that name";
+			var type = entry.GetReflectedType();
+			if (Kind != null && type != Kind) return $"the setting holds {type.Name}, the rule gives a {Kind.Name}";
+			return null;
+		}
+
+		// T is the entry's own type. 0.6 on a float entry is a double and never matches (Finish warns about it).
 		internal static SettingsMigration Default<T>(string entry, string changedIn, T oldDefault) => new SettingsMigration
 		{
 			Entry = entry,
 			ChangedIn = changedIn,
+			Kind = typeof(T),
 			AtOld = s => s is MelonPreferences_Entry<T> typed && Same(typed.Value, oldDefault),
 			ToNew = setting =>
 			{

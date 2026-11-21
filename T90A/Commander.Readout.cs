@@ -8,9 +8,8 @@ using UnityEngine;
 
 namespace T90A
 {
-	// Ammo digit and ready lamp on the TKN-4S strip. The real strip is fed for Дубль, which isn't in the game, so it
-	// runs off the gunner's 2A46. Screen overlay, not reticle strokes: a stroke with no alignment bone takes the whole
-	// reticle down.
+	// Ammo digit and ready lamp on the TKN-4S strip. The real strip is fed for Дубль, which isn't in the game, so it runs off
+	// the gunner's 2A46. Screen overlay, not reticle strokes: a stroke with no alignment bone takes the whole reticle down.
 	internal partial class Tkn4sReadout : MonoBehaviour
 	{
 		WeaponSystem _gun;

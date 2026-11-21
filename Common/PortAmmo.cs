@@ -30,6 +30,7 @@ namespace T90A.Common
 			public float Prevalence = 1f;
 			public int AfterMissions;
 			public bool ScaleWithLogistics;
+			public bool InCampaign = true;
 			public string Texture;
 			public string Atlas;
 			public string Shape;
@@ -42,10 +43,10 @@ namespace T90A.Common
 #pragma warning disable CS0649
 		internal sealed class Rack
 		{
-			public int Index;
+			public int Index;              // the base vehicle's RackLoadouts index, before any rack is dropped
 			public string Name;
 			public Mix Counts;
-			public int[] MissileSlots = new int[0];
+			public int[] MissileSlots = new int[0];   // slot numbers in that rack, on top of Counts (leave them out of Counts.Missile)
 			public bool NoRestockInto;
 			public bool BurstsInParent;
 		}
@@ -66,6 +67,28 @@ namespace T90A.Common
 
 		// Fields a tank never sets keep their defaults here: another tank sets them (CS0649 is off for this declaration only).
 #pragma warning disable CS0649
+		internal sealed class EraRule
+		{
+			public bool AddOnOnly;
+			public float CostAddOn;
+			public float CostBuiltIn;
+		}
+
+		internal sealed class SplitCharge
+		{
+			public float FirstShare = 1f / 3f;
+			public float Offset = 0.01f;
+		}
+#pragma warning restore CS0649
+
+		static readonly string[] BuiltInEraNames = { "Kontakt-5", "Relikt", "Контакт-5", "Реликт" };
+
+		internal static bool IsBuiltInEra(string armourName)
+			=> armourName != null
+				&& BuiltInEraNames.Any(n => armourName.IndexOf(n, StringComparison.OrdinalIgnoreCase) >= 0);
+
+		// Fields a tank never sets keep their defaults here: another tank sets them (CS0649 is off for this declaration only).
+#pragma warning disable CS0649
 		internal sealed class Settings
 		{
 			public string Tag = "Port";
@@ -79,9 +102,15 @@ namespace T90A.Common
 			public string MenuSuffix;
 			public string FixedHeat = "clip_3BK18M";
 			public Round Heat;
+			public Round[] HeatChoice = new Round[0];
+			public Func<string> DefaultHeat;
+			public Func<bool> ForceHeat;
+			public string HeatListName;
 			public Round Missile;
 			public Round[] Extra = new Round[0];
 			public string[] EraDefeating = new string[0];
+			public Dictionary<string, EraRule> EraRules = new Dictionary<string, EraRule>();
+			public Dictionary<string, SplitCharge> SplitCharges = new Dictionary<string, SplitCharge>();
 			public Mix TotalCounts;
 			public Rack[] Racks = new Rack[0];
 			public bool DropOtherRacks = false;
@@ -92,6 +121,8 @@ namespace T90A.Common
 			public Func<string> EmptyRacks;
 			public Func<bool> RandomApfsds;
 			public Func<string> ApfsdsPool;
+			public Func<bool> RandomHeat;
+			public Func<string> HeatPool;
 			public Vector3 GuidancePosition;
 			public string GuidanceName = "guidance computer", BeamName = "guidance beam";
 			public bool BeamOnBaseUnit;
@@ -106,11 +137,15 @@ namespace T90A.Common
 
 		internal static readonly Dictionary<string, AmmoClipCodexScriptable> Apfsds = new Dictionary<string, AmmoClipCodexScriptable>();
 		internal static AmmoClipCodexScriptable Heat;
+		internal static readonly Dictionary<string, AmmoClipCodexScriptable> Heats = new Dictionary<string, AmmoClipCodexScriptable>();
+		internal static AmmoLogisticsScriptable HeatSet;
 		internal static AmmoClipCodexScriptable Missile;
 		internal static readonly List<AmmoClipCodexScriptable> Extras = new List<AmmoClipCodexScriptable>();
 		internal static AmmoLogisticsScriptable ApfsdsSet;
 		internal static AmmoLogisticsScriptable ApfsdsMenuSet;
 		internal static AmmoClipCodexScriptable RandomStandIn;
+		internal static AmmoLogisticsScriptable HeatMenuSet;
+		internal static AmmoClipCodexScriptable RandomHeatStandIn;
 		static bool _built;
 
 		static readonly List<Object> created = new List<Object>();
@@ -138,9 +173,11 @@ namespace T90A.Common
 					? Find(null, round.ModelFrom)
 					: Find(round.ModelFrom.Substring(0, colon), round.ModelFrom.Substring(colon + 1));
 			}
-			Heat = S.Heat == null ? clips.FirstOrDefault(a => a.name == S.FixedHeat) : null;
+			bool heatChoice = S.HeatChoice.Length > 0;
+			Heat = S.Heat == null && !heatChoice ? clips.FirstOrDefault(a => a.name == S.FixedHeat) : null;
 			var ported = S.Apfsds
 				.Concat(S.Heat != null ? new[] { S.Heat } : new Round[0])
+				.Concat(S.HeatChoice)
 				.Concat(S.Missile != null ? new[] { S.Missile } : new Round[0])
 				.Concat(S.Extra)
 				.ToList();
@@ -149,7 +186,7 @@ namespace T90A.Common
 					.Where(r => !string.IsNullOrEmpty(r.ModelFrom) && ModelOfRound(r)?.VisualModel == null)
 					.Select(r => r.ModelFrom))
 				.ToList();
-			if (S.Heat == null && Heat == null && !S.SingleRound) missing.Add(S.FixedHeat);
+			if (S.Heat == null && !heatChoice && Heat == null && !S.SingleRound) missing.Add(S.FixedHeat);
 			if (missing.Count > 0 || S.Apfsds.Length == 0)
 			{
 				MelonLogger.Warning($"{S.Tag} ammo: vanilla {string.Join(", ", missing)} not loaded yet; keeping base ammo.");
@@ -157,17 +194,28 @@ namespace T90A.Common
 			}
 			foreach (var round in S.Apfsds) Apfsds[round.Id] = MakeClip(round, SourceOf(round), ModelOfRound(round));
 			if (S.Heat != null) Heat = MakeClip(S.Heat, SourceOf(S.Heat), ModelOfRound(S.Heat));
+			foreach (var round in S.HeatChoice) Heats[round.Id] = MakeClip(round, SourceOf(round), ModelOfRound(round));
+			if (heatChoice)
+			{
+				HeatSet = MakeSet("heat", S.HeatListName, S.HeatChoice, Heats);
+				Heat = DefaultHeat(warn: true);
+			}
 			if (S.Missile != null)
 			{
 				Missile = MakeClip(S.Missile, SourceOf(S.Missile), ModelOfRound(S.Missile));
 			}
 			Extras.Clear();
 			foreach (var round in S.Extra) Extras.Add(MakeClip(round, SourceOf(round), ModelOfRound(round)));
-			ApfsdsSet = MakeApfsdsSet();
+			ApfsdsSet = MakeSet("apfsds", S.ApfsdsListName, S.Apfsds, Apfsds);
 			if (RandomPossible)
 			{
-				RandomStandIn = MakeRandomStandIn();
-				ApfsdsMenuSet = MakeApfsdsMenuSet();
+				RandomStandIn = MakeRandomStandIn("random", Apfsds[S.Apfsds[0].Id]);
+				ApfsdsMenuSet = MakeMenuSet("apfsds_menu", ApfsdsSet, RandomStandIn);
+			}
+			if (RandomHeatPossible)
+			{
+				RandomHeatStandIn = MakeRandomStandIn("random_heat", Heats[S.HeatChoice[0].Id]);
+				HeatMenuSet = MakeMenuSet("heat_menu", HeatSet, RandomHeatStandIn);
 			}
 			_built = true;
 			return true;
@@ -184,49 +232,65 @@ namespace T90A.Common
 			return list;
 		}
 
-		static AmmoLogisticsScriptable MakeApfsdsSet()
+		static AmmoLogisticsScriptable MakeSet(
+			string kind,
+			string listName,
+			Round[] rounds,
+			Dictionary<string, AmmoClipCodexScriptable> built)
 		{
 			var set = ScriptableObject.CreateInstance<AmmoLogisticsScriptable>();
-			set.name = $"ammo_logistics_{S.Prefix}_apfsds";
+			set.name = $"ammo_logistics_{S.Prefix}_{kind}";
 			set.hideFlags = HideFlags.DontUnloadUnusedAsset;
 			set.AmmoLogistics = new AmmoReplacementOrder
 			{
-				Name = S.ApfsdsListName,
-				AmmoOptions = S.Apfsds.Select(r => new AmmoReplacementOrder.AmmoTypeLogistics
+				Name = listName,
+				AmmoOptions = rounds.Select(r => new AmmoReplacementOrder.AmmoTypeLogistics
 				{
-					AmmoType = Apfsds[r.Id],
+					AmmoType = built[r.Id],
 					Prevalence = r.Prevalence,
 					BlockUntilMissionsCompleted = r.AfterMissions,
 					LogisticsModifierCurve = r.ScaleWithLogistics
 						? AnimationCurve.Linear(0f, 0f, 1f, 1f)
 						: AnimationCurve.Constant(0f, 1f, 1f),
-					AllowInCampaign = true,
+					AllowInCampaign = r.InCampaign,
 				}).ToArray(),
 			};
 			created.Add(set);
 			return set;
 		}
 
+		internal static Round RoundOfOption(AmmoReplacementOrder order, AmmoClipCodexScriptable clip)
+		{
+			if (ApfsdsSet != null && order == ApfsdsSet.AmmoLogistics)
+				return S.Apfsds.FirstOrDefault(r => Apfsds.TryGetValue(r.Id, out var built) && built == clip);
+			if (HeatSet != null && order == HeatSet.AmmoLogistics)
+				return S.HeatChoice.FirstOrDefault(r => Heats.TryGetValue(r.Id, out var built) && built == clip);
+			return null;
+		}
+
 		internal static bool RandomPossible => S != null && S.RandomApfsds != null && S.Apfsds.Length >= 2;
+
+		internal static bool RandomHeatPossible => S != null && S.RandomHeat != null && S.HeatChoice.Length >= 2;
 
 		// GHPC compares clips by the rounds they hold (AmmoClip.Equals), never by the clip's name. A stand-in holding no round
 		// would equal the HEAT stand-in (and every other port's): the customizer's Random entry replaced the HEAT slot too.
-		// So it holds one round of its own, a copy of the first APFSDS (valid figures for GHPC's firing table) under a name
-		// no other round has.
-		static AmmoClipCodexScriptable MakeRandomStandIn()
+		// So it holds one round of its own, a copy of the kind's first round (valid figures for GHPC's firing table) under a
+		// name no other round has. The APFSDS and HEAT stand-ins share the name "Random (<tank>)" the dropdowns show; they
+		// never equal each other, since AmmoType.Equals also compares the round's category (AP, HEAT).
+		static AmmoClipCodexScriptable MakeRandomStandIn(string kind, AmmoClipCodexScriptable first)
 		{
 			string name = $"Random ({S.Tag})";
-			var source = Apfsds[S.Apfsds[0].Id].ClipType.MinimalPattern[0].AmmoType;
+			var source = first.ClipType.MinimalPattern[0].AmmoType;
 			var ammo = new AmmoType();
 			foreach (var field in typeof(AmmoType).GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
 				if (!field.IsLiteral && !field.IsInitOnly) field.SetValue(ammo, field.GetValue(source));
 			ammo.Name = name;
 			var codex = ScriptableObject.CreateInstance<AmmoCodexScriptable>();
-			codex.name = $"ammo_{S.Prefix}_random";
+			codex.name = $"ammo_{S.Prefix}_{kind}";
 			codex.hideFlags = HideFlags.DontUnloadUnusedAsset;
 			codex.AmmoType = ammo;
 			var standIn = ScriptableObject.CreateInstance<AmmoClipCodexScriptable>();
-			standIn.name = $"clip_{S.Prefix}_random";
+			standIn.name = $"clip_{S.Prefix}_{kind}";
 			standIn.hideFlags = HideFlags.DontUnloadUnusedAsset;
 			standIn.ClipType = new AmmoType.AmmoClip { Name = name, Capacity = 1, MinimalPattern = new[] { codex } };
 			created.Add(codex);
@@ -234,13 +298,14 @@ namespace T90A.Common
 			return standIn;
 		}
 
-		// ApfsdsSet never holds the stand-in: the campaign's factions get that one, and GHPC rolls it for real rounds only.
-		static AmmoLogisticsScriptable MakeApfsdsMenuSet()
+		// The campaign's list (ApfsdsSet, HeatSet) never holds the stand-in: the factions get that one, and GHPC rolls it for
+		// real rounds only.
+		static AmmoLogisticsScriptable MakeMenuSet(string kind, AmmoLogisticsScriptable campaignSet, AmmoClipCodexScriptable standIn)
 		{
 			var set = ScriptableObject.CreateInstance<AmmoLogisticsScriptable>();
-			set.name = $"ammo_logistics_{S.Prefix}_apfsds_menu";
+			set.name = $"ammo_logistics_{S.Prefix}_{kind}";
 			set.hideFlags = HideFlags.DontUnloadUnusedAsset;
-			var options = ApfsdsSet.AmmoLogistics.AmmoOptions.Select(o => new AmmoReplacementOrder.AmmoTypeLogistics
+			var options = campaignSet.AmmoLogistics.AmmoOptions.Select(o => new AmmoReplacementOrder.AmmoTypeLogistics
 			{
 				AmmoType = o.AmmoType,
 				Prevalence = o.Prevalence,
@@ -250,13 +315,13 @@ namespace T90A.Common
 			}).ToList();
 			options.Add(new AmmoReplacementOrder.AmmoTypeLogistics
 			{
-				AmmoType = RandomStandIn,
+				AmmoType = standIn,
 				Prevalence = 0f,
 				BlockUntilMissionsCompleted = 0,
 				LogisticsModifierCurve = AnimationCurve.Constant(0f, 1f, 1f),
 				AllowInCampaign = false,
 			});
-			set.AmmoLogistics = new AmmoReplacementOrder { Name = S.ApfsdsListName, AmmoOptions = options.ToArray() };
+			set.AmmoLogistics = new AmmoReplacementOrder { Name = campaignSet.AmmoLogistics.Name, AmmoOptions = options.ToArray() };
 			created.Add(set);
 			return set;
 		}
@@ -267,10 +332,13 @@ namespace T90A.Common
 			return value;
 		}
 
-		internal static bool RandomWanted()
+		internal static bool RandomWanted() => RandomPossible && Wanted(S.RandomApfsds, "randomapfsds");
+
+		internal static bool RandomHeatWanted() => RandomHeatPossible && Wanted(S.RandomHeat, "randomheat");
+
+		static bool Wanted(Func<bool> setting, string flagName)
 		{
-			if (!RandomPossible) return false;
-			bool wanted = S.RandomApfsds();
+			bool wanted = setting();
 			return wanted;
 		}
 
@@ -300,25 +368,51 @@ namespace T90A.Common
 
 		static AmmoClipCodexScriptable RollApfsds(Vehicle vehicle)
 		{
-			var ids = S.Apfsds.Select(r => r.Id).ToArray();
-			string spelled = Effective(S.ApfsdsPool, "apfsdspool", g => g.Replace('+', ',').Replace('=', ':'));
-			var pool = PortAmmoPool.Parse(spelled, ids, out string warning);
-			if (warning != null && PoolWarned.Add(warning)) MelonLogger.Warning($"{S.Tag}: {warning}");
-			pool = pool ?? PortAmmoPool.Default(ids, S.Apfsds.Select(r => r.Prevalence).ToArray());
-			string id = PortAmmoPool.Pick(pool, Roller);
-			return Apfsds[id];
+			var clip = Roll(vehicle, "APFSDS", S.Apfsds, Apfsds, S.ApfsdsPool, "apfsdspool");
+			return clip;
 		}
 
-		internal static void RollRandomApfsds(LoadoutManager loadoutManager)
+		static AmmoClipCodexScriptable RollHeat(Vehicle vehicle)
+		{
+			var clip = Roll(vehicle, "HEAT", S.HeatChoice, Heats, S.HeatPool, "heatpool");
+			return clip;
+		}
+
+		static AmmoClipCodexScriptable Roll(
+			Vehicle vehicle,
+			string kind,
+			Round[] rounds,
+			Dictionary<string, AmmoClipCodexScriptable> built,
+			Func<string> poolSetting,
+			string flagName)
+		{
+			var ids = rounds.Select(r => r.Id).ToArray();
+			string spelled = Effective(poolSetting, flagName, g => g.Replace('+', ',').Replace('=', ':'));
+			var pool = PortAmmoPool.Parse(spelled, ids, out string warning, kind);
+			if (warning != null && PoolWarned.Add(warning)) MelonLogger.Warning($"{S.Tag}: {warning}");
+			pool = pool ?? PortAmmoPool.Default(ids, rounds.Select(r => r.InCampaign ? r.Prevalence : 0f).ToArray());
+			string id = PortAmmoPool.Pick(pool, Roller);
+			return built[id];
+		}
+
+		internal static void RollRandomRounds(LoadoutManager loadoutManager)
 		{
 			var clips = loadoutManager?.LoadedAmmoList?.AmmoClips;
-			if (RandomStandIn == null || clips == null || clips.Length == 0) return;
+			if (clips == null || clips.Length == 0) return;
 			var vehicle = loadoutManager.GetComponent<Vehicle>();
-			if (ReferenceEquals(clips[0], RandomStandIn))
+			bool rolled = false;
+			if (RandomStandIn != null && ReferenceEquals(clips[0], RandomStandIn))
 			{
 				clips[0] = RollApfsds(vehicle);
-				RegisterAllBallistics.Invoke(loadoutManager, null);
+				rolled = true;
 			}
+			int heatSlot = RandomHeatStandIn != null ? Array.FindIndex(clips, c => ReferenceEquals(c, RandomHeatStandIn)) : -1;
+			if (heatSlot >= 0)
+			{
+				clips[heatSlot] = RollHeat(vehicle);
+				rolled = true;
+			}
+			if (rolled) RegisterAllBallistics.Invoke(loadoutManager, null);
 		}
 
 		// Clips match by value, so it holds no round to equal no option. Reusing the vanilla ClipType still matched.
@@ -344,7 +438,7 @@ namespace T90A.Common
 
 		internal static int HideFixedHeat(AmmoClipCodexScriptable[] clips)
 		{
-			if (Heat == null || clips == null) return -1;
+			if (Heat == null || clips == null || HeatSet != null) return -1;
 			int i = Array.IndexOf(clips, Heat);
 			if (i >= 0) clips[i] = HeatStandIn();
 			return i;
@@ -366,10 +460,25 @@ namespace T90A.Common
 			return Apfsds[S.Apfsds[0].Id];
 		}
 
-		static List<AmmoClipCodexScriptable> PortList(IEnumerable<AmmoClipCodexScriptable> baseClips, AmmoClipCodexScriptable ap)
+		internal static AmmoClipCodexScriptable DefaultHeat(bool warn)
+		{
+			if (S.HeatChoice.Length == 0) return Heat;
+			string id = S.DefaultHeat?.Invoke();
+			if (Heats.TryGetValue(id ?? "", out var heatClip)) return heatClip;
+			if (warn) MelonLogger.Warning($"{S.Tag} ammo: unknown HEAT '{id}', using {S.HeatChoice[0].Id}.");
+			return Heats[S.HeatChoice[0].Id];
+		}
+
+		internal static bool IsHeat(AmmoClipCodexScriptable clip)
+			=> clip != null && (ReferenceEquals(clip, Heat) || Heats.ContainsValue(clip));
+
+		static List<AmmoClipCodexScriptable> PortList(
+			IEnumerable<AmmoClipCodexScriptable> baseClips,
+			AmmoClipCodexScriptable ap,
+			AmmoClipCodexScriptable heat = null)
 		{
 			if (S.SingleRound) return new List<AmmoClipCodexScriptable> { ap };
-			var list = new List<AmmoClipCodexScriptable> { ap, Heat };
+			var list = new List<AmmoClipCodexScriptable> { ap, heat ?? DefaultHeat(warn: false) };
 			var baseHe = S.NoBaseHe ? null : baseClips.Skip(2).FirstOrDefault();
 			if (baseHe != null) list.Add(baseHe);
 			if (Missile != null) list.Add(Missile);
@@ -387,7 +496,7 @@ namespace T90A.Common
 				var clip = list[i];
 				int extra = Extras.IndexOf(clip);
 				if (i == 0) counts[i] = mix.Apfsds;
-				else if (clip == Heat) counts[i] = mix.Heat;
+				else if (IsHeat(clip)) counts[i] = mix.Heat;
 				else if (Missile != null && clip == Missile) counts[i] = mix.Missile;
 				else if (extra >= 0) counts[i] = extra < mix.Extra.Length ? mix.Extra[extra] : 0;
 				else counts[i] = mix.He;
@@ -472,17 +581,26 @@ namespace T90A.Common
 			catch (Exception exception) { PatchGuard.Failed("Tandem ERA charge", exception); }
 		}
 
-		// GHPC's Tandem only beats slat armour.
+		// GHPC's Tandem only beats slat armour. One precursor per round: a second block meets the main charge (GHPC's penCheck).
 		static void Precursor(LiveRound __instance, Collider cObject)
 		{
 			AmmoType info = __instance.Info;
 			if (info == null || !info.Tandem || __instance.IsSpall || cObject == null || PortAmmo.S == null) return;
-			if (Array.IndexOf(PortAmmo.S.EraDefeating, info.Name) < 0 || Sacrificed(__instance)) return;
+			PortAmmo.EraRule rule = null;
+			bool listed = Array.IndexOf(PortAmmo.S.EraDefeating, info.Name) >= 0
+				|| (PortAmmo.S.EraRules != null && PortAmmo.S.EraRules.TryGetValue(info.Name, out rule));
+			if (!listed || Sacrificed(__instance)) return;
 			if (!cObject.TryGetComponent<IArmor>(out var armor) || !armor.IsEra || armor.IsDetonated) return;
 			if (armor.Unit != null && __instance.ShotInfo != null && __instance.ShotInfo.Shooter == armor.Unit) return;
+			bool builtIn = PortAmmo.IsBuiltInEra(armor.Name);
+			// A precursor for add-on ERA meets built-in ERA as a single charge does: GHPC's own penCheck takes the block.
+			if (rule != null && rule.AddOnOnly && builtIn) return;
 
 			armor.Detonate();
 			Sacrificed(__instance) = true;
+			float cost = rule == null ? 0f : builtIn ? rule.CostBuiltIn : rule.CostAddOn;
+			if (cost > 0f && __instance.RhaPenetrationOverride <= 0f)
+				__instance.RhaPenetrationOverride = Mathf.Max(1f, info.RhaPenetration - cost);
 		}
 	}
 }

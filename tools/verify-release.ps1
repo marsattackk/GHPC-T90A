@@ -8,15 +8,15 @@ Checks that a release DLL of T90A is what this repo's tag builds: builds the tag
   tools\verify-release.ps1 -Tag v1.0.0 -Release C:\path\T90A_1.0.0.zip -GameDir "<GHPC folder>\Bin"
 
 -Release is the DLL, or the release zip (Mods\T90A.dll is taken out of it). The tag is cloned into a temporary folder (this
-repo is not touched) and built with `dotnet build -c Release -p:GameDir=<GameDir> -p:GitCommit=<commit>`; the commit is the
+repo is not touched) and built with `dotnet build -c Release -p:GameDir=<GameDir> -p:GitCommit=<commit>`. The commit is the
 one the release DLL's own version stamp carries (it is read from the DLL, "<version>+<commit7>[.dirty].<dev|public>"), because
-the stamp goes into the DLL and a deterministic build only repeats byte for byte with the same stamp. When the stamp's commit
-is not the tag's commit that is said; the build is the tag's source either way. A DLL you built yourself without
--p:GitCommit says "+unknown" in its stamp and names no commit: pass -Commit <short hash> (the tag's own, for a build of the tag).
+the stamp goes into the DLL and a deterministic build only repeats byte for byte with the same stamp. If the stamp's commit
+isn't the tag's, it says so, and the build is the tag's source either way. A DLL you built yourself without -p:GitCommit says
+"+unknown" in its stamp and names no commit: pass -Commit <short hash> (the tag's own, for a build of the tag).
 
 Says IDENTICAL, or what differs: sizes, the number of differing bytes and where the first one is. Exit code 0: identical,
 1: different, 2: the check could not be made (no tag, no DLL, the build failed). The game's files are only read (GameDir is
-the reference folder the build needs); nothing is written outside the temporary folder.
+the reference folder the build needs). Nothing is written outside the temporary folder.
 Needs: git and the .NET SDK on the PATH, Windows PowerShell 5.1 or newer.
 #>
 param(

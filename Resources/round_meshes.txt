@@ -6,7 +6,11 @@ mesh|3BM60|3BM42_SabotPetal_003|round_mesh_3bm60_sabot_003.mesh|2944|2593|3dc5f9
 mesh|3BM60|3BM42_SabotPetal_004|round_mesh_3bm60_sabot_004.mesh|2944|2593|d26f18f309ef2dd3
 mesh|9M119M|9M112_warhead|round_mesh_9m119m_missile.mesh|1703|1606|1df9945bc5de1efd
 mesh|9M119M|9M112_booster|round_mesh_9x949_charge.mesh|2798|2435|22565161cfd8e2ff
+mesh|3BK29M|3BK14M_Warhead|round_mesh_3bk29m_warhead.mesh|2521|2136|ca65380078798ecf
+mesh|3BK31|3BK14M_Warhead|round_mesh_3bk31_warhead.mesh|2561|2208|5782594c4bd189f4
+mesh|3BK31|3BK14M_ORing_001|round_mesh_3bk31_oring.mesh|540|496|4fd1e73034aed179
 capsule|3BM60|3BM15 projectile hit zone|0.00000,0.42250,0.00000|0.0200|0.6050|1
 capsule|3BM60|3BM15 casing hit zone|0.00000,0.21250,0.00000|0.0600|0.4150|1
 capsule|9M119M|9M112 warhead hit zone|0.00000,0.35100,0.00000|0.0500|0.5980|1
 capsule|9M119M|throwing charge hit zone|0.00000,0.12500,0.00000|0.0600|0.2200|1
+capsule|3BK31|3BK14M warhead hit zone|0.00000,0.30000,0.00000|0.0600|0.3000|1

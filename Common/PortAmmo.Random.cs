@@ -7,7 +7,11 @@ namespace T90A.Common
 {
 	internal static class PortAmmoPool
 	{
-		internal static List<KeyValuePair<string, double>> Parse(string pool, IList<string> ids, out string warning)
+		internal static List<KeyValuePair<string, double>> Parse(
+			string pool,
+			IList<string> ids,
+			out string warning,
+			string kind = "APFSDS")
 		{
 			warning = null;
 			if (string.IsNullOrWhiteSpace(pool)) return null;
@@ -25,15 +29,15 @@ namespace T90A.Common
 					string name = (colon < 0 ? text : text.Substring(0, colon)).Trim();
 					string given = colon < 0 ? "" : text.Substring(colon + 1).Trim();
 					id = ids.FirstOrDefault(k => string.Equals(k, name, StringComparison.OrdinalIgnoreCase));
-					if (id == null) problem = $"names '{name}', which is not an APFSDS round";
+					if (id == null) problem = $"names '{name}', which is not one of the {kind} rounds";
 					else if (colon >= 0 && !ParseWeight(given, out weight))
 						problem = $"gives '{given}' as the weight of {id}, which is not a number above 0";
 					else if (result.Any(e => e.Key == id)) problem = $"names {id} twice";
 				}
 				if (problem != null)
 				{
-					warning = $"APFSDS pool '{pool.Trim()}' {problem} (rounds: {string.Join(", ", ids)}); "
-						+ "rolling from every APFSDS at its campaign weight.";
+					warning = $"{kind} pool '{pool.Trim()}' {problem} (rounds: {string.Join(", ", ids)}); "
+						+ $"rolling from every {kind} at its campaign weight.";
 					return null;
 				}
 				result.Add(new KeyValuePair<string, double>(id, weight));

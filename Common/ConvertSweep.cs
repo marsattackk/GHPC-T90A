@@ -2,11 +2,12 @@ using System;
 using System.Collections;
 using GHPC.State;
 using GHPC.Vehicle;
+using MelonLoader;
 using UnityEngine;
 
 namespace T90A.Common
 {
-	// Catches T-72M1s the spawn patch missed, at PlayerReady.
+	// Catches the port's units the spawn patch missed, at PlayerReady.
 	internal static class ConvertSweep
 	{
 		// One marker per conversion: the spawn patch and the PlayerReady sweep may both see the same unit.
@@ -26,8 +27,15 @@ namespace T90A.Common
 		{
 			foreach (var vehicle in UnityEngine.Object.FindObjectsByType<Vehicle>(FindObjectsSortMode.None))
 			{
-				if (vehicle.UniqueName == unitKey) convert(vehicle);
-				else other?.Invoke(vehicle);
+				try
+				{
+					if (string.Equals(vehicle.UniqueName, unitKey, StringComparison.OrdinalIgnoreCase)) convert(vehicle);
+					else other?.Invoke(vehicle);
+				}
+				catch (Exception exception)
+				{
+					MelonLogger.Error($"{unitKey}: converting {vehicle.name} at PlayerReady failed: {exception}");
+				}
 			}
 			yield break;
 		}

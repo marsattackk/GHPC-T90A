@@ -269,7 +269,7 @@ namespace T90A.Common
 				.Where(s => !statuses.Contains(s))
 				.ToArray();
 			UnitStatuses.SetValue(vehicle, statuses.Concat(ours).ToArray());
-			// Empty means every slot under the unit. Append to it and ours are the only sights left.
+			// Empty means every slot under the unit. Append to it and the station's are the only sights left.
 			if (UnitSlots != null && vehicle.DesignatedCameraSlots != null && vehicle.DesignatedCameraSlots.Length > 0)
 				UnitSlots.SetValue(vehicle, vehicle.DesignatedCameraSlots.Concat(sights.Where(s => s != null)).ToArray());
 			return ours;

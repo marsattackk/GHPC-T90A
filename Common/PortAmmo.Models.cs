@@ -250,6 +250,25 @@ namespace T90A.Common
 							meshFilter.sharedMesh = mesh;
 							meshes++;
 						}
+						// 3BK18M's warhead is a SkinnedMeshRenderer with no bones, and it draws nothing with one of these meshes.
+						// So it becomes a plain MeshRenderer on my copy. AarVisual collects the renderers when a round spawns.
+						foreach (var skinned in model
+							.GetComponentsInChildren<SkinnedMeshRenderer>(true)
+							.Where(x => x.bones.Length == 0 && ShapePartIs(model, x.transform, fields[2]))
+							.ToList())
+						{
+							var part = skinned.gameObject;
+							var materials = skinned.sharedMaterials;
+							var shadows = skinned.shadowCastingMode;
+							bool receives = skinned.receiveShadows;
+							Object.DestroyImmediate(skinned);
+							part.AddComponent<MeshFilter>().sharedMesh = mesh;
+							var plain = part.AddComponent<MeshRenderer>();
+							plain.sharedMaterials = materials;
+							plain.shadowCastingMode = shadows;
+							plain.receiveShadows = receives;
+							meshes++;
+						}
 					}
 					else if (fields[0] == "capsule")
 					{

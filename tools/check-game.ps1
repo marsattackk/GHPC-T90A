@@ -1,15 +1,15 @@
 # Says which of the mod's game hooks a GHPC build has broken, without starting the game. It reads the built T90A.dll,
 # finds every Harmony patch and every private member the mod looks up, and looks each one up in the game's own assemblies:
-#   - [HarmonyPatch] attributes, and Reflect.Field / Property / Method / FieldRefAccess with literal names (Common\Reflect.cs);
+#   - [HarmonyPatch] attributes, and Reflect.Field / Property / Method / FieldRefAccess with literal names (Common\Reflect.cs)
 #   - AccessTools.Method(typeof(X) or AccessTools.TypeByName("X"), "name"), a patch target when its method hands it to Harmony.Patch or is
-#     the Target() of a patch class;
-#   - Traverse.Create(x).Field("name") (the class is x's declared class);
+#     the Target() of a patch class
+#   - Traverse.Create(x).Field("name") (the class is x's declared class)
 #   - the hit-zone hook table of Common\ModuleBuilder.cs: each `new HookDef(typeof(X), "Field", ("Event", "handler"), ...)` gives the
-#     owner's field, its handler methods and the destructible component's events (and their backing fields);
-#   - Type.GetField / GetMethod / GetProperty / GetEvent with a literal name on a game class.
+#     owner's field, its handler methods and the destructible component's events (and their backing fields)
+#   - Type.GetField / GetMethod / GetProperty / GetEvent with a literal name on a game class
 # Anything the IL can't spell out (a name that comes from a variable) is read from check-game-list.txt, next to this script.
 # It cannot check by name: field enumerations (Type.GetFields: the code takes whatever fields the class has now) and
-# Type.GetField / GetMethod with a name from a variable; the summary lists where they are so a game update can be read against them.
+# Type.GetField / GetMethod with a name from a variable. The summary lists where those are, to read a game update against.
 #
 #   powershell -ExecutionPolicy Bypass -File tools\check-game.ps1 -GameDir "<GHPC folder>\Bin"
 #   ... -Dll <path to a built T90A.dll>   skip the build and read that DLL

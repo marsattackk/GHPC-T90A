@@ -213,7 +213,7 @@ namespace T90A.Common
 			}
 		}
 
-		// The cloud is built for a burst high over flat ground; each burst moves it to the grenade's real height over the ground.
+		// The cloud is built for a burst high over flat ground, so each burst moves it to the grenade's real height.
 		sealed class CloudFit
 		{
 			public float Built;

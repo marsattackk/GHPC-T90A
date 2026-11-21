@@ -44,7 +44,6 @@ body:
     attributes:
       label: T-90A version
       description: From the zip you installed, or the MelonLoader console when the game starts.
-      placeholder: "0.4.2"
     validations:
       required: true
 
@@ -72,6 +71,13 @@ body:
     attributes:
       label: Other mods
       description: The other mods you have installed, with versions if you know them. Write "none" if there aren't any.
+
+  - type: textarea
+    id: settings
+    attributes:
+      label: Your settings
+      description: If you changed any of the mod's settings, paste the T-90A section of `UserData\MelonPreferences.cfg` from the game folder.
+      render: toml
 
   - type: textarea
     id: latest_log

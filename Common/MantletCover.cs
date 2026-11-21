@@ -27,7 +27,7 @@ namespace T90A.Common
 					: new BoneWeight { boneIndex0 = 0, weight0 = 1f - blend, boneIndex1 = 1, weight1 = blend };
 			}
 			mesh.boneWeights = weights;
-			// The gun can already be elevated here, bind at rest.
+			// Bind at rest. The gun can already be elevated here.
 			var plat = root.GetComponentsInChildren<AimablePlatform>(true).FirstOrDefault(c => c.Transform == gun);
 			var restRot = plat != null
 				? (Quaternion)restField.GetValue(plat)

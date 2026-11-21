@@ -92,7 +92,7 @@ namespace T90A.Common
 			{
 				if (component.HealthPercent >= target) continue;
 				bool wasDestroyed = component.IsDestroyed;
-				// Fires Repaired on a destroyed zone, the owners undo their effects.
+				// Fires Repaired on a destroyed zone so the owners undo their effects.
 				component.SetHealthPercent(target);
 				if (wasDestroyed) healed.Add(component);
 			}

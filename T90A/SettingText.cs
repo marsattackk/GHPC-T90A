@@ -7,7 +7,8 @@ namespace T90A
 		static readonly string AfterChange = " For T-90As spawned after the change.";
 
 		internal static readonly string Enabled =
-			"Adds the T-90A as its own unit (Instant Action, campaign roster, ATAC key \"T90A\").";
+			"Adds the T-90A as its own unit (Instant Action, campaign roster). Its unit key is \"T90A\", the name to give mods"
+			+ " like Any Tank Any Campaign.";
 
 		internal static readonly string Apfsds =
 			"Default APFSDS where the game does not choose one (the mission customizer's ammo dropdown and the campaign's ammo"
@@ -30,6 +31,30 @@ namespace T90A
 			"The rounds Random APFSDS rolls from, as name:weight, comma separated (3BM42, 3BM60; \"3BM42:3, 3BM60:1\" rolls 3BM42"
 			+ " three times as often as 3BM60; a name without a weight counts 1). Empty (default): every APFSDS at its campaign"
 			+ " weight."
+			+ AfterChange;
+
+		internal static readonly string Heat =
+			"Default HEAT where the game does not choose one (the mission customizer's ammo dropdown and the campaign's ammo"
+			+ " supply override it): 3BK29M (default; tandem, 700 mm, beats add-on ERA such as Kontakt-1), 3BK31 Start-2"
+			+ " (experimental triple charge, 800 mm, beats built-in ERA such as Kontakt-5 too) or 3BK18M (the older single charge,"
+			+ " 585 mm).";
+
+		internal static readonly string ForceHeat =
+			"false (default): the campaign picks each T-90A's HEAT from the army's ammo supply (3BK29M or 3BK18M; never the"
+			+ " experimental 3BK31). true = every T-90A carries the HEAT setting's round in the campaign too. In Instant Action"
+			+ " the mission customizer's ammo dropdown still decides."
+			+ AfterChange;
+
+		internal static readonly string RandomHeat =
+			"false (default): each T-90A carries the HEAT setting's round where the game does not choose one. true = each T-90A"
+			+ " rolls its own HEAT from HEAT pool in Instant Action and scripted missions, and the mission customizer's HEAT"
+			+ " dropdown starts on Random (a round picked there still decides). The campaign keeps its own ammo supply."
+			+ AfterChange;
+
+		internal static readonly string HeatPool =
+			"The rounds Random HEAT rolls from, as name:weight, comma separated (3BK29M, 3BK31, 3BK18M; \"3BK29M:3, 3BK18M:1\""
+			+ " rolls 3BK29M three times as often as 3BK18M and never 3BK31; a name without a weight counts 1). Empty (default):"
+			+ " 3BK29M and 3BK18M at their campaign weights; the experimental 3BK31 only when named here."
 			+ AfterChange;
 
 		internal static readonly string AmmunitionLoad =
@@ -55,7 +80,7 @@ namespace T90A
 			+ AfterChange;
 
 		internal static readonly string Shtora =
-			"Shtora-1 (default): the IR jammer against wire-guided missiles, the laser warning on the commander's panel and the"
+			"Shtora-1 (default): the IR jammer against command-guided missiles, the laser warning on the commander's panel and the"
 			+ " automatic 3D17 aerosol screens. false = none of it: the smoke launchers fire the game's ordinary smoke salvo."
 			+ AfterChange;
 
@@ -75,9 +100,10 @@ namespace T90A
 			+ AfterChange;
 
 		internal static readonly string ShtoraJamChance =
-			"Chance, from 0 to 1, that the IR jammer breaks a wire-guided missile's guidance (TOW, HOT, MILAN, Konkurs and the"
-			+ " like). 0.6 (default) is the figure Russian sources give against MILAN and HOT. It only acts on a missile launched"
-			+ " from inside the jammer's sector, 20 deg either side of the gun: one fired from the flank or the rear is never jammed."
+			"Chance, from 0 to 1, that the IR jammer breaks the guidance of a missile steered from its launcher, by wire or radio"
+			+ " (TOW, HOT, MILAN, Konkurs, Kobra, Shturm and the like). 0.6 (default) is the figure Russian sources give against"
+			+ " MILAN and HOT. It only acts on a missile launched from inside the jammer's sector, 20 deg either side of the gun:"
+			+ " one fired from the flank or the rear is never jammed."
 			+ AfterChange;
 
 		internal static readonly string ShtoraPanel =

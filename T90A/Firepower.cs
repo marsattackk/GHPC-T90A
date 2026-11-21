@@ -6,8 +6,8 @@ namespace T90A
 {
 	internal static partial class Firepower
 	{
-		// 42 rounds, 22 in the carousel (Russian Wikipedia, «Т-90»; btvt.narod.ru, «Основной боевой танк Т-90А»). The mix
-		// is mine: the carousel takes any mix (Suvorov, «Т-90») and I found no standard load.
+		// 42 rounds, 22 in the carousel (Russian Wikipedia's «Т-90» and btvt.narod.ru's «Основной боевой танк Т-90А»). The
+		// mix is mine: the carousel takes any mix (Suvorov, «Т-90») and I found no standard load.
 		internal static readonly PortAmmo.Mix Counts = new PortAmmo.Mix { Apfsds = 22, Heat = 8, He = 8, Missile = 4 };
 
 		// With the two Invars, the carousel's 22. The split is mine.
@@ -18,7 +18,11 @@ namespace T90A
 		internal const int Svinets2AfterMissions = 4;
 		internal const float Svinets2Prevalence = 0.25f;
 
-		// Eight belts of 250 rounds, 2000 in all (Russian Wikipedia, «Т-90»; the T-90M carries five boxes of 400).
+		// The HEAT rounds' name ending, as the darts' "APFSDS-T": GHPC matches rounds by name, so not the T-90M's " HEAT-FS",
+		// the T-80UM2's " HEAT" nor the game's own "HEAT-FS-T" (the vanilla 3BK18M's list would follow this tank's copy).
+		const string HeatSuffix = " HEAT-T";
+
+		// Eight belts of 250 rounds, 2000 in all (Russian Wikipedia, «Т-90»). The T-90M carries five boxes of 400.
 		internal const int PktBelt = 250;
 
 		internal static readonly GunSetup.Settings Gun = new GunSetup.Settings
@@ -59,7 +63,7 @@ namespace T90A
 					{
 						// 578 mm at the muzzle: the maker's 230 mm at 60 deg at 2000 m (NIMI's brochure from «Армия-2019»), 460 mm
 						// in line of sight, carried back through this drag. 4.85 kg without the sabot (btvt.info, «Боекомплект
-						// танков Т-64/72/80/90. БОПС»), 1700 m/s the maker's; the drag is the game's 3BM32's.
+						// танков Т-64/72/80/90. БОПС»), 1700 m/s the maker's and the drag the game's 3BM32's.
 						ammo.RhaPenetration = 578f;
 						ammo.Mass = 4.85f;
 						ammo.MuzzleVelocity = 1700f;
@@ -77,13 +81,13 @@ namespace T90A
 					Shape = "3BM60",
 					Set = ammo =>
 					{
-						// 693 mm at the muzzle: the maker's 300 mm at 60 deg at 2000 m (NIMI's brochure from «Армия-2019»; Rostec
-						// to Interfax, 2019), 600 mm in line of sight, carried back through this drag.
+						// 693 mm at the muzzle: the maker's 300 mm at 60 deg at 2000 m (NIMI's brochure from «Армия-2019» and
+						// Rostec to Interfax in 2019), 600 mm in line of sight, carried back through this drag.
 						ammo.RhaPenetration = 693f;
 						// The 4.5 kg is the core's mass from the one Russian list that gives it (vpk.name, «Основной боевой танк
-						// Т-90 "Владимир"»); the flight mass isn't published. The coefficient is paired with it for a 3.5 %
-						// velocity loss per 1000 m, from the same list. The 1660 m/s muzzle velocity and the 8.4 kg with sabot
-						// are the maker's.
+						// Т-90 "Владимир"»), because the flight mass isn't published. The coefficient is paired with it for a
+						// 3.5 % velocity loss per 1000 m, from the same list. The 1660 m/s muzzle velocity and the 8.4 kg with
+						// sabot are the maker's.
 						ammo.Mass = 4.5f;
 						ammo.MuzzleVelocity = 1660f;
 						ammo.Coeff = 0.093f;
@@ -101,7 +105,15 @@ namespace T90A
 			EmptyRacks = () => T90AMod.EmptyRacks.Value,
 			ApfsdsListName = "125mm APFSDS (T-90A)",
 			MenuSuffix = " (T-90A)",
-			FixedHeat = "clip_3BK18M",
+			// 3BK29M (default), 3BK31 and 3BK18M, the same set as the T-90M's and the T-80UM2's under this tank's own names.
+			HeatChoice = Heat125.Choice(HeatSuffix),
+			DefaultHeat = () => T90AMod.Heat.Value,
+			ForceHeat = () => T90AMod.ForceHeat.Value,
+			RandomHeat = () => T90AMod.RandomHeat.Value,
+			HeatPool = () => T90AMod.HeatPool.Value,
+			HeatListName = "125mm HEAT (T-90A)",
+			EraRules = Heat125.EraRules(HeatSuffix),
+			SplitCharges = Heat125.SplitCharges(HeatSuffix),
 			Missile = new PortAmmo.Round
 			{
 				Id = "9M119M",
@@ -120,14 +132,14 @@ namespace T90A
 					ammo.MuzzleVelocity = 284f;
 					ammo.MaximumRange = 5000f;
 					ammo.ArmingDistance = 100f;
-					ammo.RangedFuseTime = 5000f / 284f + 0.3f;   // just past 5 km; the 0.3 s is mine
+					ammo.RangedFuseTime = 5000f / 284f + 0.3f;   // just past 5 km (the 0.3 s is mine)
 					ammo.Guidance = AmmoType.GuidanceType.Laser;
 				},
 			},
 			EraDefeating = new[] { "9M119M Invar" },
 			TotalCounts = Counts,
 			// Two Invars in the carousel and two in the hull's rear rack: my placement.
-			// The racks' names are the words the player types in Empty racks. The carousel is "autoloader"; the hull's rear
+			// The racks' names are the words the player types in Empty racks. The carousel is "autoloader", while the hull's rear
 			// rack and every other T-72M1 rack (GHPC fills those with its own share-out) are "hull".
 			Racks = new[]
 			{

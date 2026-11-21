@@ -6,7 +6,7 @@
        is untouched. -->
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
-    <LangVersion>latest</LangVersion>
+    <LangVersion>10</LangVersion>
     <Nullable>disable</Nullable>
     <IsPackable>false</IsPackable>
     <RootNamespace>T90A.Tests</RootNamespace>

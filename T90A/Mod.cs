@@ -4,13 +4,14 @@ using MelonLoader.Utils;
 using T90A.Common;
 using UnityEngine;
 
-[assembly: MelonInfo(typeof(T90A.T90AMod), "T-90A", "0.5.2", "marsattackk")]
+[assembly: MelonInfo(typeof(T90A.T90AMod), "T-90A", "0.5.3", "marsattackk")]
 [assembly: MelonGame("Radian Simulations LLC", "GHPC")]
+[assembly: HarmonyDontPatchAll]   // off means off: nothing is patched until Enabled has been read
 
 namespace T90A
 {
 	// Loads the bundle, registers the unit on the T-72M1 prefab and hangs the War Thunder model's HULL / TURRET / GUN on the base
-	// rig's bones (the base's visuals off, paint, real axes). The armour goes on before the axes move; the Kord station, the
+	// rig's bones (the base's visuals off, paint, real axes). The armour goes on before the axes move. The Kord station, the
 	// modules and Shtora-1 are fitted at spawn, the sights and voices once the unit has started (Conversion.Convert).
 	public partial class T90AMod : MelonMod
 	{
@@ -26,7 +27,7 @@ namespace T90A
 		const string BaseUnit = "T72M1";   // registry key of the vanilla prefab "T72M1" (crew, interior, damage model, running gear)
 		// The T-72M1 is NVA in GHPC, so the army comes off the T-80B.
 		const string ArmyFrom = "T80B";
-		// 2000 rounds for the PKT (Russian Wikipedia, «Т-90»; «Описание танка Т-90А», odetievbrony.ru).
+		// 2000 rounds for the PKT (Russian Wikipedia, «Т-90», and «Описание танка Т-90А» on odetievbrony.ru).
 		internal const int CoaxRounds = 2000;
 		internal const string NumberPosition = "rear lamp";
 
@@ -36,6 +37,10 @@ namespace T90A
 		internal static MelonPreferences_Entry<bool> ForceApfsds;
 		internal static MelonPreferences_Entry<bool> RandomApfsds;
 		internal static MelonPreferences_Entry<string> ApfsdsPool;
+		internal static MelonPreferences_Entry<string> Heat;
+		internal static MelonPreferences_Entry<bool> ForceHeat;
+		internal static MelonPreferences_Entry<bool> RandomHeat;
+		internal static MelonPreferences_Entry<string> HeatPool;
 		internal static MelonPreferences_Entry<string> AmmunitionLoad;
 		internal static MelonPreferences_Entry<string> EmptyRacks;
 		internal static MelonPreferences_Entry<bool> FireWhenLaid;
@@ -53,7 +58,8 @@ namespace T90A
 		internal static MelonPreferences_Entry<bool> ShtoraPanelAlways;
 
 		const string Repo = "marsattackk/GHPC-T90A";
-		// A changed default needs a rule here. MelonLoader keeps the saved one.
+		// A changed default needs a rule here. MelonLoader keeps the saved one. The arguments are the setting, the version
+		// that changed it and the old default it replaces (the new one is the entry's own).
 		static readonly SettingsMigration[] Migrations =
 		{
 			SettingsMigration.Default("APFSDS", "0.4.2", "3BM42"),
@@ -66,6 +72,7 @@ namespace T90A
 			UnityErrors.Install(typeof(T90AMod).Namespace);
 			CreateSettings();
 			if (!Enabled.Value) return;
+			PatchClasses.Apply(this);
 			PortAmmo.S = Firepower.Settings();
 			LoadData();
 			RegisterUnit();
@@ -79,7 +86,7 @@ namespace T90A
 				"Enabled",
 				true,
 				description: SettingText.Enabled);
-			// The T-90A is the more common tank; the newer, rarer T-90M shows up half as often (0.25).
+			// The T-90A is the more common tank: the newer, rarer T-90M shows up half as often (0.25).
 			Campaign = CampaignConfig.Create(cfg, FriendlyName, 0.5f, 2);
 			Apfsds = cfg.CreateEntry(
 				"APFSDS",
@@ -97,6 +104,22 @@ namespace T90A
 				"APFSDS pool",
 				"",
 				description: SettingText.ApfsdsPool);
+			Heat = cfg.CreateEntry(
+				"HEAT",
+				"3BK29M",
+				description: SettingText.Heat);
+			ForceHeat = cfg.CreateEntry(
+				"Force HEAT",
+				false,
+				description: SettingText.ForceHeat);
+			RandomHeat = cfg.CreateEntry(
+				"Random HEAT",
+				false,
+				description: SettingText.RandomHeat);
+			HeatPool = cfg.CreateEntry(
+				"HEAT pool",
+				"",
+				description: SettingText.HeatPool);
 			AmmunitionLoad = cfg.CreateEntry(
 				"Ammunition load",
 				"Full",
@@ -150,7 +173,7 @@ namespace T90A
 				"Kord spent cases",
 				true,
 				description: SettingText.KordCases);
-			// Off by default on the T-90A, as it has always shipped; on by default on the T-90M.
+			// Off by default on the T-90A, as it has always shipped, but on by default on the T-90M.
 			EraEffects = cfg.CreateEntry(
 				"ERA destruction effects",
 				false,

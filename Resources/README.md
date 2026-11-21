@@ -17,10 +17,12 @@ file only has to be dropped in. The reticle files (`*.jsonc`) are written in the
 | `essa_monitor.jsonc` | ESSA monitor edges | `NightSight` |
 | `round_3bm42_co.png`, `round_3bm60_co.png` | stencil textures for the 3BM42 and 3BM60 rounds | `Firepower`, applied by `PortAmmo` |
 | `round_9m119m_co.png` | stencil texture for the 9M119M missile | `Firepower`, applied by `PortAmmo` |
+| `round_3bk29m_co.png`, `round_3bk31_co.png` | stencil textures for the 3BK29M and 3BK31 HEAT rounds, made the same way | `Common\Heat125.cs`, applied by `PortAmmo` |
 | `round_meshes.txt` | index of the round mesh pieces below, by round | `PortAmmo.ApplyShape` |
 | `round_mesh_3bm60_*.mesh` (charge, oring, rod, sabot 001 / 003 / 004) | 3BM60 shell pieces | `PortAmmo`, via `round_meshes.txt` |
 | `round_mesh_9m119m_missile.mesh` | 9M119M missile body | `PortAmmo`, via `round_meshes.txt` |
 | `round_mesh_9x949_charge.mesh` | booster piece for the 9M119M | `PortAmmo`, via `round_meshes.txt` |
+| `round_mesh_3bk29m_warhead.mesh`, `round_mesh_3bk31_warhead.mesh`, `round_mesh_3bk31_oring.mesh` | the 3BK29M and 3BK31 shells, reshaped from the game's 3BK14M | `PortAmmo`, via `round_meshes.txt` |
 | `shtora_panel.png` | commander's Shtora control panel picture | `ShtoraScreen` |
 | `shtora_lamp_on.png`, `shtora_lamp_off.png` | panel lamps | `ShtoraScreen` |
 | `shtora_layout.txt` | where the lamps sit on the panel picture | `ShtoraScreen` |

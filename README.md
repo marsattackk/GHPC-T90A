@@ -139,8 +139,9 @@ tracer, and the spent cases pile up on the roof until you brake hard. AI T-90As 
 It doesn't shoot anything down. It messes with how the other guy aims, and using it well is mostly about where your gun
 points.
 
-- The two red lamps either side of the gun are an IR jammer. A TOW, HOT, MILAN, Fagot or Konkurs coming in within 20°
-  of where your gun points goes wide about 6 times in 10. Point the gun at the launcher. Each lamp can be shot off.
+- The two red lamps either side of the gun are an IR jammer. A TOW, HOT, MILAN, Fagot, Konkurs, Kobra or Shturm coming
+  in within 20° of where your gun points goes wide about 6 times in 10, wire or radio link alike. Point the gun at the
+  launcher. Each lamp can be shot off.
 - Get lased and the commander's panel pops up bottom right with a tone and a lamp for the direction. The lamps go by
   the turret, not the hull.
 - Lased from in front of the turret, it fires a 3D17 grenade between you and the shooter by itself. The cloud builds in
@@ -192,10 +193,20 @@ spares round the crew in the T-72B manual's places. The autoloader runs at the g
 |---|---|
 | 3BM42 "Mango" | ~580 mm at the muzzle, ~460 mm at 2 km |
 | 3BM60 "Svinets-2" | ~690 mm at the muzzle, ~600 mm at 2 km |
-| 3BK18M HEAT, 3OF26 HE-Frag | the game's own rounds |
+| 3BK29M HEAT (default) | 700 mm, tandem, 915 m/s |
+| 3BK31 "Start-2" HEAT | 800 mm, a precursor and two main charges |
+| 3BK18M HEAT | 585 mm, the game's own round |
+| 3OF26 HE-Frag | the game's own round |
 
 3BM60 is the default and 3BM42 the alternative, picked in the game's normal ammo menu. In the campaign 3BM60 only turns
 up after four missions and runs short when Pact logistics go badly, and 3BM42 fills the gap.
+
+**The HEAT.** It's the same three rounds as on my T-90M, picked in the same menu, and both dropdowns have a Random
+entry. 3BK29M has a small charge in the nose that sets off add-on ERA like Kontakt-1 before the main charge gets there,
+and it comes out about 50 mm down. It can't do that to built-in ERA (Kontakt-5, Relikt), so against those it's a single
+charge again. 3BK31 was only ever an experimental round, shown at Omsk in 1997. It gets through either kind of ERA with
+660-680 mm left, and its two main charges go in as two jets, which you can see in the recap. The campaign never hands
+out 3BK31. Set `Force HEAT` if you want it there.
 
 **The Invar.** The 9M119M rides a laser beam from the 1G46, so it goes where the chevron is. Keep the tip on the target
 until it hits. It arms at 100 m and takes about 17.6 s to reach 5000 m, and its tandem warhead (700 mm) sets the ERA off
@@ -206,8 +217,8 @@ Keep the nose towards trouble and the gun towards whoever's got a missile, and i
 
 ## Settings
 
-After the first start, `UserData\MelonPreferences.cfg` in the game folder has a `[T-90A]` section. Close the game
-before editing it.
+After the first start, `UserData\MelonPreferences.cfg` in the game folder has a `[T-90A]` section. You can edit it
+with the game running: MelonLoader reloads the file when you save it.
 
 | Setting | Values | Default |
 |---|---|---|
@@ -219,6 +230,10 @@ before editing it.
 | `Force APFSDS` | true: the campaign gives every T-90A the `APFSDS` round instead of drawing one from its ammo supply | false |
 | `Random APFSDS` | true: each T-90A rolls its own APFSDS from `APFSDS pool` in Instant Action and scripted missions, and the mission customizer's ammo dropdown starts on Random; the campaign keeps its own ammo supply | false |
 | `APFSDS pool` | the rounds `Random APFSDS` rolls from, as name:weight (`"3BM42:3, 3BM60:1"`); empty: every APFSDS at its campaign weight | `""` |
+| `HEAT` | `"3BK29M"` / `"3BK31"` / `"3BK18M"`, where the game doesn't pick one itself | 3BK29M |
+| `Force HEAT` | true: the campaign gives every T-90A the `HEAT` round instead of drawing 3BK29M or 3BK18M from its ammo supply | false |
+| `Random HEAT` | true: each T-90A rolls its own HEAT from `HEAT pool` in Instant Action and scripted missions, and the mission customizer's HEAT dropdown starts on Random; the campaign keeps its own ammo supply | false |
+| `HEAT pool` | the rounds `Random HEAT` rolls from, as name:weight (`"3BK29M:3, 3BK18M:1"`); empty: 3BK29M and 3BK18M at their campaign weights, 3BK31 only if you name it | `""` |
 | `Ammunition load` | `"Full"` / `"Autoloader"` (only the 22 rounds of the autoloader, 2 of them missiles), on every T-90A, friend and foe | Full |
 | `Empty racks` | racks to leave empty, comma separated (`"hull"`); replaces `Ammunition load`; the autoloader is always loaded | `""` |
 | `Gunner night sight` | `"ESSA"` / `"Buran-M"` | ESSA |
@@ -229,7 +244,7 @@ before editing it.
 | `Shtora-1 automatic screens` | false: the warning only, and you fire the screen from the vehicle menu or with the smoke key | true |
 | `Shtora-1 alarm tone` | false: the panel's lamps only | true |
 | `Shtora-1 jammer on at spawn` | false: off until you switch it on (AI crews still do in a fight) | true |
-| `Shtora-1 jam chance` | 0 to 1, how often the jammer throws off a wire-guided missile fired from in front of the gun | 0.6 |
+| `Shtora-1 jam chance` | 0 to 1, how often the jammer throws off a missile guided from its launcher (wire or radio) fired from in front of the gun | 0.6 |
 | `Shtora-1 panel on screen` | false: no panel, the tone only | true |
 | `Shtora-1 panel always on screen` | true: on screen the whole time you're in the T-90A | false |
 | `Kord spent cases` | false: no cases, the belt still feeds | true |
@@ -238,8 +253,8 @@ before editing it.
 | `Check for updates` | true / false | true |
 
 Leave the `ConfigVersion` line at the end alone. It's how the mod tells which settings are still on an old default.
-The three campaign settings take effect at the next mission load, no restart needed. A number saved with a decimal
-comma (`"0,3"`) is read fine too.
+Most settings apply to T-90As spawned after you save, the three campaign ones at the next mission load. `Enabled`
+needs a restart. A number saved with a decimal comma (`"0,3"`) is read fine too, but only when the game starts.
 
 ## Bugs and suggestions
 
@@ -296,5 +311,10 @@ The 3D model and textures are War Thunder's T-90A, taken from War Thunder's game
 Entertainment and they're not covered by this repository's licence. The same goes for the armour shapes, cut from War
 Thunder's damage model. Everything else (the armour values, the sights and their reticles, the fire control, the ammo,
 the interior) was built for GHPC from Russian sources.
+
+A few files in `Resources\` are GHPC's own assets, reworked: the T-72M1 hull skin with its side skirts cut out
+(`T72M1_skin_hull_trimmed.bin`), and the round meshes and stencil textures (`round_mesh_*.mesh`, `round_*_co.png`),
+reshaped and repainted from the game's own rounds. Those belong to Radian Simulations, and the
+licence doesn't cover them either.
 
 The source code is under the [GNU General Public License v3.0](LICENSE).

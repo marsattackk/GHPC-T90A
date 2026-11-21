@@ -55,7 +55,7 @@ namespace T90A
 				readout.letter = Text("ammo text", root.transform, LetterX, 24f, TextAlignmentOptions.Center, "6");
 
 				optic.RangeText = range;
-				optic.RangeTextQuantize = 5;   // 5 m steps, as the T-80B's 1G42 readout
+				optic.RangeTextQuantize = 5;   // the digits in the sight, in 5 m steps as the 1G42's. Not the weapon info's 50 m
 				optic.RangeTextDivideBy = 1;
 				optic.RangeTextArchetype = "0000";
 				optic.RangeTextPrefix = "<mspace=0.9em>";

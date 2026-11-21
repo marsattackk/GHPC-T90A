@@ -380,7 +380,7 @@ namespace T90A.Common
 			}
 		}
 
-		// GHPC lays the gun parallel to the sight's line; a sight 0.6 m off the bore needs its lines converged.
+		// GHPC lays the gun parallel to the sight's line. A sight 0.6 m off the bore needs its lines converged.
 		internal static class Converge
 		{
 			static readonly Dictionary<FireControlSystem, List<(CameraSlot slot, float distance)>> Sights =

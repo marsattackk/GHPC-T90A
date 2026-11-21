@@ -2,7 +2,6 @@ using T90A.Common;
 
 namespace T90A
 {
-	// The T-90A's engine and gearing.
 	internal static partial class Drive
 	{
 		const float ReverseTrackFactor = 4.52f / 4.17f;   // GHPC's tracks run ~8 % over NWH's gear formula
@@ -11,7 +10,7 @@ namespace T90A
 
 		internal static readonly Mobility.Settings Settings = new Mobility.Settings
 		{
-			// The V-92S2's 1000 hp at 2000 rpm (Suvorov, «Т-90. Первый серийный российский танк»; Russian Wikipedia, «Т-90»).
+			// The V-92S2's 1000 hp at 2000 rpm (Suvorov, «Т-90. Первый серийный российский танк», and Russian Wikipedia, «Т-90»).
 			MaxPower = 1000f,
 			MaxRpm = 2000f,
 			// Solved for the T-72A manual's speeds at 2000 rpm, 7.32 to 60 km/h: its 0.706 input gear and 5.454 final drive

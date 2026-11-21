@@ -25,14 +25,15 @@ Then, in this order:
 4. Check the T-90A is in Instant Action, the mission customiser and the campaign.
 5. Spawn one and read the log again. Conversion runs at spawn, so most warnings only show up here.
 6. Go through the test list at the bottom.
-7. Play a mission with the mod off. Some patches touch every unit, so check a vanilla T-72M1 and T-80B still behave.
+7. Leave the mod on and play a mission with a vanilla T-72M1 and T-80B in it. Some patches touch every unit.
 
 ## What it looks like in the log
 
 - `Game field X.y not found: a game update may have changed it, ...` comes from `Reflect`. The word after "Game" can
   also be `method`, `property` or `property setter`. Once per session per member. `can't be read as bool (...)` means
   the field is still there but its type changed. `can't be looked up (...)` usually means a method gained an overload.
-- A Harmony error at startup naming a patch class, with `Undefined target method` or similar: the patch target went.
+- `<class> could not be patched (a game update?), so that part of the mod is off: ...` at startup names the patch
+  class whose target went, usually with `Undefined target method`. The other classes still go in.
 - `<feature> failed (the game carries on without it this time; 1 of 3 logged)` is `PatchGuard`. The patch ran and the
   code inside threw. The stack trace has the line. It goes quiet after three.
 - `Unity exception in our code: ...` is `UnityErrors`, an exception in one of the mod's behaviours or coroutines.
@@ -45,7 +46,8 @@ Then, in this order:
 
 A missing reflected member is looked up once and cached, and the feature code checks for null and skips, so a rename
 shows up as a feature that's gone quiet, not a crash. The one exception is `TraverseLimits`, which wraps
-`AimablePlatform.enforceEulerLimits` in a `MethodDelegate` and loses its whole class if that method goes.
+`AimablePlatform.enforceEulerLimits` in a `MethodDelegate` when the class loads. If that method is removed the limit is
+just skipped, but if it changes its parameters or return type the delegate throws and the whole class goes with it.
 
 Things that break most often, roughly in order: a private field or method renamed, a patched method's parameters
 changed, a public member renamed (compile error), a prefab or material renamed, and last, nothing renamed but the game's
@@ -57,6 +59,9 @@ Open the game's `Assembly-CSharp.dll` (`GHPC_Data\Managed`) in a .NET decompiler
 look for the same kind of member with a similar type and name. Find Usages on the old name's neighbours usually gives
 it away. For a method, match the parameter types and read the body. Decompiling the previous game version and diffing
 the class is the quickest way if you still have it. Change the string or signature, build, and test that feature.
+
+Most of the hooks are in `Common\`, which is sealed, so the seal test fails once you've changed one. In a fork that's
+expected, and [MAINTAINING.md](../MAINTAINING.md#layout) says how to re-seal it.
 
 If a whole mechanism has gone (say `LiveRound.penCheck` is split up), the code using it has to be rethought, not
 renamed.
@@ -126,9 +131,8 @@ These don't go through `Reflect`, so a rename gives no warning of that shape.
 
 `tools\check-game.ps1` reads the literal names in `Reflect.*`, `AccessTools.Method`, `Traverse.Create(x).Field`,
 `Type.GetField` / `GetMethod` and the hit-zone table of `ModuleBuilder`, and looks each one up in the game's DLLs. It
-cannot check a field enumeration (`GetFields` in `PortAmmo.MakeClip`, `RemoteMg.Platform` and `DonorParts.Scrub`) or a
-lookup whose name is a variable: after a game update read those against the class by hand. The script lists where they
-are.
+cannot check a field enumeration (`GetFields`, as in `PortAmmo.MakeClip` or `RemoteMg.Platform`) or a lookup whose
+name is a variable: after a game update read those against the class by hand. The script prints every place they are.
 
 The rest, which no script reads:
 
@@ -138,9 +142,20 @@ The rest, which no script reads:
 - **The T-72M1 armour War Thunder's model replaces** (`BaseRigT72M1.ImportReplaces`, plus `Fire Wall` in
   `T90A\Armour.cs`). A renamed one stays switched on inside the T-90A's armour, and the armour warning names it. Some
   carry GHPC's own trailing space (`Hull Roof 30mm `). Keep it.
-- **Donors**: units `T80B` and `T72M1` in the registry, copied at the main menu by `DonorParts.cs` because
-  VanillaAssetUtil can destroy the prefabs after a mission.
-- **Ammunition** (`T90A\Firepower.cs`): clips `clip_3BM32`, `clip_9M112M` and `clip_3BK18M` from the T-80B's list.
+- **Donors**, copied at the main menu by `DonorParts.cs` because VanillaAssetUtil can destroy the prefabs after a
+  mission. They are `T80B` (voices, sight sounds, the Buran-M) and `T72M1` from the registry, the first unit whose key
+  starts `T64` for the Kord's station (`RemoteMg.cs`), `M60A3TTS` for the ESSA's thermal screen (`ThermalSight.cs`),
+  and the first of `LEO2A3`, `M60A3`, `LEO1A3` or `M1` for the 3D17's white cloud (`ShtoraScreen.cs`, which falls back
+  to the 3D6's dark one). The glass donors are the last column of `material_roles`.
+- **Shtora glow and heat** (`T90A\Countermeasures.ShtoraGlow.cs` and `.ShtoraHeat.cs`): the T-72M1's `Luna visuals`,
+  `Luna visuals 2` and `IR light source`, the shader `Legacy Shaders/Particles/Additive`, and `GHPC/VehicleShader` with
+  its `_PaintMask`, `_ScorchAmount` and `_FLIR_Emission`. A missing object or shader gets a warning. A renamed shader
+  property gets nothing, and the emitters just stay cold in thermal. The `T-72M1 Luna out` step switches off
+  `---ELECTRICS SCRIPTS---/spotlight` (`BaseStrip.cs`).
+- **Ammunition** (`T90A\Firepower.cs`, `Common\Heat125.cs`): clips `clip_3BM32`, `clip_9M112M` and `clip_3BK18M` from
+  the T-80B's list. All three HEAT rounds are copies of `clip_3BK18M`. The 3BK31's ERA cost goes through
+  `LiveRound.RhaPenetrationOverride`, and built-in ERA is told apart by the armour's name (Kontakt-5, Relikt): if
+  another mod renames its blocks, 3BK29M treats them as add-on.
 - **Fonts and materials**: `Soviet7SegmentFont SDF`, fonts starting `TPD_Etch`, `Standard (FLIR)`, and
   `see-through teal gray` for the x-ray (no log line if that one goes).
 - **Scenes and input**: the menu scenes in `MenuScenes.cs`, `TR01_showcase`, and the buttons `Toggle Night Sight` and

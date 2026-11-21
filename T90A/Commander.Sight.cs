@@ -10,8 +10,7 @@ namespace T90A
 {
 	using DC = GHPC.Equipment.DestructibleComponent;
 
-	// The TKN-4S: two optics as its day and night channels, tied to the Kord. Avtomat keeps the Kord on target through
-	// traverse.
+	// The TKN-4S: two optics as its day and night channels, tied to the Kord. Avtomat keeps the Kord on target through traverse.
 	internal static partial class CommanderSight
 	{
 		// Eye 1.5 cm proud of the head's front plate. Put it any deeper and the view's a black wall.
@@ -23,7 +22,7 @@ namespace T90A
 		// Avtomat holds the Kord between -4 and +20 deg (Suvorov, «Т-90. Первый серийный российский танк»).
 		internal static readonly Vector2 AutoElevation = new Vector2(-4f, 20f);
 		// The range keys stop at 1600 m, where the З scale ends (figure 4.65 of «Прицельно-наблюдательный комплекс
-		// ПНК-4С», odetievbrony.ru); that З is the Kord's scale is my reading.
+		// ПНК-4С», odetievbrony.ru). That З is the Kord's scale is my reading.
 		internal static readonly Vector2 RangeLimits = new Vector2(0f, 1600f);
 		// The sight's hit box: War Thunder's damage part for it, its back trimmed 4 cm to clear the commander's face.
 		internal static readonly Vector3 ZoneCentre = new Vector3(

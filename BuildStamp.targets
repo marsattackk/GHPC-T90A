@@ -1,9 +1,9 @@
 <Project>
   <!-- Puts "<version>+<commit7>[.dirty].<dev|public>" in the DLL's AssemblyInformationalVersion, and BuildInfo.cs logs
        it on load. The version is read from MelonInfo in Mod.cs so it only lives in one place. -p:GitCommit and
-       -p:BuildFlavour set the other two. Without GitCommit it asks git (StampAskGit; StampGit, default "git" on the PATH)
-       or writes "unknown", and without BuildFlavour it says "dev". The public project file sets "public" and never asks
-       git. -->
+       -p:BuildFlavour set the other two. Without GitCommit it asks git (StampAskGit, with StampGit defaulting to "git" on
+       the PATH) or writes "unknown", and without BuildFlavour it says "dev". The public project file sets "public" and
+       never asks git. -->
   <PropertyGroup>
     <BuildFlavour Condition="'$(BuildFlavour)' == ''">dev</BuildFlavour>
     <StampAskGit Condition="'$(StampAskGit)' == ''">true</StampAskGit>

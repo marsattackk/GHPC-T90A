@@ -25,7 +25,7 @@ latest [release zip](https://github.com/marsattackk/GHPC-T90A/releases/latest). 
 do, because it still has the old armour pieces. Without the bundle's model the mod loads and the T-90A stays a complete
 T-72M1: nothing of the conversion is applied.
 
-The DLL logs a stamp when it loads, like `T-90A 0.4.4+3dac81f.public, game <version>, Steam build <number>`, so a
+The DLL logs a stamp when it loads, like `T-90A <version>+<commit>.public, game <version>, Steam build <number>`, so a
 player's log tells you which build they ran. The version comes from `MelonInfo` in `T90A\Mod.cs`, the commit from
 `-p:GitCommit=<hash>` (otherwise `unknown`), the flavour from `-p:BuildFlavour` (default `public`).
 
@@ -60,8 +60,11 @@ the tests skip those and a README edit is the usual way for the settings tables 
 
 The reticle language is described in [docs/reticles.md](docs/reticles.md), and `ExpressionTests.cs` pins it: read both
 before changing `ReticleSpec.Expressions.cs`. Every reticle in `Resources\` is also expanded and compared line by line
-with `tests\expanded\`. After changing a reticle on purpose, set `T90A_UPDATE_EXPANDED=1`, run the tests once and check
-the diff is what you meant.
+with `tests\expanded\`. After changing a reticle on purpose, rewrite those once and check the diff is what you meant:
+
+```
+$env:T90A_UPDATE_EXPANDED = "1"; dotnet test tests; Remove-Item Env:T90A_UPDATE_EXPANDED
+```
 
 ## Layout
 
@@ -69,17 +72,21 @@ the diff is what you meant.
 T90A\       the tank itself
 Common\     the stamped, sealed code shared with my other ports
 Resources\  data embedded in the DLL, file by file in its README.md
-tools\      check-game.ps1, check-settings.ps1, verify-release.ps1
+tools\      check-game.ps1 and its check-game-list.txt, check-settings.ps1, verify-release.ps1
 tests\      the tests above, a project of their own
 docs\       game-updates.md, bundle.md, reticles.md and shared-features.md for you; armour.md, screens.md and details.md for
             players; the images
 ```
 
-`T90A\` is small, one file per job. `Mod.cs` is the entry point: the settings, the data load and the unit's
-registration, with the settings' descriptions in `SettingText.cs`. `Conversion.cs` does the converting, calling the
-rest: `Armour`, `Firepower` (rounds, counts, gun settings), `Drive`, `Countermeasures` (Shtora-1), and the
-commander's station in `Commander.cs` with `Commander.Seat.cs`, `Commander.Sight.cs` (the TKN-4S), `Commander.Avtomat.cs`
-(its Avtomat mode), `Commander.Readout.cs` (its indicator strip) and `Commander.Zones.cs`. The sights come a moment later from `Sights.cs`, with `Sights.1G46.cs`, `Sights.Night.cs` and `Sights.Readout.cs`;
+`T90A\` is small, one file per job. Where a file holds a class of its own, the class is in brackets. `Mod.cs`
+(`T90AMod`) is the entry point: the settings, the data load and the unit's registration, with the settings'
+descriptions in `SettingText.cs`. `Conversion.cs` does the converting, calling the rest: `Armour`, `Firepower`
+(rounds, counts, gun settings), `Drive`, and Shtora-1 in `Countermeasures.cs` with `Countermeasures.ShtoraGlow.cs`
+(`ShtoraGlow`, the emitters lit in night sights) and `Countermeasures.ShtoraHeat.cs` (`ShtoraHeat`, the same in
+thermal). The commander's station is `Commander.cs` with `Commander.Zones.cs`, `Commander.Seat.cs` (`CommanderSeat`),
+`Commander.Sight.cs` (`CommanderSight`, the TKN-4S), `Commander.Avtomat.cs` (`CommanderSight.Avtomat`, its Avtomat
+mode) and `Commander.Readout.cs` (`Tkn4sReadout`, its indicator strip). The sights come a moment later from
+`Sights.cs`, with `Sights.1G46.cs` (`Sight1G46`), `Sights.Night.cs` (`NightSight`) and `Sights.Readout.cs`.
 `Reticles.cs` is the shared reticle handle.
 
 `tools\verify-release.ps1` rebuilds a tag and compares it with a release DLL or zip (the last step of Releasing).
@@ -90,8 +97,17 @@ Where to change things:
 
 | What | Where |
 |---|---|
-| Tunable numbers | `Firepower.cs` (gun, rounds, coax belt), `Mod.cs` (coax rounds), `Commander.cs` (Kord) |
-| A setting's description | `SettingText.cs`, except three that live in `Common`: `Weathered paint` (`PaintFinish.cs`), `Campaign prevalence` (`UnitRegistry.cs`) and `Check for updates` (`UpdateCheck.cs`) |
+| The gun, the rounds and their counts, the coax belt | `Firepower.cs`, and the coax's total in `Mod.cs` (`CoaxRounds`) |
+| Engine, gearing, reverse and top speed | `Drive.cs` |
+| Laser range, the sight's travel, the fire gate | `Sights.cs` |
+| 1G46 zoom steps and reticle | `Sights.1G46.cs` |
+| ESSA fields and travel | `Sights.Night.cs` |
+| The Kord: belts, rate, traverse, drive speeds | `Commander.cs` |
+| TKN-4S fields, the Avtomat's limits | `Commander.Sight.cs` |
+| Jammer sector, chance and missile list | `Countermeasures.cs` |
+| How bright and how hot the Shtora emitters get | `Countermeasures.ShtoraGlow.cs`, `Countermeasures.ShtoraHeat.cs` |
+| The source-only armour factors | `Armour.cs` |
+| A setting's description | `SettingText.cs`, except the ones `Common` makes: `Add to campaign roster`, `Campaign prevalence` and `Campaign unlock after missions` (`UnitRegistry.cs`), `Weathered paint` (`PaintFinish.cs`) and `Check for updates` (`UpdateCheck.cs`) |
 | Armour values, hatches, glass, ERA, smoke points | the text files in `Resources\` |
 
 Every method named `Dev...` is an empty partial method: a hook my own test harness fills in. Without the harness the
@@ -104,8 +120,12 @@ by my GHPC mods and stamped into each repo, so it is never edited here: the same
 and each tank gets the subset it needs, so it holds code the T-90A doesn't use.
 [docs/shared-features.md](docs/shared-features.md) says which features those are and which the tank switches on. It is
 sealed: `Common\STAMP.txt` lists a hash for every file and `tests\CommonSealTests.cs` fails, naming the file, when one
-differs. To change it, open an issue or a pull request on this repo describing the change; I apply it to the shared copy
-and stamp every mod again.
+differs. For a change you want in this repo, open an issue or a pull request describing it, and I make it in the shared
+copy and stamp every mod again.
+
+In your own fork it's yours to edit, which matters after a game update because most of the hooks live in `Common\`.
+Change what you need, and the seal test fails naming the file and printing its new SHA-256. Put that hash on the
+file's line in `Common\STAMP.txt` and the tests pass again.
 
 One trade-off comes with that. Each port compiles `Common\` into its own DLL under its own namespace, so a player who
 installs the T-90A, T-90M and T-80UM2 together gets one copy of every Harmony patch per port, for example three on
@@ -127,24 +147,26 @@ The bundle's contents and formats are in [docs/bundle.md](docs/bundle.md).
 
 ## What happens when a T-90A spawns
 
-At game start `T90AMod.OnInitializeMelon` makes the settings (`CreateSettings`), stops there if `Enabled` is off,
-opens the bundle (`LoadData`) and registers a unit (`RegisterUnit`) `T90A` based on the `T72M1` with the `T80B`'s army
-(GHPC has the T-72M1 as NVA and I wanted it Soviet). `UnitRegistry` copies the T-72M1's entry under that name so
-Instant Action, the customiser and the campaign offer it, and re-adds it whenever a scene or spawner turns up without
-it.
+At game start `T90AMod.OnInitializeMelon` makes the settings (`CreateSettings`) and stops there if `Enabled` is off.
+MelonLoader patches nothing by itself (`[assembly: HarmonyDontPatchAll]` in `Mod.cs`), so off really is off. With it
+on, `PatchClasses.Apply` puts the Harmony patches in one class at a time, then the mod opens the bundle (`LoadData`) and
+registers a unit (`RegisterUnit`) `T90A` based on the `T72M1` with the `T80B`'s army (GHPC has the T-72M1 as NVA and I
+wanted it Soviet). `UnitRegistry` copies the T-72M1's entry under that name so Instant Action, the customiser and the
+campaign offer it, and re-adds it whenever a scene or spawner turns up without it.
 
 At spawn, `SpawnPatch` (in `Common`) on `UnitSpawner.SpawnUnit` renames the unit and runs `Conversion.Convert`, which
 works through its `Steps` table: base visuals, visuals, paint, hatch undersides, tactical numbers, leftovers, armour,
 commander's seat, interior, ammo, coax, gun, mobility, smoke launchers, hatches, turret axis, commander's station (the
-Kord), modules, periscope placement, Shtora-1, LOD materials. The order of the table is the order they run in, and it
-matters. The seat comes before the interior because both move the commander figure. Each step has its own try/catch (in
-`ConversionSteps.Run`, in `Common`), so one failing logs an error and the rest carry on. Two frames later `LateSetup`
-runs its own table: smoke crew refresh, voices, sight setup, the commander's station late setup, module wiring, thermal
-heat and the ammunition self-check, once the game has built the crew.
+Kord), modules, periscope placement, Shtora-1, the Shtora lens glow and emitter heat, taking out the T-72M1's Luna, LOD
+materials. The order of the table is the order they run in, and it matters. The seat comes before the interior because
+both move the commander figure. Each step has its own try/catch (in `ConversionSteps.Run`, in `Common`), so one failing
+logs an error and the rest carry on. Two frames later, once the game has built the crew, `LateSetup` refreshes the
+smoke launchers' crew and runs its own table: voices, sight setup, the commander's station late setup, module wiring,
+thermal heat and the ammunition self-check.
 
-Some steps only work at spawn (`SpawnOnly` in the table): ammo, coax, the Kord, modules, periscope placement and
-Shtora-1, and in the late table module wiring and the ammunition self-check, because GHPC builds the unit's weapon and
-camera lists straight afterwards. A T-90A the spawn patch missed is caught at `PlayerReady` by `ConvertSweep` (in
+Every step marked `SpawnOnly` in the two tables only works at spawn, because GHPC builds the unit's weapon and camera
+lists straight afterwards. That's most of the second half of `Steps`, from the ammo to the Luna, and module wiring and
+the self-check in the late table. A T-90A the spawn patch missed is caught at `PlayerReady` by `ConvertSweep` (in
 `Common`) and gets everything else; the log says so for the ammo and the Kord.
 
 Parts borrowed from other vehicles (T-80B voices and sight sounds, the T-64B's machine gun station, the M60A3's thermal
@@ -168,6 +190,9 @@ this table says where each one lives. `tools\check-settings.ps1` checks both tab
 | `APFSDS` | `Mod.cs` | `Firepower`, the default round where the game doesn't pick one |
 | `Force APFSDS` | `Mod.cs` | `Firepower` (`ForceApfsds`): the campaign's roll gives the `APFSDS` round |
 | `Random APFSDS`, `APFSDS pool` | `Mod.cs` | `Firepower` (`RandomApfsds`, `ApfsdsPool`): each tank rolls its own APFSDS outside the campaign |
+| `HEAT` | `Mod.cs` | `Firepower` (`DefaultHeat`), the default HEAT where the game doesn't pick one |
+| `Force HEAT` | `Mod.cs` | `Firepower` (`ForceHeat`): the campaign's roll gives the `HEAT` round |
+| `Random HEAT`, `HEAT pool` | `Mod.cs` | `Firepower` (`RandomHeat`, `HeatPool`): each tank rolls its own HEAT outside the campaign |
 | `Ammunition load`, `Empty racks` | `Mod.cs` | `Firepower` (`LoadPreset`, `EmptyRacks`, the racks' names and `LoadPresets`): racks left empty at spawn |
 | `Gunner night sight` | `Mod.cs` | `NightSight` (`ESSA` or `Buran-M`) |
 | `ESSA electronic zoom` | `Mod.cs` | `NightSight` |
@@ -190,20 +215,26 @@ Most only apply to T-90As spawned after the change. Two catches when you add or 
 
 ## Releasing
 
-1. Bump the version in `MelonInfo` at the top of `T90A\Mod.cs`. `Repo` next to it is what the update check asks. Commit.
-2. Get the commit's 7-character short hash with `git rev-parse --short=7 HEAD` and build with it:
+The armour numbers, hatches, glass and smoke points are text in `Resources\`, so changing them is a rebuild of the DLL
+and nothing else. The bundle only has to change with the model, and that needs the Unity project, which isn't in this
+repo. Renaming an armour piece or a visual node counts as a model change. [docs/bundle.md](docs/bundle.md) says which
+edits are safe.
+
+1. Bump the version in `MelonInfo` at the top of `T90A\Mod.cs`. `Repo` next to it is what the update check asks.
+2. Add the release's row to the hash table at the end of [docs/bundle.md](docs/bundle.md): the SHA-256 of the bundle
+   you'll ship, in lower case (`(Get-FileHash <bundle> -Algorithm SHA256).Hash.ToLower()`), the same as the row before
+   if it hasn't changed. Every release gets a row. Commit both, so the tag carries its own row.
+3. Run `dotnet test tests`, `tools\check-settings.ps1` and `tools\check-game.ps1` (see Tests). All three have to be
+   clean before you build.
+4. Get the commit's 7-character short hash with `git rev-parse --short=7 HEAD` and build with it:
    `dotnet build -c Release -p:GameDir="<GHPC folder>\Bin" -p:GitCommit=<that hash>`. The hash goes into the DLL's stamp.
-3. Install it, start a mission and read `MelonLoader\Latest.log`: the stamp first, then no warnings or errors from the
+5. Install it, start a mission and read `MelonLoader\Latest.log`: the stamp first, then no warnings or errors from the
    mod.
-4. Zip it as `T90A_<version>.zip` with this layout inside, forward slashes: `Mods/T90A.dll` and `Mods/T90A/t90a` (the bundle
-   from the latest release). In a folder that holds that `Mods` folder: `tar -a -c -f T90A_<version>.zip Mods`.
-5. The armour numbers, hatches, glass and smoke points are text in `Resources\`, so changing them is a rebuild of the DLL and
-   nothing else. The bundle only has to change with the model, and that needs the Unity project, which isn't in this repo.
-   Renaming an armour piece or a visual node is a model change too. [docs/bundle.md](docs/bundle.md) says which edits are
-   safe. Every release, new bundle or not, gets its row in the hash table there (the check is in that file).
-6. Tag the built commit `v<version>` (like `v0.4.4`) and push the tag. On GitHub create a release from the tag: attach the zip,
-   and write the release notes, what changed for the player, a line or two each.
-7. Check the result: `powershell -ExecutionPolicy Bypass -File tools\verify-release.ps1 -Tag v<version> -Release T90A_<version>.zip
-   -GameDir "<GHPC folder>\Bin"` rebuilds the tag in a temporary folder with the commit the release's own stamp carries.
-   Expect IDENTICAL: a release built from its tag rebuilds byte for byte (the released 0.4.4 does from tag `v0.4.4`).
-   DIFFERENT means the SDK or the source differs from what built the release; compare the decompiled code then.
+6. Zip it as `T90A_<version>.zip` with this layout inside, forward slashes: `Mods/T90A.dll` and `Mods/T90A/t90a` (the
+   bundle from step 2). In a folder that holds that `Mods` folder: `tar -a -c -f T90A_<version>.zip Mods`.
+7. Tag the built commit `v<version>` and push the tag. On GitHub create a release from the tag: attach the zip, and
+   write the release notes, what changed for the player, a line or two each.
+8. Check the result: `powershell -ExecutionPolicy Bypass -File tools\verify-release.ps1 -Tag v<version> -Release
+   T90A_<version>.zip -GameDir "<GHPC folder>\Bin"` rebuilds the tag in a temporary folder with the commit the
+   release's own stamp carries. Expect IDENTICAL: a release built from its tag rebuilds byte for byte. DIFFERENT means
+   the SDK or the source differs from what built the release; compare the decompiled code then.

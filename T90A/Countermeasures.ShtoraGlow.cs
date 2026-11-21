@@ -8,10 +8,10 @@ using UnityEngine;
 
 namespace T90A
 {
-	//! The Shtora-1 emitters lit while they jam. The xenon lamps shine from 0.7 µm up, so an image intensifier sees them blaze
-	//! and lights the ground ahead, and the eye gets a dim deep red. Thermal sights don't see the beam at all (ShtoraHeat).
-	//! Copies of the T-72M1's own Luna glow and IR spotlight do the work: LightBandExclusiveItem shows each one only in the
-	//! views its flags name.
+	// The Shtora-1 emitters lit while they jam. The xenon lamps shine from 0.7 µm up, so an image intensifier sees them blaze
+	// and lights the ground ahead, and the eye gets a dim deep red. Thermal sights don't see the beam at all (ShtoraHeat).
+	// Copies of the T-72M1's own Luna glow and IR spotlight do the work: LightBandExclusiveItem shows each one only in the
+	// views its flags name.
 	internal sealed class ShtoraGlow : MonoBehaviour
 	{
 		internal const string LensGlass = "headlight_glass_a_under";
@@ -25,8 +25,8 @@ namespace T90A
 		// The eye's share: a soft deep red, brightest in the middle, as night footage of a jamming emitter shows it.
 		// Judged on screenshots against that footage.
 		static readonly Color EyeColour = new Color(0.15f, 0.006f, 0.0045f, 1f);
-		//! additive, so it only adds light. The Luna's own glow material is opaque and hid the lens grid by day, and the game
-		//! ships no Standard variant that is both see-through and emissive. This one is the game's own (its sparks use it).
+		// additive, so it only adds light. The Luna's own glow material is opaque and hid the lens grid by day, and the game
+		// ships no Standard variant that is both see-through and emissive. This one is the game's own (its sparks use it).
 		const string EyeShader = "Legacy Shaders/Particles/Additive";
 		const int FalloffSize = 128;
 
@@ -213,7 +213,7 @@ namespace T90A
 				var picked = corners.Where(i => Mathf.Sign(vertices[i].x) == side).ToArray();
 				if (picked.Length == 0) continue;
 				var centre = picked.Aggregate(Vector3.zero, (sum, i) => sum + vertices[i]) / picked.Length;
-				//! the lens is two-sided: its back faces would cancel the normal, so every normal is turned forward first
+				// the lens is two-sided: its back faces would cancel the normal, so every normal is turned forward first
 				var normal = picked.Aggregate(Vector3.zero, (sum, i) => sum + (normals[i].z < 0f ? -normals[i] : normals[i])).normalized;
 				float radius = picked.Max(i => (vertices[i] - centre).magnitude);
 				yield return (centre, normal, radius);
@@ -245,7 +245,7 @@ namespace T90A
 		// Left inactive for the caller to place.
 		static LightBandExclusiveItem Clone(LightBandExclusiveItem source, Transform parent, string name)
 		{
-			//! copied inactive: Awake would hook the copy to the Luna's own DestructibleComponent and put it out with the Luna
+			// copied inactive: Awake would hook the copy to the Luna's own DestructibleComponent and put it out with the Luna
 			var sourceObject = source.gameObject;
 			bool wasActive = sourceObject.activeSelf;
 			sourceObject.SetActive(false);
@@ -255,9 +255,9 @@ namespace T90A
 			var item = copy.GetComponent<LightBandExclusiveItem>();
 			item.Destructible = null;
 			item.StartSwitchedOn = false;
-			//! the Luna's lens glow shows in thermal too. Glass doesn't pass 8-12 µm, so a thermal sight never sees the beam.
+			// the Luna's lens glow shows in thermal too. Glass doesn't pass 8-12 µm, so a thermal sight never sees the beam.
 			item.ShowInThermal = false;
-			//! renamed: the T-72M1 leftover hiding goes by the Luna's renderer names
+			// renamed: the T-72M1 leftover hiding goes by the Luna's renderer names
 			foreach (var renderer in copy.GetComponentsInChildren<Renderer>(true))
 				renderer.name = copy.name;
 			return item;

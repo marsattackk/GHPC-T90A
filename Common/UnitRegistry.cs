@@ -57,7 +57,10 @@ namespace T90A.Common
 					"Campaign prevalence",
 					prevalence,
 					description: "How common it is compared to other tanks (1 = as common as a typical tank)."),
-				AfterMissions = cfg.CreateEntry("Campaign unlock after missions", afterMissions),
+				AfterMissions = cfg.CreateEntry(
+					"Campaign unlock after missions",
+					afterMissions,
+					description: "How many campaign missions you have to finish before it can turn up (0 = from the first mission)."),
 			};
 
 		internal void Use(UnitDef u)
@@ -269,7 +272,7 @@ namespace T90A.Common
 			}
 		}
 
-		// Re-added at the spawner, not only at the menu: a mission's spawner can hold a list without our units.
+		// Re-added at the spawner, not only at the menu: a mission's spawner can hold a list without my units.
 
 		[HarmonyPatch(typeof(UnitSpawner), "GetMetadataByUniqueName")]
 		internal static class LookupPatch

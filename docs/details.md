@@ -116,7 +116,7 @@ the clean factory finish on the right.
 | Turret traverse / gun elevation | 24°/s / 28°/s |
 | Gun | 2A46M-5, -6°13′ / +13°47′ over the front, less depression over the engine deck |
 | Autoloader | The game's own T-72M1 timing, about 7.2 s for every round |
-| Main gun ammo | 42 rounds: 3BM42 or 3BM60, 3BK18M HEAT, 3OF26 HE-Frag, 9M119M Invar |
+| Main gun ammo | 42 rounds: 3BM42 or 3BM60, 3BK29M, 3BK31 or 3BK18M HEAT, 3OF26 HE-Frag, 9M119M Invar |
 | Coax PKT | 2000 rounds (8 belts of 250) |
 | Smoke | 12 × 902B "Tucha", 3D17 aerosol grenades (each tube can be knocked out) |
 
@@ -125,7 +125,9 @@ the clean factory finish on the right.
 | 3BM42 "Mango" | ~580 mm at the muzzle, ~460 mm at 2 km |
 | 3BM60 "Svinets-2" (default) | ~690 mm at the muzzle, ~600 mm at 2 km |
 | 9M119M "Invar" | 700 mm, tandem warhead (sets off ERA first), 100-5000 m, guided along the gunner's sight line |
-| 3BK18M HEAT, 3OF26 HE-Frag | the game's own rounds |
+| 3BK29M HEAT (default) | 700 mm (the maker's guaranteed figure), 915 m/s, 18.4 kg. The precursor only beats add-on ERA: a 2019 article by NII Stali people says it was never made to get through built-in ERA, so Kontakt-5 and Relikt count in full against it. 650 mm behind add-on ERA is my reading of a second, unlabelled figure in the same table |
+| 3BK31 "Start-2" HEAT | 800 mm, 660 mm behind built-in and 680 mm behind add-on ERA, 19 kg. Experimental, never adopted, so the campaign never rolls it. Nobody publishes its muzzle velocity: I gave it 3BK18M's 905 m/s, because its direct-fire range is within 10 m of 3BK18M's |
+| 3BK18M HEAT, 3OF26 HE-Frag | the game's own rounds (3BK18M under a name of the T-90A's own) |
 
 ## Where it isn't the real tank
 

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using MelonLoader;
 
 namespace T90A.Common
@@ -35,10 +36,26 @@ namespace T90A.Common
 				try { step.Run(state); }
 				catch (Exception exception)
 				{
-					string otherwise = step.Otherwise != null ? " (" + step.Otherwise + ")" : "";
-					MelonLogger.Error($"{tag} {step.What} failed{otherwise}: {exception}");
+					Failed(tag, step, unit, exception);
 				}
 			}
+		}
+
+		static readonly Dictionary<string, int> Failures = new Dictionary<string, int>();
+
+		static void Failed<T>(string tag, ConversionStep<T> step, string unit, Exception exception)
+		{
+			string otherwise = step.Otherwise != null ? " (" + step.Otherwise + ")" : "";
+			string key = tag + " " + step.What;
+			int count = Failures.TryGetValue(key, out int had) ? had + 1 : 1;
+			Failures[key] = count;
+			if (count == 1)
+			{
+				MelonLogger.Error($"{tag} {step.What} failed{otherwise}: {exception}");
+				return;
+			}
+			string why = $"{exception.GetType().Name}: {exception.Message}";
+			MelonLogger.Error($"{tag} {step.What} failed again on {unit}{otherwise}: {why} ({count} times)");
 		}
 	}
 }

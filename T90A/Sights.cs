@@ -42,7 +42,7 @@ namespace T90A
 		}
 
 		// The 1A45T: laser limits and a fire gate that waits for the gun to be laid.
-		// The laser reads 400 to 5000 m («Комплекс управления огнем 1А45», odetievbrony.ru; Suvorov's 1G46 table).
+		// The laser reads 400 to 5000 m («Комплекс управления огнем 1А45», odetievbrony.ru, and Suvorov's 1G46 table).
 		const float LaserMin = 400f;
 		const float LaserMax = 5000f;
 
@@ -55,7 +55,8 @@ namespace T90A
 			LaserMax = LaserMax,
 			LineOfSightLimits = LineOfSightLimits,
 			LineOfSightAzimuth = 8f,   // the 1G46 head's ±8 deg sideways («Прицел 1Г46», odetievbrony.ru)
-			// The T-80B's 1G42 values: the range keys move 100 m a press and the range is shown rounded to 50 m.
+			// The T-80B's 1G42 values: the range keys move 100 m a press, and the range line in GHPC's weapon info is rounded
+			// to 50 m. The four digits in the sight have their own rounding (Sights.Readout).
 			RangeStep = 100,
 			DisplayRangeIncrement = 50,
 			FireGateAngle = 0.1f,   // 1V528's isn't published. GHPC's 1A33 value

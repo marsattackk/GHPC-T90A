@@ -28,7 +28,9 @@ namespace T90A.Tests
 		{
 			var armour = Shipped();
 			Assert.Empty(_warnings);
-			Assert.Equal(Pieces, armour.Entries.Count);
+			Assert.True(
+				armour.Entries.Count == Pieces,
+				$"dm_armour.txt has {armour.Entries.Count} pieces and Pieces says {Pieces}: a piece added or taken out changes both.");
 			Assert.Equal(armour.Entries.Count, armour.Entries.Select(e => e.Piece).Distinct().Count());
 		}
 

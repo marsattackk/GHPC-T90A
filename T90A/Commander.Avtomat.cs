@@ -9,6 +9,7 @@ namespace T90A
 	// The TKN-4S's Avtomat mode: the Kord follows the sight, stabilised in elevation, and turns with the turret in traverse.
 	internal static partial class CommanderSight
 	{
+		// Ahead of FireControlSystem and AimablePlatform (both at the default 0), so they take this frame's aim
 		[DefaultExecutionOrder(-50)]
 		internal partial class Avtomat : MonoBehaviour
 		{

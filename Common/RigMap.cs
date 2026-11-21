@@ -6,6 +6,8 @@ using UnityEngine;
 
 namespace T90A.Common
 {
+	// Every point is in the base vehicle's prefab space at rest. Whoever reads it allows for a turned turret or a moved
+	// pivot (HatchRig.Apply's placed argument).
 	public sealed class RigMap
 	{
 		public sealed class Hatch

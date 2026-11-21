@@ -19,11 +19,13 @@ namespace T90A.Common
 			var loadoutManager = vehicle.GetComponent<LoadoutManager>();
 			if (loadoutManager == null) return;
 			var weapon = vehicle.GetComponent<WeaponsManager>().Weapons[0].Weapon;
-			// Outside the campaign a tank set to roll its own round rolls it here, so slot 0 always holds a real round while the
-			// tank's parts are built (sights read it for their range scales). A round the mission customizer names replaces it
-			// in GHPC's logistics; the customizer's Random entry is rolled after them (AmmoCampaignPatch).
-			var first = RandomWanted() && !DynamicMissionComposer.CampaignMode ? RollApfsds(vehicle) : DefaultApfsds(warn: true);
-			var list = PortList(loadoutManager.LoadedAmmoList.AmmoClips, first);
+			// Outside the campaign a tank set to roll its own round rolls it here, so its slot always holds a real round while
+			// the tank's parts are built (sights read slot 0 for their range scales). A round the mission customizer names
+			// replaces it in GHPC's logistics. The customizer's Random entries are rolled after them (AmmoCampaignPatch).
+			bool campaign = DynamicMissionComposer.CampaignMode;
+			var first = RandomWanted() && !campaign ? RollApfsds(vehicle) : DefaultApfsds(warn: true);
+			var heat = RandomHeatWanted() && !campaign ? RollHeat(vehicle) : null;
+			var list = PortList(loadoutManager.LoadedAmmoList.AmmoClips, first, heat);
 			if (Missile != null && weapon.GuidanceUnit == null && (FeedMissileGuidance == null || FeedGuidanceStopped == null))
 				list.Remove(Missile);
 			loadoutManager.LoadedAmmoList.AmmoClips = list.ToArray();
@@ -96,6 +98,7 @@ namespace T90A.Common
 			var problems = new List<string>();
 			var own = Apfsds.Select(e => (e.Key, e.Value)).ToList();
 			if (S.Heat != null) own.Add((S.Heat.Id, Heat));
+			own.AddRange(Heats.Select(e => (e.Key, e.Value)));
 			if (Missile != null) own.Add((S.Missile.Id, Missile));
 			for (int i = 0; i < Extras.Count; i++) own.Add((S.Extra[i].Id, Extras[i]));
 			foreach (var (id, clip) in own)
@@ -123,7 +126,9 @@ namespace T90A.Common
 				problems.Add("APFSDS slot still holds the Random stand-in");
 			else if (clips.Length > 0 && !Apfsds.Values.Any(a => ReferenceEquals(a, clips[0])))
 				problems.Add($"APFSDS slot holds '{clips[0]?.ClipType?.Name}'");
-			if (!S.SingleRound && clips.Length > 1 && !ReferenceEquals(clips[1], Heat))
+			if (!S.SingleRound && clips.Length > 1 && RandomHeatStandIn != null && ReferenceEquals(clips[1], RandomHeatStandIn))
+				problems.Add("HEAT slot still holds the Random stand-in");
+			else if (!S.SingleRound && clips.Length > 1 && !IsHeat(clips[1]))
 				problems.Add($"HEAT slot holds '{clips[1]?.ClipType?.Name}'");
 			bool xray = AarController.ShowXray || AarController.InAar;
 			var constants = ConstantsAndInfoManager.Instance;

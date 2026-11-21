@@ -518,7 +518,7 @@ namespace T90A.Common
 		[DefaultExecutionOrder(20)]
 		internal class Belt : MonoBehaviour
 		{
-			// Half is a guess, the source only gives the order of the motions.
+			// Half is a guess. The source only gives the order of the motions.
 			const float FeedPart = 0.5f;
 
 			internal Settings Set;

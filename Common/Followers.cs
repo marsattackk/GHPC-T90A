@@ -18,11 +18,13 @@ namespace T90A.Common
 
 		internal static bool Ready => PosShift != null && RotShift != null;
 
+		// A group that follows a parent of the bone is placed off its stored offset too: the Arena-M kit's hull ERA, fitted
+		// while the hull group still lagged the settling tank, went in 0.35 m high.
 		internal static void PlaceOnBone(Transform piece, Transform bone, Transform target, Vector3 offsetInBone = default)
 		{
-			var follow = Ready
-				? target.GetComponentsInParent<LateFollow>(true).FirstOrDefault(f => f.FollowTarget == bone)
-				: null;
+			var followers = Ready ? target.GetComponentsInParent<LateFollow>(true) : new LateFollow[0];
+			var follow = followers.FirstOrDefault(f => f.FollowTarget == bone)
+				?? followers.FirstOrDefault(f => f.FollowTarget != null && bone.IsChildOf(f.FollowTarget));
 			if (follow == null)
 			{
 				piece.SetParent(bone, false);
@@ -32,9 +34,14 @@ namespace T90A.Common
 				piece.SetParent(target, true);
 				return;
 			}
-			var boneToFollower = Matrix4x4.TRS(PosShift(follow), RotShift(follow), Vector3.one);
+			var followed = follow.FollowTarget;
+			var boneInFollowed = Matrix4x4.TRS(
+				followed.InverseTransformPoint(bone.position),
+				Quaternion.Inverse(followed.rotation) * bone.rotation,
+				Vector3.one);
+			var followedToFollower = Matrix4x4.TRS(PosShift(follow), RotShift(follow), Vector3.one);
 			var followerToTarget = follow.transform.worldToLocalMatrix * target.localToWorldMatrix;
-			var boneInTarget = (boneToFollower * followerToTarget).inverse;
+			var boneInTarget = (followedToFollower * followerToTarget).inverse * boneInFollowed;
 			piece.SetParent(target, false);
 			piece.localPosition = boneInTarget.MultiplyPoint3x4(offsetInBone);
 			piece.localRotation = boneInTarget.rotation;

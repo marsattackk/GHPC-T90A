@@ -14,8 +14,8 @@ namespace T90A.Common
 {
 	internal static class BaseStrip
 	{
-		// the T-72M1's and the T-80B's Luna: its IR light and both glows. A port whose model hides the lamp takes this out too,
-		// or the crew lights the ground at night from a lamp nobody can see.
+		// Path of the T-72M1's and the T-80B's Luna, its IR light and both glows. A port whose model hides the lamp takes this
+		// out too, or the crew lights the ground at night from a lamp nobody can see.
 		internal const string BaseLuna = "---ELECTRICS SCRIPTS---/spotlight";
 
 		internal static string TakeOutLuna(Vehicle vehicle, string tag)

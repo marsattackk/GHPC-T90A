@@ -248,7 +248,7 @@ namespace T90A
 				"t90a_hatch_inner",
 				TurretPaint,
 				// A smooth plate of the turret atlas (x 320-550, y 1350-1460 of 4096 x 2048): a flat normal map with no bolts, welds or
-				// cast texture, so the undersides take the turret's paint as one green colour (the owner's call, 2026-10-20).
+				// cast texture, so the undersides take the turret's paint as one green colour (my call).
 				new RectInt(320, 1350, 230, 110),
 				new Vector2Int(4096, 2048));
 		}
@@ -295,7 +295,7 @@ namespace T90A
 		}
 
 		// The T-90A's turret sits 22 cm further back on the ring than the T-72's, the trunnion 8 cm back and 7.5 cm lower, and
-		// turret and seat sit 1.2 deg nose-down; the numbers are in the rig map.
+		// turret and seat sit 1.2 deg nose-down (numbers in the rig map).
 		static void MoveAxes(Parts parts)
 		{
 			var axes = PortAxes.FromRig(T90AMod.Rig, BaseRigT72M1.TurretPivot, BaseRigT72M1.GunPivot, FriendlyName);

@@ -52,8 +52,8 @@ namespace T90A
 			ShtoraScreen.Apply(vehicle, screens);
 		}
 
-		// 0.6 is the chance it breaks a MILAN's or a HOT's guidance (btvt.info, «Комплекс оптико-электронного подавления «Штора-1»»);
-		// I use it for every missile on the list. The default of the "Shtora-1 jam chance" setting.
+		// 0.6 is the chance it breaks a MILAN's or a HOT's guidance (btvt.info, «Комплекс оптико-электронного подавления
+		// «Штора-1»»), but I use it for every missile on the list. The default of the "Shtora-1 jam chance" setting.
 		internal const float JamChance = 0.6f;
 
 		static readonly Shtora.Settings Jammer = new Shtora.Settings

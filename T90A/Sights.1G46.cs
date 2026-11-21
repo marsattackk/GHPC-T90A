@@ -16,16 +16,19 @@ namespace T90A
 	// strokes' shapes are the game's own 1G42's.
 	internal static partial class Sight1G46
 	{
-		// 20 to 4.5 deg, the 1G46's 2.7-12x (Suvorov, «Т-90»). The real zoom is smooth; the seven stops between are mine.
+		// 20 to 4.5 deg, the 1G46's 2.7-12x (Suvorov, «Т-90»). The real zoom is smooth, so the seven stops between are mine.
 		internal static readonly float[] ZoomFovs = { 20f, 16.6f, 13.8f, 11.4f, 9.5f, 7.9f, 6.5f, 5.4f, 4.5f };
 
+		// Only for when the loaded ammo list can't be read: the T-80B rounds the T-90A's are copied from, else one of that
+		// kind off the host reticle. The list goes APFSDS, HEAT, then the T-72M1's HE (PortAmmo.PortList), which is why
+		// Sights.Apply and the TKN-4S both read slot 2 as HE.
 		internal static readonly string ApfsdsAmmo = "ammo_3BM32";
 		internal static readonly string HeAmmo = "ammo_3OF26";
 		internal static readonly string HeatAmmo = "ammo_3BK14M";
 		internal static readonly string CoaxAmmo = "ammo_762x54R";
 
 		// Off the figure: the range-input bar's height, the vertical stroke's end and where each scale stands. Its legend
-		// gives the lead step (0-02), the Б scale's 200 m divisions and the stadia's 2.5 m target; its П scale ends at 14.
+		// gives the lead step (0-02), the Б scale's 200 m divisions and the stadia's 2.5 m target. Its П scale ends at 14.
 		const float Thick = 0.1571f;
 		const float TopThick = 0.2094f;
 		const float Lead = 2.094f;
@@ -86,8 +89,8 @@ namespace T90A
 			plane.elements.Add(bore);
 			plane.elements.Add(moving);
 
-			// The chevron; the range-input bar across the whole 4.5 deg field at 12x; the vertical stroke from under the tip
-			// down to the strip, or 1 mrad past the 1400 m coax mark if that's lower (-30.1 if the ballistics can't be read).
+			// The chevron and the range-input bar across the whole 4.5 deg field at 12x. The vertical stroke runs from under the
+			// tip down to the strip, or 1 mrad past the 1400 m coax mark if that's lower (-30.1 if the ballistics can't be read).
 			var chevron = Group(bore, "Chevron", 0f, 0f);
 			chevron.elements.Add(Line(chevron, 0.75f, -1.55f, 294.97f, 3.6652f));
 			chevron.elements.Add(Line(chevron, -0.7461f, -1.5504f, 65.03f, 3.6652f));
@@ -122,7 +125,7 @@ namespace T90A
 		{
 			var group = Group(parent, "range-MG", 0f, 0f);
 			var ballistic = Ballistic(group, coax, 0f, 0f);
-			// The figure's coax scale: 100 m divisions to 1400 m, numbered in hundreds every 200, П by the 800; the marks'
+			// The figure's coax scale: 100 m divisions to 1400 m, numbered in hundreds every 200, П by the 800, with the marks'
 			// lengths and places measured off it.
 			int[] ranges = { 200, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200, 1300, 1400 };
 			foreach (int range in ranges)
@@ -200,7 +203,7 @@ namespace T90A
 		static ReticleTree.Angular LeadMarks(ReticleTree.Angular parent)
 		{
 			// The lead scales: 0-02 a division out to ±0-16, a small chevron every 0-08 («Цена одного малого деления 0-02,
-			// общий диапазон ±0-16»); the bar over the chevron spans the two 0-02 marks.
+			// общий диапазон ±0-16»). The bar over the chevron spans the two 0-02 marks.
 			var angularGroup = Group(parent, "Horizontal", 0f, 0f);
 			angularGroup.elements.Add(Line(angularGroup, 0f, 0f, 0f, 2f * Lead));
 			for (int side = -1; side <= 1; side += 2)
